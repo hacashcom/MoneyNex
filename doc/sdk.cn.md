@@ -162,4 +162,8 @@ MoneyNex.transfer({txobj}, (a, b) => {
 
 更多交易 `action` 类别正在开发支持中。
 
+### 测试代码
 
+上述 SDK 接口的测试参考用例，可以在下面目录中找到，并可作为开发者的编写示范：
+
+- [测试代码](https://github.com/hacashcom/MoneyNex/tree/main/test)
