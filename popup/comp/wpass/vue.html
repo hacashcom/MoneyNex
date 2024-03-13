@@ -1,0 +1,20 @@
+
+<!-- wpass -->
+<div :class="`popbox pass ${show?'':'hide'}`">
+    <div class="bg dark"></div>
+    <div :class="`con box ${cnsh?'':'hide'}`">
+        <h1>Confirm your password</h1>
+        <div class="ipw">
+            <label>Password</label>
+            <input ref="iptpw" @keydown="clear" v-model="pswd" type="password" />
+            <div :class="`err ${err?'':'hide'}`">
+                <p>{{err}}</p>
+            </div>
+            <div class="btns">            
+                <div><button class="mid cancel" @click="ccl">Cancel</button></div>
+                <div><button :class="`mid ${col?col:'blue'} ok`" @click="cok">{{okbtn}}</button></div>
+            </div>
+        </div>
+    </div>
+</div>
+        

@@ -1,0 +1,84 @@
+
+
+.header {
+    position: relative;
+    margin-bottom: @pgpd * 1.5;
+    background: @bgcol + #040404;
+    // height: @headerh;
+    box-shadow: 0 0 20px 1px #000;
+    &>div {
+    }
+
+    .cvs {
+        position: absolute;
+        left: 0;
+        bottom: -20px;
+        width: 100%;
+        height: 20px;
+        background-image: linear-gradient(to right, @bgcol, #0000, #0000, @bgcol);
+    }
+    
+}
+
+.hpgw {
+
+    .header {
+        @ch: 24px;
+        // padding: @pgpd;
+        position: relative;
+        height: @ch + @pgpd*2;
+        .bk {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: @pgpd;
+            background: @bgcol - #010101;
+            cursor: pointer;
+            img {
+                height: @ch;
+            }
+            &:hover {
+                background: #fff1;
+            }
+        }
+        .ptt {
+            width: 100%;
+            display: block;
+            text-align: center;
+            padding: @pgpd 0;
+            height: @ch;
+            color: #fffb;
+            font-weight: normal;
+            line-height: @ch;
+        }
+    }
+
+}
+
+.hpgw {
+    transition: 0.5s all;
+    position: relative;
+    z-index: 2;
+    width: @bodyw;
+    height: @bodyh;
+    background: @bgcol;
+    &.hide {
+        position: absolute;
+        z-index: 1;
+        opacity: 0;
+        transform: scale(0.80);
+        box-shadow: 0 0 15px #0009;
+    }
+    &.prep {
+        position: absolute;
+        z-index: 3;
+        top: 0;
+        left: @bodyw;
+        box-shadow: 0 0 15px #0000;
+    }
+    &.active {
+        z-index: 3;
+        left: 0;
+        box-shadow: 0 0 15px #000;
+    }
+}

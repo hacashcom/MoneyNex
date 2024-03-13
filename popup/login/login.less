@@ -1,0 +1,71 @@
+
+.lghdr {
+    height: 50px;
+    // background: @bgcol + #090909;
+    box-shadow: 0 0 @pgpd #000;
+}
+
+#boot {
+    &.hide {
+        top: 0px - @bodyh;
+        // opacity: 0;
+    }
+    transition: all .0s;
+    opacity: 1;
+    display: block;
+    background: @bgcol;
+    z-index: 2;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    margin-left: 0px - (@bodyw/2);
+    width: @bodyw;
+    height: @bodyh;
+    box-shadow: 0 0 160px #000 inset;
+    .loading {
+        display: flex;
+        flex-direction: column;
+        height: @bodyh;
+        justify-content: center;
+        .lgi {
+            text-align: center;
+            img {
+                opacity: 0.5;
+                filter: drop-shadow(1px 1px 2px #000) grayscale(1);
+            }
+        }
+        .ld {
+            position: relative;
+            margin-top: 30px;
+            text-align: center;
+            @keyframes zymdz {
+                0% { top: 0px }
+                50% { top: 20px; }
+                100% { top: 0px; }
+              }
+            img {
+                z-index: 2;
+                position: relative;
+                animation: zymdz infinite ease-in-out 0.7s;
+                filter: drop-shadow(1px 1px 1px #000) grayscale(1);
+            }
+            .sdn {
+                z-index: 1;
+                margin: auto;
+                display: block;
+                width: 30px;
+                height: 8px;
+                border-radius: 100%;
+                background: #000;
+                position: relative;
+                top: 10px;
+                filter: blur(10px);
+                transform: scaleY(.5);
+            }
+        }
+    }
+    .dolog {
+        display: none;
+    }
+}
+

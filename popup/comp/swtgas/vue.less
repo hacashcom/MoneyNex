@@ -1,0 +1,45 @@
+
+.gasw {
+    .con {
+        padding-top: @pgpd;
+        display: flex;
+        justify-content: space-between;
+    }
+    .high {
+        display: none;
+    }
+    .item {
+        transition: all 0.2s;
+        cursor: pointer;
+        border-radius: 5px;
+        padding: 4px 6px;
+        max-width: @bodyw*0.3;
+        min-width: @bodyw*0.2;
+        border: 1px solid #fff4;
+        min-height: 66px;
+        h5 {
+            font-weight: normal;
+            font-style: italic;
+            font-size: 15px;
+            &.n { color: darkcyan; }
+            &.f { color: orange; }
+            &.h { color: hotpink; }
+            &.c { color: deepskyblue; }
+        }
+        p {
+            margin-top: 10px;
+            font-size: 12px;
+            line-height: 18px;
+        }
+        input {
+            margin-top: 8px;
+        }
+        &.active {
+            background: #00ccff44;
+            border-color: @clblue;
+            text-shadow: 1px 1px 1px #000;
+            // box-shadow: 2px 2px 6px #0009;
+            // transform: scale(1.05);
+        }
+    }
+}

@@ -1,0 +1,25 @@
+
+<div class="header">
+    <div class="bk" @click="back">
+        <img :src="`${icfp}left.svg`" />
+    </div>
+    <h1 class="ptt">Account details</h1>
+    <!-- <div class="cvs"></div> -->
+</div>
+
+<div class="pvky" v-if="privkey">
+    <label>Private key:</label>
+    <textarea>{{privkey}}</textarea>
+    <div>
+        <a class="cp" @click="cppvk">Copy krivate key</a>
+    </div>
+</div>
+<div id="acinfqrcd" v-else></div>
+
+<div class="btns">
+
+    <button class="adr" @click="cpadr"><b>{{myadr}}</b><img :src="`${icfp}copy.svg`" /></button>
+    <button class="blue" v-if="!privkey" @click="sprivk">Show private key</button>
+    <button class="rmv" v-if="!privkey && adrn>1" @click="rmvadr">Remove</button>
+
+</div>

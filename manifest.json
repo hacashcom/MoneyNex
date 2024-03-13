@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "MoneyNex",
+  "description": "A Hacash and Bitcoin Wallet",
+  "version": "0.1.2",
+  "icons": {
+    "64": "image/icos/64.png"
+  }, 
+  "permissions": [
+    "storage",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://*.hacash.org/*",
+    "https://*.hacash.com/*"
+  ],
+  "optional_permissions": [
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "action": {
+    "default_icon": "image/icos/64.png",
+    "default_popup": "popup/moneynex.html",
+    "default_title": "MoneyNex"
+  }, 
+  "content_scripts": [
+    {
+      "js": ["content/content.min.js"],
+      "css": ["content/content.min.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "web_accessible_resources": [{
+    "resources": ["content/hacash_api.min.js",
+      "image/icos/128.png",
+      "image/icos/64.png",
+      "image/*/*.*"
+    ],
+    "matches": ["<all_urls>"]
+  }],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

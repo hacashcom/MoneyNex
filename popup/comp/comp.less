@@ -1,0 +1,223 @@
+
+button {
+    position: relative;
+    min-width: 100px;
+    height: 44px;
+    line-height: 44px;
+    padding: 0 20px;
+    border: 1px solid #fff2;
+    border-radius: 1000px;
+    background: #fff2;
+    color: @clblue;
+    font-weight: bold;
+    opacity: 0.9;
+    box-shadow: 0 4px 12px #fff4 inset, 0 -4px 12px #0006 inset;
+    text-shadow: 0 0 3px #000a;
+    font-size: 18px;
+    &.blue {
+        background: @clblue;
+        color: #fff;
+    }
+    &.mid {
+        border-radius: 9px;
+        line-height: 38px;
+        height: 38px;
+    }
+    &.red {
+        background: @clerr;
+        color: #fff;
+    }
+    &.orange {
+        background: darkorange;
+        color: #fff;
+    }
+
+    &:hover {
+        cursor: pointer;
+        opacity: 1;
+        border-color: #fff8;
+        text-shadow: 1px 1px 1px #0006;
+    }
+    &:active {
+        box-shadow: none;
+        text-shadow: none;
+    }
+    &.ing{
+        color: transparent;
+        text-shadow: none;
+        box-shadow: none;
+        opacity: 0.6;
+        border-color: transparent;
+        &::before {
+            top: 50%;
+            left: 50%;
+            margin-left: -29px;
+            margin-top: -5px;
+            position: absolute;
+            content: url(../image/ld/w.gif);
+            filter: grayscale(1);
+            opacity: 0.5;
+        }
+    }
+    &.ban {
+        text-shadow: none;
+        cursor: default;
+        opacity: 0.2;
+        box-shadow: none;
+    }
+
+}
+
+input {
+    box-sizing: border-box;
+    @h: 34px;
+    display: block;
+    height: @h;
+    line-height: @h;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    // background-color: #000;
+    border-bottom: 2px solid #fff6;
+    &:hover {
+        border-color: @clblue;
+    }
+    &:focus {
+        // box-shadow: 2px 2px 1px #0008;
+        // padding: 0 @pgpd*0.5;
+        border-color: @clblue;
+        background-image: linear-gradient(to top, #0006, #0000);
+    }
+}
+
+textarea {
+    @h: 20px;
+    display: block;
+    line-height: @h;
+    min-height: @h*2 + @pgpd;
+    width: 100%;
+    padding: @pgpd*0.5 0;
+    border-bottom: 2px solid #fff6;
+    &:hover {
+        border-color: @clblue;
+    }
+    &:focus {
+        // box-shadow: 2px 2px 1px #0008;
+        // padding: 0 @pgpd*0.5;
+        border-color: @clblue;
+        background-image: linear-gradient(to top, #0006, #0000);
+    }
+}
+
+label {
+    display: block;
+    text-align: left;
+    font-size: 15px;
+    color: #fffb;
+}
+
+table {
+    border: 1px solid #fff6;
+    border-collapse: collapse;
+    td, th {
+        padding: 2px 5px;
+        border: 1px solid #fff6;
+    }
+}
+
+
+.popbox_err_tip_before {
+    &::before{
+        display: inline-block;
+        content: "!";
+        font-weight: bold;
+        background-color: @clerr;
+        color: #444;
+        border-radius: 100px;
+        height: 16px;
+        width: 16px;
+        margin: 2px 6px 0 0;
+        font-size: 14px;
+        line-height: 16px;
+        text-align: center;
+    }
+}
+
+.popbox {
+    z-index: 9;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: @bodyw;
+    height: @bodyh;
+    overflow: hidden;
+    .bg {
+        width: 100%;
+        height: 100%;
+        background: #0004;
+    }
+    .bg.dark {
+        background: #000b;
+    }
+    .con {
+        .popbox_err_tip_before;
+        transition: all 0.4s ease-in-out;
+        position: absolute;
+        z-index: 2;
+        left: 50%;
+        margin-left: 0px - (@bodyw / 2) + @pgpd;
+        top: @pgpd;
+        width: @bodyw - (@pgpd * 4);
+        display: block;
+        color: @clerr;
+        display: block;
+        text-align: center;
+        padding: @pgpd;
+        background: #444;
+        border-radius: 5px;
+        box-shadow: 6px 6px 12px #0008;
+        line-height: 20px;
+        opacity: 1;
+    }
+    .con.box {
+        top: auto;
+        bottom: @pgpd;
+        button {
+            display: block;
+            width: 100%;
+            // box-shadow: none;
+            &.ok {
+                margin: @pgpd 0;
+            }
+        }
+        p.red {
+            color: @clerr;
+        }
+        p.orange {
+            color: darkorange;
+        }
+    }
+    .con.box::before {
+        display: none;
+        content: '';
+    }
+    .con.hide {
+        top: -80px;
+        opacity: 0;
+        color: transparent;
+    }
+    .con.box.hide {
+        top: auto;
+        bottom: -80px;
+        
+    }
+
+    &.hide {
+        display: none;
+        .bg {
+            display: none;
+        }
+    }
+}
+

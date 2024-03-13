@@ -1,0 +1,76 @@
+<div class="container" @mousemove="mousemove" @click="mousemove">
+    <div class="ibox">
+        <div class="lgi"><img src="../image/icos/128.png"
+            :style="{filter: `drop-shadow(${lgix*1.2}px ${lgiy*1.5}px ${-lgiy/3}px #000b)`, transform: `rotate(${lgix*4.4}deg) translate(${lgix}px, ${lgiy}px) skewX(${lgix/2}deg) rotateX(${lgiy*2}deg)`}" /><div class="sdn"></div></div>
+
+        <div class="itpr" v-if="!rdnstr">
+            <div class="per"><b :style="{width: rdnbct/6+'%'}"></b></div>
+            <p>{{(rdnbct/6).toFixed(1)}}%</p>
+            <p>Securely initialize your wallet by <i>moving your mouse randomly</i>, ensuring the wallet created is fully protected</p>
+        </div>
+        <div v-else >
+            <div class="ttl">
+                <h1 v-if="unlock">Welcome Back!</h1>
+                <h1 v-else>MoneyNex<br></h1>
+                <p>Your key to future money</p>
+            </div>
+
+            <div v-if="unlock" class="pswd">
+                <!-- <p>Password</p> -->
+                <input ref="iptpw" v-model="ulkpass" type="password" placeholder="Password" @keyup="pskup" />
+                <br/>
+                <button class="" @click="doulk">Unlock</button>
+            </div>
+            <div v-else-if="setpass" class="stps">
+
+                <label>Set a password to manage your wallet</label>
+
+                <input type="password" v-model="pass1" placeholder="Password" />
+                <input type="password" v-model="pass2" placeholder="Repeat password" />
+
+                <button @click="dopass">OK</button>
+
+            </div>
+            <div v-else-if="backup" class="bkup">
+
+                <div class="adr">
+                    <label>Your new wallet address</label>
+                    <h1>{{acc.address.substring(0, 17)}}...</h1>
+                </div>
+                <label class="tip">Back up your private key</label>
+                <textarea>{{acc.private_key}}</textarea>
+
+                <div class="btns">
+                    <button class="" @click="cprvk">Copy</button>
+                    <button class="blue" @click="dobnk">Next</button>
+                </div>
+
+
+            </div>
+            <div v-else :class="`page p${pgi}`">
+                <div :class="`swts s${pgi}`">
+                    <div @click="pgi=1" :class="`swt ${pgi==1?'active':''}`"><h1>Create</h1></div>
+                    <div @click="pgi=2" :class="`swt ${pgi==2?'active':''}`"><h1>Import</h1></div>
+                </div>
+                <div class="p1" v-if="pgi==1">
+                    <label>Create a new wallet by generating a randonm private key</label>
+                    <button :class="`blue ${crting?'ing':''}`" @click="create">Create wallet</button>
+                    <!-- <a @click="clswd">Cancel</a> -->
+
+                </div>
+                <div class="p2" v-if="pgi==2">
+                    <label>Import your private key</label>
+                    <div class="ipt">
+                        <label></label>
+                        <textarea @input="cleanerr" v-model="importkey" placeholder="Past or input your private key or password"></textarea>
+                    </div>
+                    <button @click="importpk" :class="`${crting?'ing':''}`">Import wallet</button>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

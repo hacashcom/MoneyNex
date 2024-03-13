@@ -1,0 +1,120 @@
+<html>
+<body>
+
+<img src="http://127.0.0.1:7890" style="display: none;" />
+
+    
+<div id="info">
+    <img src="" />
+    <h1></h1>
+    <p></p>
+</div>
+
+<div id="test">
+    <p id="wltif">...</p>
+    <p><button id="connect_wallet">Connect Wallet</button></p>
+    <p><button id="sign_trs">Sign Transfer</button></p>
+    <p id="trsw"></p>
+</div>
+
+<script>
+
+var $id = function(s) {
+    return document.getElementById(s)
+}
+, $tags = function(b, s) {
+    return b.getElementsByTagName(s)
+}
+, $tag = function(b, s) {
+    return $tags(b, s)[0]
+}
+
+
+window.MoneyNexInit = function(wltinfo){
+
+    console.log(MoneyNex)
+
+    // var wltinfo = MoneyNex.info // wltinfo
+
+    var info = $id('info')
+    $tag(info, 'img').src = wltinfo.icon
+    $tag(info, 'h1').innerText = wltinfo.name
+    $tag(info, 'p').innerText = wltinfo.version
+
+
+    // test
+    var inf = $id('wltif')
+    var cw = $id('connect_wallet')
+    var st = $id('sign_trs')
+    var trsw = $id('trsw')
+
+    function gotAcc(acc) {
+        if(acc && acc.address){
+            inf.innerHTML = acc.address
+            // console.log("hacash.connect_account() ret: ", acc)
+        }
+    }
+
+    // get acc
+    MoneyNex.wallet({}, gotAcc)
+
+    // conn wlt
+    cw.onclick = function(){
+        MoneyNex.connect({}, acc=>{
+            cw.innerHTML = acc.address
+            gotAcc(acc)
+        })
+    }
+
+    // sig trs
+    st.onclick = function(){
+
+        let txobj = JSON.stringify({
+            // fee: '1:246',
+            actions: [/*{
+                kind: 1, // transfer
+                to: '1LRi6Wn38JtUppbFv2uWyAwtctcDLtFDFr',
+                amount: '12.5'
+            },*/{
+                kind: 1, // transfer
+                to: '19vyHUgwSqQci1kUcAa5ryShm1Aau3qxod',
+                amount: '1:248'
+            }]
+        })
+        txobj = encodeURIComponent(btoa(txobj))
+        // call api
+        MoneyNex.transfer({txobj}, (a, b) => {
+            trsw.innerHTML = JSON.stringify(a)
+            console.log(a, b)
+        })
+
+        /*
+        eyJmZWUiOiIxOjI0NCIsImFkZHJlc3MiOiIxTXpOWTFvQTNrZmdZaTc1enF1ajNTUlVQWXp0elhIeks5IiwiYWN0aW9ucyI6W3sidG8iOiIxNnUyaHF1cjRoNTM3Skw0ZWY1dWF0NnhRVzk5WjFKTllDIiwiYW1vdW50IjoiMTIuNSJ9XX0
+
+        */
+    }
+
+
+
+
+
+}
+
+setTimeout(function(){
+
+    if(window.MoneyNex){
+
+        console.log(MoneyNex)
+
+    }else{
+    
+        alert("not find MoneyNex wallet")
+
+    }
+
+}, 750)
+
+
+</script>
+</body>
+</html>

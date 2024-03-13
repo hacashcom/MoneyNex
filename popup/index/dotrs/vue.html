@@ -1,0 +1,39 @@
+<div class="header">
+    <div class="bk" @click="back">
+        <img :src="`${icfp}left.svg`" />
+    </div>
+    <h1 class="ptt">Send</h1>
+    <!-- <div class="cvs"></div> -->
+</div>
+
+<div class="form">
+    <div class="ipw">
+        <label>Send to</label>
+        <input v-model="recaddr" placeholder="Enter an address" />
+    </div>
+
+    <div class="ipw">
+        <label>Select asset</label>
+        <div class="cis">
+            <div :class="`it f ${cisx==1?'active':''}`" @click="swtcis(1)">
+                <a><img :src="`${icfp}hac.svg`" />HAC</a></div>
+            <div :class="`it e ${cisx==2?'active':''}`" @click="swtcis(2)">
+                <a><img :src="`${icfp}hacd.svg`" />HACD</a></div>
+        </div>
+        <input v-if="cisx==1" v-model="amthac" placeholder="Enter HAC amount (e.g., 0.1, 10, 1:247, 1:249)" />
+        <textarea class="diary" v-if="cisx==2" v-model="nmshacd" placeholder="Enter HACD names separated by commas, like 'AAABBB,HYYMMN'(Max 200)"></textarea>
+    </div>
+
+    <div class="ipw" id="gasw">
+        <swtgas ref="swtgas" />
+    </div>
+
+    <div class="ipw">
+        <p class="pmtip">From: {{myadr.substring(0, 9)}}...</p>
+    </div>
+</div>
+
+<div class="btns">
+    <button @click="back">Cancel</button>
+    <button @click="dotrs" :class="`blue ${ing?'ing':''}`">Transfer</button>
+</div>

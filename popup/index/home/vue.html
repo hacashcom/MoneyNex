@@ -1,0 +1,217 @@
+<div class="header">
+    <div class="lg">
+        <img src='../image/icos/128.png' />
+        <span class="n" v-if="lgtip">{{lgtip}}</span>
+        <!-- Hacash<br>Wallet -->
+    </div>
+    <div class="adrs">
+        <h1 class="btn" @click="openadrswct">{{addr.substring(0,7)}}
+            <img class="icf" :src="`${icfp}down.svg`" />
+        </h1>
+        <div class="menu" v-if="adrswct" @click="adrswct=0">
+            <ul>
+                <img class="close" :src="`${icfp}delete.svg`" @click="adrswct=0" />
+                <div class="tt">Switch account</div>
+                <li v-for="(v, k) in adrmaps" 
+                    :class="`${k==addr?'active':''}`"
+                    @click="swtcuraddr(k)">
+                    {{k}}
+                </li>
+                <div class="add">
+                    <button class="mid" @click="donewacc">Create or import a new account</button>
+                </div>
+            </ul>
+        </div>
+    </div>
+    <div class="opts">
+        <div class="btn" @click="optmenu=1">
+            <img class="icf" :src="`${icfp}more.svg`" />
+        </div>
+        <div class="menu" v-if="optmenu" @click="optmenu=0">
+            <ul>
+                <li class="f" @click="vmadrexpl">
+                    <img :src="`${icfp}jump.svg`" />
+                    <a>View on explorer<i>hacash.org</i></a>
+                </li>
+                <li @click="opintab">
+                    <img :src="`${icfp}unfold.svg`" />
+                    <a>Expand view</a>
+                </li>
+                <li class="" @click="opacinf">
+                    <img :src="`${icfp}info.svg`" />
+                    <a>Account details</a>
+                </li>
+                <li @click="dolock">
+                    <img :src="`${icfp}lock.svg`" />
+                    <a>Lock wallet</a>
+                </li>
+                <li @click="doexit">
+                    <img :src="`${icfp}clean.svg`" />
+                    <a>Reset wallet</a>
+                </li>
+                <li @click="dospt">
+                    <img :src="`${icfp}support.svg`" />
+                    <a>Support</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="cvs"></div>
+</div>
+
+
+<div class="hmpg">
+    <div class="adcp" title="copy address">
+        <button class="btn" @click="cpadr"><b>{{sadr}}</b><img :src="`${icfp}copy.svg`" /></button>
+    </div>
+
+    <div class="blsw">
+        <table>
+            <tr v-for="(v) in blsctx" :class="`${v}`"><td>
+                <img class="lg" :src="`${icfp}${v.toLowerCase()}.svg`" /></td>
+            <td class="amt">
+                <img class="n" src="../image/ld/c.gif" v-if="!blsobj">
+                <b class="n" v-if="blsobj">{{blsobj[v]}}</b>
+            </td><td>
+                <u>{{v}}</u>
+            </td></tr>
+        </table>
+    </div>
+
+    <div class="opts">
+        <div>
+            <div class="itw" @click="opurl('https://sea.hacash.diamonds')"> 
+                <div class="ico"><img :src="`${icfp}shopping.svg`" /></div>
+                <h4>Buy & Sell</h4>
+                <i class="ad">Ad</i>
+            </div>
+        </div>
+        <div>
+            <div class="itw" @click="dotrs">
+                <div class="ico"><img :src="`${icfp}transfer.svg`" /></div>
+                <h4>Send</h4>
+            </div>
+        </div>
+        <div class="hide">
+            <div class="itw">
+                <div class="ico"><img :src="`${icfp}moreb.svg`" /></div>
+                <h4>More</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div>
+            <div :class="`item ${tabx==1?'active':''}`" @click="swttab(1)"><b>Activity</b></div>
+        </div>
+        <div class="hide">
+            <div :class="`item ${tabx==2?'active':''}`" @click="swttab(2)"><b>---</b></div>
+        </div>
+        <div>
+            <div :class="`item ${tabx==3?'active':''}`" @click="swttab(3)"><b>Collection</b></div>
+        </div>
+    </div>
+    
+    <!-- transaction -->
+    <div class="lgw txlg" v-if="tabx==1">
+        <ul v-if="trslgs && trslgs.length>0">
+            <li v-for="(v, i) in trslgs" :key="v.hash.substring(0, 16)">
+                <div :class="`lgcd i${i} stat${v.stat}`">
+                    <div v-if="v.type=='MUL'">
+                        <div class="hd"    >
+                            <div><h1 class="amt">
+                                <img class="lg" :src="`${icfp}ftag.svg`" />
+                                <b>Multiple actions</b></h1>
+                            </div>
+                            <div><b class="btn" v-if="!v.ufd" @click="v.ufd=1">Check info</b></div>
+                        </div>
+                        <p class="desc" v-if="v.ufd">{{v.desc}}</p>
+                    </div>
+                    <div v-else class="hd">
+                        <div><h1 class="amt">
+                            <img class="lg" :src="`${icfp}${v.type.toLowerCase()}.svg`" />
+                            <b>{{v.asset.replace(/\s\(\S+\)/ig, '')}}</b>
+                        </h1></div>
+                        <div>
+                            <div class="frto">
+                                <b class="f">{{v.from.substring(0, 3)}}...</b>
+                                <img :src="`${icfp}right.svg`" />
+                                <b>{{v.to.substring(0, 9)}}...</b>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div>
+                            <a v-if="v.stat==1" title="Open tx in explorer" class="hxj" @click="optx(v.hash)"><b>Tx: {{v.hash.substring(0,16)}}...</b><img :src="`${icfp}jump.svg`" /></a>
+                            <i class="time" v-else-if="v.stat==0">{{new Date(v.time*1000).toLocaleString()}}</i>
+                            <i class="time" v-else >Transaction failed</i>
+                        </div>
+                        <div v-if="v.stat!=1">
+                            <a @click="cpbody(v.body)" class="abtn">Copy Tx Body</a>
+                        </div>
+                        <div v-if="v.stat==2">
+                            <a @click="v.stat=0; updtxsts([v])" class="abtn">Refresh</a>
+                        </div>
+                        <div>
+                            <div v-if="v.stat==0" class="pdin">
+                                <img src="../image/ld/b.gif" />
+                                <b>Processing</b>
+                            </div>
+                            <div v-else-if="v.stat==2" class="fail">
+                                <b>Failed</b>
+                            </div>
+                            <div v-else class="cfim">
+                                <b>Confirm</b>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ft" v-if="v.stat==0">
+                        <div>
+                        </div>
+                        <div>
+                            <!-- <a class="" @click="cpbody(v.body)">More <img :src="`${icfp}down.svg`"/></a> -->
+                        </div>
+                    </div>
+                </div>
+            </li>
+        </ul>
+        <img v-if="trslgs==null" class="ldf" src="../image/ld/w.gif" />
+        <div v-else>
+            <p v-if="trslgs.length>0" class="end">- END -</p>
+            <p v-else class="end">- You have no transactions -</p>
+        </div>
+    </div>
+
+    <!-- activity -->
+    <div class="lgw actv" v-if="tabx==2">
+        <div class="actvs" v-if="actvlgs && actvlgs.length>0">
+        </div>
+        <img v-if="actvlgs==null" class="ldf" src="../image/ld/w.gif" />
+        <div v-else>
+            <p v-if="actvlgs.length>0" class="end">- END -</p>
+            <p v-else class="end">- You have no activitys -</p>
+        </div>
+    </div>
+
+    <!-- collection -->
+    <div class="lgw clct" v-if="tabx==3">
+        <p class="fpt">Display assets only after four block confirmations</p>     
+        <div class="dias" v-if="dialis && dialis.length>0">
+            <div class="hd">
+                <div><label>{{dialis.length}} HACD:</label></div>
+            </div>
+            <p class="nms">{{dialis.join(",")}}</p>
+            <div class="btns">
+                <a @click="cpdianms">Copy name list</a>
+                <a @click="vwdiaexpl">View in explorer</a>
+            </div>
+        </div>
+        <img v-if="dialis==null" class="ldf" src="../image/ld/w.gif" />
+        <div v-else>
+            <p v-if="dialis.length>0" class="end">- END -</p>
+            <p v-else class="end">- You have no collections -</p>
+        </div>   
+    </div>
+
+
+</div>

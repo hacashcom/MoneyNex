@@ -1,0 +1,46 @@
+
+
+.popbox.pass {
+    .bg {
+
+    }
+    .box {
+        bottom: 30%;
+        h1 {
+            font-size: 20px;
+            margin-top: @pgpd;
+        }
+        .ipw {
+            width: 92%;
+            margin: @pgpd*3 auto 0;
+        }
+        .err {
+            transition: all .4s;
+            margin: @pgpd 0;
+            opacity: 1;
+            p {
+                // font-size: 14px;
+                line-height: 22px;
+                color: @clerr;
+                text-align: left;
+                .popbox_err_tip_before;
+                
+            }
+            &.hide {
+                opacity: 0;
+            }
+        }
+        input {
+        }
+    }
+    .btns {
+        margin-top: @pgpd;
+        display: flex;
+        justify-content: space-between;
+        button {
+            display: block;
+            width: @bodyw * 0.39;
+            margin: 0 !important;
+        }
+    }
+}

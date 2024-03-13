@@ -1,0 +1,78 @@
+
+#dotrs{
+
+.form {
+    padding: 0 @pgpd*2;
+    .ipw {
+        padding-top: @pgpd*2;
+    }
+    .diary {
+        // font-size: 15px;
+    }
+    .cis {
+        display: flex;
+        margin: @pgpd*0.5 0;
+        // border-radius: 12px;
+        overflow: hidden;
+        @h: 20px;
+        a {
+            position: relative;
+            display: block;
+            background: #fff2;
+            padding: 3px 10px;
+            height: @h;
+            line-height: @h;
+            cursor: pointer;
+        }
+        .it {
+            img {
+                display: none;
+                top: 3px;
+                left: 10px;
+                height: @h;
+                position: absolute;
+            }
+            &.f a{
+                border-radius: 5px 0 0 5px;
+            }
+            &.e a{
+                border-radius: 0 5px 5px 0;
+            }
+        }
+        .it.active {
+            img {
+                display: block;
+            }
+            a {
+                padding-left: 36px;
+                background-image: linear-gradient(to right, #0000, @clblue, #0000);
+                cursor: default;
+            }
+            &.f a{
+                background-image: linear-gradient(to right, @clblue, #0000);
+            }
+            &.e a{
+                background-image: linear-gradient(to right, #0000, @clblue);
+            }
+        }
+    }
+}
+
+.pmtip {
+    text-align: right;
+    color: #fff6;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.btns {
+    display: flex;
+    justify-content: space-evenly;
+    button {
+        width: 42%;
+    }
+}
+
+
+}
+

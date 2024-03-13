@@ -1,0 +1,31 @@
+
+<div class="gasw">
+    <label>Select gas fee</label>
+    <div class="con">
+        <div>
+            <div :class="`item f ${gsus==1?'active':''}`" @click="doswt(1)">
+                <h5 class="n">Avg</h5>
+                <p>{{dectwo(bgas)}} HAC<br/>15 mins</p>
+            </div>
+        </div>
+        <div>
+            <div :class="`item f ${gsus==2?'active':''}`" @click="doswt(2)">
+                <h5 class="f">Fast</h5>
+                <p>{{dectwo(bgas*4)}} HAC<br/>10 mins</p>
+            </div>
+        </div>
+        <div class="high">
+            <div :class="`item f ${gsus==3?'active':''}`" @click="doswt(3)">
+                <h5 class="h">Highest</h5>
+                <p>{{dectwo(bgas*12)}} HAC<br/>5 mins</p>
+            </div>
+        </div>
+        <div class="custom">
+            <div :class="`item f ${gsus==4?'active':''}`" @click="doswt(4)">
+                <h5>Custom</h5>
+                <input v-model="setgas" placeholder="Gas HAC" />
+            </div>
+        </div>
+
+    </div>
+</div>

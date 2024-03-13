@@ -1,0 +1,11 @@
+
+<!-- wpcfm -->
+<div :class="`popbox ${show?'':'hide'}`">
+    <div class="bg dark"></div>
+    <div :class="`con box ${cnsh?'':'hide'}`">
+        <p :class="`tip cfmt ${col?col:''}`" v-html="tip"></p>
+        <button :class="`mid ${col?col:'blue'} ok`" @click="cok">{{okbtn}}</button>
+        <button class="mid cancel" @click="ccl">Cancel</button>
+    </div>
+</div>
+        
