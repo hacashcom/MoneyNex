@@ -164,6 +164,47 @@ The above transaction construction adopts Hacash's readable contract technology,
 
 More transaction 'action' categories are in development.
 
+### Sign a multi-signature transaction
+
+Hacash supports high-end functions such as native DEX atomic transactions and multi-signature transactions, after building a transaction through SDK or other interfaces, it can be submitted to the wallet and request user signatures, and the same transaction can request multiple user signatures, only need to save the signed tx_body data, and after all user signatures are completed, the transaction will take effect and can be submitted to the chain for confirmation.
+
+```js
+    let txbody = "02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed18f40104000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500000000"
+    // call api
+    MoneyNex.signtx({txbody}, (a, b) => {
+        sgtw.innerHTML = JSON.stringify(a)
+        console.log(a, b)
+    })
+```
+
+API return:
+
+
+```js
+{
+    "sign_hash": "e2700db4558ef1e1b540fd53f5e7a0fa7b9d096947f9dc20d07bd507969987b9",
+    "hash": "e2700db4558ef1e1b540fd53f5e7a0fa7b9d096947f9dc20d07bd507969987b9",
+    "hash_with_fee": "4001dd689105d2174c15a21814a7e832747ed986c171b370030f43ebbdd5e9fc",
+    "body": "02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed18f40104000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500020231745adae24044ff09c3541537160abb8d5d720275bbaeed0b3d035b1e8b263caafe3ea70ad599f9afaef4381c5678b47a6fad4be9d7b5603ca00577f494ae741d0649eebe6e67d33efb430e70691fae544016d1e84925b25282fb1c9c9f5e08037bb06e880a8afb03f4035bdcd9354e798a0cbdee613bebe17d2c8db14f0eb7344d7baf705d2efec958c3a3aa9b2752c142572b4f3c5bf0f84f6a92a112ebbd49398e738f82356a0d3ea9f0181138568ede3b3d3b90d2848d116785222289ff140000",
+    "fee": "0.0004",
+    "address": "1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9",
+    "need_sign_address": {
+        "1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9": true,
+        "1ARE89cbY5UnVv8UT14p1WiCMEh21YLfQT": false
+    },
+    "description": [
+        "Pay 0.0004HAC tx fee by 1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9",
+        "Transfer 1.2HAC from 1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9 to 16u2hqur4h537JL4ef5uat6xQW99Z1JNYC",
+        "Transfer 125HAC from 1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9 to 1ARE89cbY5UnVv8UT14p1WiCMEh21YLfQT",
+        "Transfer 1 HACD (TUHBME) from 1ARE89cbY5UnVv8UT14p1WiCMEh21YLfQT to 1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9"
+    ],
+    "ret": 0
+}
+```
+
+Among them, the `body` field is the signed transaction body data, and the user's signature data will be automatically added to the body and needs to be saved. Wait for all users to sign and then submit the body to the chain.
+
+
 ### Test code
 
 The test reference use cases of the above SDK interfaces can be found in the following directory and can be used as a writing example for developers:

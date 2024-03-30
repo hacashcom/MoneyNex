@@ -30,18 +30,22 @@ var routePageSignTx = (adr, clbk) => {
         nop() {
             window.close()
         }
+        , async req_check() {
+            let t = this
+            // await sleep(500)
+            let resp = await checkTx(txbody, params)
+            t.txres = resp
+            t.txsgck = resp.need_sign_address
+            console.log(resp)
+            return resp
+        }
         // check trs
         , async crtrs() {
             let t = this
             t.lding = yes
             params[sa] = t.adr
-            // console.log(txobj)
-            // await sleep(500)
-            let resp = await checkTx(txbody, params)
-            t.txsgck = resp.need_sign_address
-            console.log(resp)
+            let resp = await t.req_check()
             t.lding = no
-            t.txres = resp
             t.txdesc = parseTxDesc(resp)
             // deal err
             t.txerr = resp.error || nil
@@ -87,15 +91,13 @@ var routePageSignTx = (adr, clbk) => {
             // req new tx body
             params.sign_pubkey = signobj.pubkey
             params.sign_data = signobj.signature
-            let resp = await checkTx(txbody, params)
-            t.txsgck = resp.need_sign_address
-            console.log(resp)
+            let resp = await t.req_check()
             // success return
-            await returnDataToUserPage(t.txres)
+            await returnDataToUserPage(resp)
             // ok
             t.ing = no
             t.end = yes
-            // _setTimeout(t.nop, 2500)
+            _setTimeout(t.nop, 2500)
             _setTimeout(_=>t.ende=1, 150)
             // ok
             // showWPtip("Tx submitted successfully!")
