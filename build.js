@@ -60,10 +60,17 @@ let page_defs = {
 
     'transfer': [
         [
-            'transfer/sigtrs'   
+            'transfer/sigtrs'
         ],
         ['transfer']
-    ] // sign transfer
+    ], // do transfer
+
+    'signtx': [
+        [
+            'signtx/signtx'
+        ],
+        ['signtx']
+    ] // sign tx
 }
 ;
 

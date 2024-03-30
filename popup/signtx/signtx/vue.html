@@ -1,0 +1,71 @@
+<div class="header">
+    <div class="lg">
+        <img src='../image/icos/128.png' />
+    </div>
+    <div class="pttl">Sign Tx</div>
+    <div class="adrs">
+        <h1 class="btn" @click="openadrswct">{{adr.substring(0,9)}}...
+            <img class="icf" :src="`${icfp}down.svg`" />
+        </h1>
+        <div class="menu" v-if="adrswct" @click="adrswct=0">
+            <ul>
+                <img class="close" :src="`${icfp}delete.svg`" @click="adrswct=0" />
+                <div class="tt">Switch account</div>
+                <li v-for="(v, k) in adrmaps" 
+                    :class="`${k==adr?'active':''}`"
+                    @click="swtcuraddr(k)">
+                    {{k}}
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="permt">
+    <div class="con">
+        <p class="tip"><b>{{dmu}}</b> create a new transaction and request your signature, please check the transaction actions:</p>
+    </div>
+</div>
+
+
+<div v-if="lding" class="lding">
+    <img class="ldf" src="../image/ld/w.gif" />
+</div>
+<div v-else>
+    <div class="tx" v-if="txdesc && txdesc.length">
+        <ul>
+            <li v-for="(v, i) in txdesc" :class="'l'+i" v-html="v"></li>
+        </ul>
+    </div>
+
+    <div v-if="txerr" class="txerr">
+        <h1>Tx validation failed:</h1>
+        <p>{{txerr}}</p>
+    </div>
+</div>
+
+
+<div v-show="!txerr&&!end" class="sgck">
+    <h5>Signature checks:</h5>
+    <p v-for="(v, k) in txsgck">
+        <a>{{k.substr(0, 17)}}...</a>
+        <b v-if="v" class="yes">Signed OK</b>
+        <b v-if="!v">Not yet</b>
+    </p>
+</div>
+
+
+<div class="btns" v-if="!end">  
+    <div><button @click="nop">Cancel</button></div>
+    <div><button @click="cfim" :class="`blue ${txerr?'ban':''} ${ing?'ing':''}`">Sign Tx</button></div>
+</div>
+<div v-else class="success">
+    <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
+    <p>The transaction has been successfully signed!</p>
+</div>
+
+<div class="wtip" v-if="!end"   >
+    <p>Tips: Transactions are initiated by third-party services, please pay attention to the safety of funds and carefully check the content of the transaction</p>
+</div>
+
+

@@ -1,9 +1,9 @@
-// const explorer_url = 'https://explorer.hacash.org'
-// , wallet_url = 'https://wallet.hacash.org'
+const explorer_url = 'https://explorer.hacash.org'
+, wallet_url = 'https://wallet.hacash.org'
 
 // local test
-const explorer_url = 'http://127.0.0.1:8002'
-, wallet_url = 'http://127.0.0.1:8009'
+// const explorer_url = 'http://127.0.0.1:8002'
+// , wallet_url = 'http://127.0.0.1:8009'
 // test end
 
 let randomString = ctime(yes)+''
@@ -268,6 +268,16 @@ let getAmtTip = (obj) => {
     , bodydata = JSON_stringify(txjson);
     // console.log(JSON_parse(body))
     return do_fetch_post(url, bodydata, jsdttyhdr)
+}
+, checkTx = async (txbody, params) => {
+    let url = wallet_url+"/api/check_tx?"
+    params = params || {}
+    for(var k in params){
+        url += `${k}=${params[k]}&`
+    }
+    // signaddr,signpubkey,signdata
+    // console.log(JSON_parse(body))
+    return do_fetch_post(url, txbody, jsdttyhdr)
 }
 , commitTransactionBySign = async (txbody, pubkey, signature) => {
     let url = wallet_url+"/api/create_trs"

@@ -13,8 +13,10 @@
 <div id="test">
     <p id="wltif">...</p>
     <p><button id="connect_wallet">Connect Wallet</button></p>
-    <p><button id="sign_trs">Sign Transfer</button></p>
+    <p><button id="do_trs">Do Transfer</button></p>
     <p id="trsw"></p>
+    <p><button id="sign_tx">Sgin Tx</button></p>
+    <p id="sgtw"></p>
 </div>
 
 <script>
@@ -45,8 +47,10 @@ window.MoneyNexInit = function(wltinfo){
     // test
     var inf = $id('wltif')
     var cw = $id('connect_wallet')
-    var st = $id('sign_trs')
+    var dt = $id('do_trs')
+    var st = $id('sign_tx')
     var trsw = $id('trsw')
+    var sgtw = $id('sgtw')
 
     function gotAcc(acc) {
         if(acc && acc.address){
@@ -66,8 +70,8 @@ window.MoneyNexInit = function(wltinfo){
         })
     }
 
-    // sig trs
-    st.onclick = function(){
+    // do trs
+    dt.onclick = function(){
 
         let txobj = JSON.stringify({
             // fee: '1:246',
@@ -92,6 +96,20 @@ window.MoneyNexInit = function(wltinfo){
         eyJmZWUiOiIxOjI0NCIsImFkZHJlc3MiOiIxTXpOWTFvQTNrZmdZaTc1enF1ajNTUlVQWXp0elhIeks5IiwiYWN0aW9ucyI6W3sidG8iOiIxNnUyaHF1cjRoNTM3Skw0ZWY1dWF0NnhRVzk5WjFKTllDIiwiYW1vdW50IjoiMTIuNSJ9XX0
 
         */
+    }
+
+    // sign tx
+    st.onclick = function(){
+
+        // let txbody = "02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed18f40104000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500000000"
+        let txbody = "02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed18f40104000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500010231745adae24044ff09c3541537160abb8d5d720275bbaeed0b3d035b1e8b263caafe3ea70ad599f9afaef4381c5678b47a6fad4be9d7b5603ca00577f494ae741d0649eebe6e67d33efb430e70691fae544016d1e84925b25282fb1c9c9f5e080000"
+        // call api
+        MoneyNex.signtx({txbody}, (a, b) => {
+            sgtw.innerHTML = JSON.stringify(a)
+            console.log(a, b)
+        })
+        // sign_addr = "1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9"
+
     }
 
 
