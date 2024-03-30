@@ -164,3 +164,9 @@ The above transaction construction adopts Hacash's readable contract technology,
 
 More transaction 'action' categories are in development.
 
+### Test code
+
+The test reference use cases of the above SDK interfaces can be found in the following directory and can be used as a writing example for developers:
+
+- [SDK Test](https://github.com/hacashcom/MoneyNex/tree/main/test)
+
