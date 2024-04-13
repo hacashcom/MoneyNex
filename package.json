@@ -1,0 +1,12 @@
+{
+    "name": "MoneyNex",
+    "version": "0.1.2",
+    "description": "A Bitcoin and Hacash Wallet",
+    "dependencies": {
+        "@vue/compiler-dom": "^3.4.21",
+        "less": "^4.2.0",
+        "csso": "^5.0.5",
+        "uglify-js": "^3.17.4",
+        "html-minifier": "^4.0.0"
+    }
+}

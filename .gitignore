@@ -11,7 +11,7 @@ popup/*/*/*.css
 popup/*.html
 popup/*.css
 popup/*.js
-*/icos/*.png
+# */icd cos/*.png
 # vue.*.js
 # crypto-js.*.js
 

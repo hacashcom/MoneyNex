@@ -103,12 +103,13 @@ var vuepuplist = (vuecomptpls, ext) => {
 } 
 
 // requires
-const vue = require('vue')
-const vue_compiler_dom = require('@vue/compiler-dom')
-const babel = require("@babel/core")
+// const vue = require('vue')
+// const babel = require("@babel/core")
 const http = require('http')
 const path = require('path')
 const fs = require('fs')
+// other
+const vue_compiler_dom = require('@vue/compiler-dom')
 const less = require('less')
 const csso = require('csso')
 const uglifyjs = require("uglify-js")
