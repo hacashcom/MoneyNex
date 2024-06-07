@@ -17,6 +17,8 @@
     <p id="trsw"></p>
     <p><button id="sign_tx">Sgin Tx</button></p>
     <p id="sgtw"></p>
+    <p><button id="raise_fee">Raise Fee</button></p>
+    <p id="rsfe"></p>
 </div>
 
 <script>
@@ -49,8 +51,10 @@ window.MoneyNexInit = function(wltinfo){
     var cw = $id('connect_wallet')
     var dt = $id('do_trs')
     var st = $id('sign_tx')
+    var rf = $id('raise_fee')
     var trsw = $id('trsw')
     var sgtw = $id('sgtw')
+    var rsfe = $id('rsfe')
 
     function gotAcc(acc) {
         if(acc && acc.address){
@@ -110,6 +114,17 @@ window.MoneyNexInit = function(wltinfo){
         })
         // sign_addr = "1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9"
 
+    }
+
+    // raise fee
+    rf.onclick = function(){
+        let hash = "595bba3c8449cb19850f77a84943f9cb34b3b0b4a434a500aed6c66fb9944e94"
+        let fee = "12:245"
+        // call api
+        MoneyNex.raisefee({hash, fee}, (a) => {
+            rsfe.innerHTML = JSON.stringify(a)
+            console.log(a)
+        })
     }
 
 

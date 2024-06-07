@@ -70,7 +70,14 @@ let page_defs = {
             'signtx/signtx'
         ],
         ['signtx']
-    ] // sign tx
+    ], // sign tx
+
+    'raisefee': [
+        [
+            'raisefee/raisefee'
+        ],
+        ['raisefee']
+    ] // raise fee
 }
 ;
 

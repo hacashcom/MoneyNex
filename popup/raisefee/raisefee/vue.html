@@ -1,0 +1,52 @@
+<div class="header">
+    <div class="lg">
+        <img src='../image/icos/128.png' />
+    </div>
+    <div class="pttl">Raise Tx Fee</div>
+    <div class="adrs">
+        <h1 class="btn" @click="openadrswct">{{adr.substring(0,9)}}...
+            <img class="icf" :src="`${icfp}down.svg`" />
+        </h1>
+        <div class="menu" v-if="adrswct" @click="adrswct=0">
+            <ul>
+                <img class="close" :src="`${icfp}delete.svg`" @click="adrswct=0" />
+                <div class="tt">Switch account</div>
+                <li v-for="(v, k) in adrmaps" 
+                    :class="`${k==adr?'active':''}`"
+                    @click="swtcuraddr(k)">
+                    {{k}}
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+<div class="ipt">
+
+    <div class="item">
+        <label>Tx Hash</label>
+        <textarea v-model="hash" placeholder="Tx hash"></textarea>
+    </div>
+    <div class="item">
+        <label>Fee</label>
+        <input v-model="fee" placeholder="Tx fee want to reset, such as '1:245' or '0.0012'" />
+    </div>
+</div>
+
+
+<div class="btns" v-if="!end">  
+    <div><button @click="nop">Cancel</button></div>
+    <div><button @click="cfim" :class="`blue ${err?'ban':''} ${ing?'ing':''}`">Raise Fee</button></div>
+</div>
+<div v-else class="success">
+    <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
+    <p>The tx fee has been increased!</p>
+</div>
+
+
+<div class="permt">
+    <div class="con">
+        <p class="tip">Improve the ordering of tx in the tx pool so that they can be packaged and confirmed as soon as possible, or make a manual quote for HACD bidding.</p>
+    </div>
+</div>

@@ -5,6 +5,7 @@ var optkey_check_wallet = "wallet"
 , optkey_connect_account = "connect"
 , optkey_do_transfer = "transfer"
 , optkey_sign_tx = "signtx"
+, optkey_raise_fee = "raisefee"
 // , optkey_wallet_info = "wallet_info"
 // , optkey_open_wallet = "open_wallet"
 // , optkey_close_wallet = "close_wallet"
@@ -16,5 +17,6 @@ var optkey_list_to_popup = [
     optkey_connect_account,
     optkey_do_transfer,
     optkey_sign_tx,
+    optkey_raise_fee,
 ];
 

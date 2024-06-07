@@ -50,7 +50,7 @@ var routePageSignTx = (adr, clbk) => {
             // deal err
             t.txerr = resp.error || nil
             // req
-        }   
+        }
         , async cfim() {
             let t = this
             if(t.txerr){

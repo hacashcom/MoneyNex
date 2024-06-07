@@ -202,6 +202,30 @@ Hacash 支持原生 DEX 原子交易、多签交易等高阶功能，通过 SDK 
 
 其中，`body` 字段即为已经签名后的交易体数据，用户签名数据会自动添加进 body 内，需保存。等待所有用户签名完成后，即可将 body 提交上链。
 
+### 提升交易手续费
+
+Hacash 支持实时提升手续费来改变在交易池内的排序，以达到尽快打包确认的目的。HACD 竞价费本质上也是交易的手续费，也可以采用此种方式来改变竞价排序。
+
+```js
+    let hash = "e2700db4558ef1e1b540fd53f5e7a0fa7b9d096947f9dc20d07bd507969987b9"
+    let fee = "2:245" // or 0.002
+    // call api
+    MoneyNex.raisefee({hash, fee}, (a) => {
+        // sgtw.innerHTML = JSON.stringify(a)
+        console.log(a)
+    })
+```
+
+接口返回值：
+
+
+```js
+{
+    "ret": 0,
+    "success": true,
+}
+```
+
 
 ### 测试代码
 

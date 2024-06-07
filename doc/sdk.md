@@ -204,6 +204,30 @@ API return:
 
 Among them, the `body` field is the signed transaction body data, and the user's signature data will be automatically added to the body and needs to be saved. Wait for all users to sign and then submit the body to the chain.
 
+### Raise Tx Fee
+
+Hacash supports real-time fee increases to change the order of transactions in the transaction pool, so as to achieve the purpose of packaging and confirming as soon as possible. The HACD Bidding Fee is essentially a transaction fee, and it can also be used in this way to change the bidding order.
+
+```js
+    let hash = "e2700db4558ef1e1b540fd53f5e7a0fa7b9d096947f9dc20d07bd507969987b9"
+    let fee = "2:245" // or 0.002
+    // call api
+    MoneyNex.raisefee({hash, fee}, (a) => {
+        // sgtw.innerHTML = JSON.stringify(a)
+        console.log(a)
+    })
+```
+
+API return:
+
+
+```js
+{
+    "ret": 0,
+    "success": true,
+}
+```
+
 
 ### Test code
 
