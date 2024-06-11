@@ -59,8 +59,13 @@ for(var i in optkey_list_to_popup) {
 }
 
 
+// 
+var icon_url = $attr(apidiv, 'icon')
+// , cid = icon_url.match(/\:\/\/([^\/]+)\//)[1];
+// console.log(cid)
 var wltinfo = {
-    'icon': $attr(apidiv, 'icon'),
+    // 'chrome_id': cid,
+    'icon': icon_url,
     'name': 'MoneyNex',
     'version': $attr(apidiv, 'version'),
 }

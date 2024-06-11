@@ -3,7 +3,7 @@ var explorer_url = 'https://explorer.hacash.org'
 
 // local test
 // explorer_url = 'http://127.0.0.1:8002'
-wallet_url = 'http://127.0.0.1:8009'
+// wallet_url = 'http://127.0.0.1:8009'
 // test end
 
 let randomString = ctime(yes)+''
