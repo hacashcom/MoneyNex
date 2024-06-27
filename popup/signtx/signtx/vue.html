@@ -2,7 +2,7 @@
     <div class="lg">
         <img src='../image/icos/128.png' />
     </div>
-    <div class="pttl">Sign Tx</div>
+    <div class="pttl">Sign Transaction</div>
     <div class="adrs">
         <h1 class="btn" @click="openadrswct">{{adr.substring(0,9)}}...
             <img class="icf" :src="`${icfp}down.svg`" />
@@ -23,7 +23,7 @@
 
 <div class="permt">
     <div class="con">
-        <p class="tip"><b>{{dmu}}</b> create a new transaction and request your signature, please check the transaction actions:</p>
+        <p class="tip"><b>{{dmu}}</b> has created a new transaction and is requesting your signature. Please review the transaction details:</p>
     </div>
 </div>
 
@@ -39,18 +39,18 @@
     </div>
 
     <div v-if="txerr" class="txerr">
-        <h1>Tx validation failed:</h1>
+        <h1>Transaction Validation Failed:</h1>
         <p>{{txerr}}</p>
     </div>
 </div>
 
 
 <div v-show="!txerr&&!end" class="sgck">
-    <h5>Signature checks:</h5>
+    <h5>Signature Status:</h5>
     <p v-for="(v, k) in txsgck">
         <a>{{k.substr(0, 17)}}...</a>
-        <b v-if="v" class="yes">Signed OK</b>
-        <b v-if="!v">Not yet</b>
+        <b v-if="v" class="yes">Signed</b>
+        <b v-if="!v">Not Yet</b>
     </p>
 </div>
 
@@ -65,7 +65,7 @@
 </div>
 
 <div class="wtip" v-if="!end"   >
-    <p>Tips: Transactions are initiated by third-party services, please pay attention to the safety of funds and carefully check the content of the transaction</p>
+    <p>Tips: Transactions are initiated by third-party services. Please pay attention to the safety of your funds and carefully review the transaction content.</p>
 </div>
 
 
