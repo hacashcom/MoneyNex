@@ -1,11 +1,9 @@
 var explorer_url = 'https://explorer.hacash.org'
-, wallet_url = 'https://wallet.hacash.com'
-, fullnode_url = wallet_url + '/fullnode'
+, fullnode_url = 'http://wallet.hacash.com/fullnode'
 
 // local test
-explorer_url = 'http://127.0.0.1:8002'
-wallet_url = 'http://127.0.0.1:8009'
-fullnode_url = wallet_url + '/fullnode'
+// explorer_url = 'http://127.0.0.1:8002'
+// fullnode_url = 'http://127.0.0.1:8009/fullnode'
 
 // test end
 
@@ -274,13 +272,13 @@ let getAmtTip = (obj) => {
 }
 , submitTransaction = async (txbody) => {
     return proxyFullnodeApiPost(
-        "/submit/transaction",
-        hexToBytes(txbody))
+        "/submit/transaction", hexToBytes(txbody)
+    )
 }
 , createTransaction = async (txjson) => {
     return proxyFullnodeApiPost(
-        "/create/transaction",
-        JSON_stringify(txjson))
+        "/create/transaction", JSON_stringify(txjson)
+    )
 }
 , checkTransaction = async (txbody, params) => {
     return proxyFullnodeApiPost(
