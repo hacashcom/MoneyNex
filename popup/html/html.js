@@ -81,7 +81,8 @@ var yes = true
 
 , chrome_tabs_create = chrome.tabs.create
 
-// , _Vue = Vue
+/* , _Vue = Vue */
+
 , VueCreateAppEx = (tplf, d,f,m, exps, extds) => {
     let appobj = {
         render: tplf(),
@@ -153,12 +154,12 @@ var yes = true
     return Uint8Array.from(bytes);
 }
 , hexToString = hex => {
-    var arr = hex.split("")
-    var out = ""
-    for (var i = 0; i < arr.length / 2; i++) {
-        var tmp = "0x" + arr[i * 2] + arr[i * 2 + 1]
-        var charValue = String.fromCharCode(tmp);
-        out += charValue
+    let arr = hex.split("")
+    let out = ""
+    for (let i = 0; i < arr.length / 2; i++) {
+        let tmp = "0x" + arr[i * 2] + arr[i * 2 + 1]
+        let charValue = String.fromCharCode(tmp);
+        out += charValue;
     }
     return out
 }
@@ -222,3 +223,6 @@ let hac_mei_unit = amt => {
 , hac_show_mei_unit = amt => {
     return hac_mei_unit(amt) + ' HAC'
 }
+
+
+

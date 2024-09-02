@@ -1,4 +1,4 @@
-let acinfLoadLib= no
+var acinfLoadLib= no
 , routePageAcinf = (addr, clbk) => {
 
     // alert(adrnum)

@@ -1,5 +1,7 @@
+
 var explorer_url = 'https://explorer.hacash.org'
 , fullnode_url = 'http://wallet.hacash.com/fullnode'
+;
 
 // local test
 // explorer_url = 'http://127.0.0.1:8002'
@@ -7,7 +9,7 @@ var explorer_url = 'https://explorer.hacash.org'
 
 // test end
 
-let randomString = ctime(yes)+''
+var randomString = ctime(yes)+''
 , recordRandomString = s=>{
     randomString += s
     // console.log(randomString)
@@ -155,9 +157,10 @@ let randomString = ctime(yes)+''
         return {err: res} // err
     }
 }
+;
 
 
-let getAmtTip = (obj) => {
+var getAmtTip = (obj) => {
     let dc = obj.diamond_count
     , ds = obj.diamonds
     , amt = obj.amount
@@ -293,20 +296,7 @@ let getAmtTip = (obj) => {
 }
 
 
-/*
-, commitTransactionBySign = async (txbody, pubkey, signature) => {
-    let url = fullnode_url+"/create/transaction"
-    , bodydata = JSON_stringify({
-        pubkey,
-        signature,
-        txbody,
-    });
-    // console.log(JSON_parse(body))
-    return do_fetch_post(url, bodydata, jsdttyhdr)
-}
-*/
-
-
+;
 
 
 
@@ -315,7 +305,7 @@ let getAmtTip = (obj) => {
 
 
 
-let cti = ctime(yes)
+var cti = ctime(yes)
 , btlgboot = $id('boot')
 , btlginit = $id('init')
 , btlglogok = $id('logok')
@@ -340,8 +330,7 @@ let cti = ctime(yes)
 
 
 // load show
-_setTimeout(loginSwitchToInit, 10)
-
+_setTimeout(loginSwitchToInit, 10);
 
 
 

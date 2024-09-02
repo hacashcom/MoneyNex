@@ -1,4 +1,4 @@
-let refreshHomeTrsLog = nil
+var refreshHomeTrsLog = nil
 , homeTrsDatas = nil
 , homePageAppPtr = nil
 , homePageCtxPtr = nil
@@ -167,7 +167,8 @@ let refreshHomeTrsLog = nil
             let updtsome = no
             for(let i in updtrs){
                 let li = updtrs[i]
-                let res = await do_fetch_get(fullnode_url+'/query/transaction?hash='+li.hash) || {}
+                , res = (await do_fetch_get(fullnode_url+'/query/transaction?hash='+li.hash)) || {}
+                ;
                 // console.log(res)
                 if(res.confirm){
                     li.stat = 1 // ok
@@ -260,4 +261,4 @@ _setInterval(async ()=>{
     if(homePageCtxPtr){
         await homePageCtxPtr.refreshAll()
     }
-}, minutes*5)
+}, minutes*5);

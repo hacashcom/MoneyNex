@@ -29,16 +29,3 @@ var hpgwstks = ['home']
 }
 ;
 
-
-
-/*
-_setTimeout(()=>{
-    pushhpgw('dotrs')
-}, 1000)
-
-
-_setTimeout(()=>{
-    pophpgw()
-}, 2000)
-
-*/

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MoneyNex",
   "description": "A Hacash and Bitcoin Wallet with open SDK",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "icons": {
     "64": "image/icos/64.png"
   }, 
@@ -12,7 +12,9 @@
   ],
   "host_permissions": [
     "https://*.hacash.org/*",
-    "https://*.hacash.com/*"
+    "https://*.hacash.com/*",
+    "http://*.hacash.org/*",
+    "http://*.hacash.com/*"
   ],
   "optional_permissions": [
   ],

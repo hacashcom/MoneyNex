@@ -1,3 +1,6 @@
 
-// 清除通知
-chrome.action.setBadgeText({ text: ''})
+/* 清除通知 */
+chrome.action.setBadgeText({ text: ''});
+
+
+

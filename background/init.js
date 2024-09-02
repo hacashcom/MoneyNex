@@ -54,10 +54,11 @@ async function sendMessageToCurrentTabContent(req, msg) {
 
 async function openWalletPopupPageInNextTab(req) {
     // console.log(req)
+    req = req || {}
     let curtab = await getCurrentTab()
     , cidx = curtab.index
     , tabid = curtab.id
-    , actpage = (req && req.action) || 'moneynex'
+    , actpage = req.action || 'moneynex'
     , params = `?tid=${tabid}`;
     delete req.action
     for(let k in req){

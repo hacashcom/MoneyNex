@@ -1,4 +1,4 @@
-let routePageDotrs = (clbk) => {
+var routePageDotrs = (clbk) => {
 
     // alert(adr)
 
