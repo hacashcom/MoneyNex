@@ -141,6 +141,28 @@ var yes = true
 , sleep = time => {
     return new Promise((resolve) => setTimeout(resolve, time));
 }
+
+
+/******** uitl ********/
+
+, hexToBytes = hex => {
+    let bytes = [];
+    for (let c = 0; c < hex.length; c += 2){
+        bytes.push(parseInt(hex.substr(c, 2), 16));
+    }
+    return Uint8Array.from(bytes);
+}
+, hexToString = hex => {
+    var arr = hex.split("")
+    var out = ""
+    for (var i = 0; i < arr.length / 2; i++) {
+        var tmp = "0x" + arr[i * 2] + arr[i * 2 + 1]
+        var charValue = String.fromCharCode(tmp);
+        out += charValue
+    }
+    return out
+}
+
 ;
 
 ////////

@@ -1,9 +1,12 @@
 var explorer_url = 'https://explorer.hacash.org'
-, wallet_url = 'https://wallet.hacash.org'
+, wallet_url = 'https://wallet.hacash.com'
+, fullnode_url = wallet_url + '/fullnode'
 
 // local test
-// explorer_url = 'http://127.0.0.1:8002'
-// wallet_url = 'http://127.0.0.1:8009'
+explorer_url = 'http://127.0.0.1:8002'
+wallet_url = 'http://127.0.0.1:8009'
+fullnode_url = wallet_url + '/fullnode'
+
 // test end
 
 let randomString = ctime(yes)+''
@@ -248,47 +251,53 @@ let getAmtTip = (obj) => {
 /////////
 
 , reqFeasibleFee = async (txsz) => {
-    let url = wallet_url+"/api/estimate_fee?unitmei=1&omitdec=1"
+    let url = fullnode_url+"/query/fee/average?unit=mei"
     if(txsz > 0){
-        url += `&txsize=${txsz}`
+        url += `&consumption=${txsz}`
     }
     return do_fetch_get(url)
 }
 , jsdttyhdr = {
     "Content-Type": "application/json"
 }
-, submitTransaction = async (tx_body) => {
-    let url = wallet_url+"/api/send_tx"
-    , bodydata = JSON_stringify({"txbody":tx_body});
-    // console.log(JSON_parse(body))
-    return do_fetch_post(url, bodydata, jsdttyhdr)
-}
-, createTransaction = async (txjson) => {
-    let url = wallet_url+"/api/create_trs"
-    , bodydata = JSON_stringify(txjson);
-    // console.log(JSON_parse(body))
-    return do_fetch_post(url, bodydata, jsdttyhdr)
-}
-, proxyWalletAPI = async (api, params) => {
-    let url = wallet_url+"/api/"+api+"?"
+, proxyFullnodeApiPost = (path, bodydata, params) => {
+    let url = fullnode_url+path+"?";
     params = params || {}
-    for(var k in params){
+    for(let k in params){
         url += `${k}=${params[k]}&`
     }
+    return do_fetch_post(url, bodydata, jsdttyhdr)
+}
+, queryTransaction = async (txhash) => {
+    let url = fullnode_url+"/query/transaction?unit=mei&body=true&&hash=" + txhash
     return do_fetch_get(url)
 }
-, checkTx = async (txbody, params) => {
-    let url = wallet_url+"/api/check_tx?"
-    params = params || {}
-    for(var k in params){
-        url += `${k}=${params[k]}&`
-    }
-    // signaddr,signpubkey,signdata
-    // console.log(JSON_parse(body))
-    return do_fetch_post(url, txbody, jsdttyhdr)
+, submitTransaction = async (txbody) => {
+    return proxyFullnodeApiPost(
+        "/submit/transaction",
+        hexToBytes(txbody))
 }
+, createTransaction = async (txjson) => {
+    return proxyFullnodeApiPost(
+        "/create/transaction",
+        JSON_stringify(txjson))
+}
+, checkTransaction = async (txbody, params) => {
+    return proxyFullnodeApiPost(
+        "/util/transaction/check", hexToBytes(txbody), params
+    )
+}
+
+, signTransaction = async (txbody, params) => {
+    return proxyFullnodeApiPost(
+        "/util/transaction/sign", hexToBytes(txbody), params
+    )
+}
+
+
+/*
 , commitTransactionBySign = async (txbody, pubkey, signature) => {
-    let url = wallet_url+"/api/create_trs"
+    let url = fullnode_url+"/create/transaction"
     , bodydata = JSON_stringify({
         pubkey,
         signature,
@@ -297,6 +306,7 @@ let getAmtTip = (obj) => {
     // console.log(JSON_parse(body))
     return do_fetch_post(url, bodydata, jsdttyhdr)
 }
+*/
 
 
 

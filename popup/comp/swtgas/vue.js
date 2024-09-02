@@ -1,47 +1,3 @@
-/*
-;let swtgasApp = VueCreateAppEx(vue_tpl_swtgas, {
-    // icfp: icfpath,
-    // gas use
-    gsus: 1,
-    bgas: 0.0001,
-    setgas: '',
-    rcmgas: '',
-},{
-    getgas() {
-        let t = this
-        , gas = parseFloat(t.rcmgas)
-        if(gas < t.bgas){
-            gas = t.bgas
-        }
-        if(t.gsus==2) {
-            gas *= 4
-        }else if(t.gsus==3) {
-            if(t.setgas.indexOf(':')>0){
-                gas = t.setgas
-            }else{
-                gas = parseFloat(t.setgas)||0
-            }
-        }
-        return gas
-    },
-    swtgas(g) {
-        let t = this
-        t.gsus = g
-    },
-    async reqgas(txsz) {
-        txsz = txsz || 166
-        t.rcmgas = parseFloat((await reqFeasibleFee(txsz)).feasible_fee)
-        if(t.rcmgas > t.bgas){
-            t.bgas = t.rcmgas
-        }
-    }
-}, async(t)=>{
-    // await t.reqgas(166)
-});
-
-// console.log("swtgasApp---------", swtgasApp)
-*/
-
 
 
 ;let swtgasAppObj = {
@@ -121,7 +77,7 @@
         async req(txsz) {
             txsz = txsz || 166
             let t = this
-            t.rcmgas = parseFloat((await reqFeasibleFee(txsz)).feasible_fee)
+            t.rcmgas = parseFloat((await reqFeasibleFee(txsz)).feasible)
             // console.log('gas req ret = ', t.rcmgas)
             if(t.rcmgas > t.bgas){
                 t.bgas = t.rcmgas

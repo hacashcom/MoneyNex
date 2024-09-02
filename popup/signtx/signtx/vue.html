@@ -48,9 +48,9 @@
 <div v-show="!txerr&&!end" class="sgck">
     <h5>Signature Status:</h5>
     <p v-for="(v, k) in txsgck">
-        <a>{{k.substr(0, 17)}}...</a>
-        <b v-if="v" class="yes">Signed</b>
-        <b v-if="!v">Not Yet</b>
+        <a>{{v.address.substr(0, 17)}}...</a>
+        <b v-if="v.complete" class="yes">Signed</b>
+        <b v-else>Not Yet</b>
     </p>
 </div>
 

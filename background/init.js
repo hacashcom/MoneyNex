@@ -57,7 +57,7 @@ async function openWalletPopupPageInNextTab(req) {
     let curtab = await getCurrentTab()
     , cidx = curtab.index
     , tabid = curtab.id
-    , actpage = req.action || 'moneynex'
+    , actpage = (req && req.action) || 'moneynex'
     , params = `?tid=${tabid}`;
     delete req.action
     for(let k in req){
@@ -83,32 +83,6 @@ chrome.runtime.onInstalled.addListener(async ({reason}) => {
     }
 });
   
-
-
-// async function testOpenPopuop(){
-//     console.log(await chrome.action.getPopup())
-//     // await chrome.action.openPopup();
-// }
-
-// setTimeout(async function(){
-//     await testOpenPopuop()
-// }, 1200)
-
-/*
-chrome.webNavigation.onCompleted.addListener(
-    async () => {
-        console.log("chrome.action.openPopup()")
-        let url = chrome.runtime.getURL('popup/moneynex.html')
-        chrome.tabs.create({url}, function (tabs){
-            console.log(tabs)
-        })
-    },
-    { url: [
-      { urlMatches: 'https://hacash.org/' },
-    ] },
-  );
-*/
-
 
 
 

@@ -28,27 +28,6 @@ var routePageRaiseFee = (adr, clbk) => {
         nop() {
             window.close()
         }
-        // , async req_check() {
-        //     let t = this
-        //     // await sleep(500)
-        //     let resp = await checkTx(txbody, params)
-        //     t.txres = resp
-        //     t.txsgck = resp.need_sign_address
-        //     console.log(resp)
-        //     return resp
-        // }
-        // check trs
-        // , async crtrs() {
-        //     let t = this
-        //     t.lding = yes
-        //     params[sa] = t.adr
-        //     let resp = await t.req_check()
-        //     t.lding = no
-        //     t.txdesc = parseTxDesc(resp)
-        //     // deal err
-        //     t.txerr = resp.error || nil
-        //     // req
-        // }
         , async doraise() {
             let t = this
             // , gasset = t.gasw.get()
@@ -60,39 +39,49 @@ var routePageRaiseFee = (adr, clbk) => {
             }
             if(t.ing) return
             t.ing = yes;
-            let res = await proxyWalletAPI('raise_fee', {
-                hash: t.hash,
-                fee: t.fee,
-            });
-            if(!res || res.err) {
-                t.ing = no;
-                return showWPerr('Error: '+res.err)
-            }
+            // get tx body
+            let res = await queryTransaction(t.hash)
             console.log(res)
-            let signobj = await stoCurAccDoSign(res.hash_with_fee)
+            if(!res || !res.pending) {
+                t.ing = no;
+                return showWPerr('Error: Tx not find in tx pool')
+            }
+            // reset fee
+            let txobj = await checkTransaction(res.body, {
+                body: true, set_fee: t.fee,
+            })
+            console.log("txobj", txobj)
+            if(!txobj || txobj.err) {
+                t.ing = no;
+                return showWPerr('Check Tx Error: '+txobj.err)
+            }
+            let signobj = await stoCurAccDoSign(txobj.hash_with_fee)
             console.log("signobj", signobj)
             if(signobj.err) {
                 t.ing = no;
                 return showWPerr('Sign Error: '+signobj.err)
             }
-            // up
-            let res2 = await proxyWalletAPI('raise_fee', {
-                hash: t.hash,
-                fee: t.fee,
-                publickey: signobj.pubkey,
-                signature: signobj.signature,
-            });
-            console.log("res submit", res2)
-            if(!res2 || res2.err) {
+            // do sign
+            let sigp = await signTransaction(txobj.body, {
+                signature: true,
+                pubkey: signobj.pubkey,
+                sigdts: signobj.signature,
+            })
+            // console.log(sigp)
+            // submit 
+            let subp = await submitTransaction(sigp.body)
+            console.log(subp)
+            if(subp.err) {
                 t.ing = no;
-                return showWPerr('Error: '+res2.err)
+                return showWPerr('Error: '+subp.err)
             }
-            // submit ok
+            // success return
+            sigp.submit = true;
             t.end = yes
             _setTimeout(t.nop, 3000)
             _setTimeout(_=>t.ende=1, 150)
             // success return
-            await returnDataToUserPage(res2)
+            await returnDataToUserPage(sigp)
         }
         , async cfim() {
             let t = this

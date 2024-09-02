@@ -42,16 +42,17 @@ let refreshHomeTrsLog = nil
             // load HACD names
             if(!t.clcted && x==3) {
                 t.clcted = yes
-                let res = await do_fetch_get(explorer_url+'/api/ranking/diamonds?address='+t.addr)
-                , dias = res.diamonds||{}
+                let res = await do_fetch_get(fullnode_url+'/query/balance?diamonds=true&address='+t.addr)
+                , dias = res.list[0].diamonds || ""
                 , dn = dias.length
                 , ds = []
                 if(dn>=6) {
                     for(let i=0;i<dn;i+=6) {
-                        ds.push(dias.slice(i, i+6))
+                        let d = dias.slice(i, i+6);
+                        ds.push(d)
                     }
                 }
-                // console.log(res)
+                // console.log(ds)
                 t.dialis = ds
             }
 
@@ -113,7 +114,8 @@ let refreshHomeTrsLog = nil
         ,async ldbls() {
             // return
             let t = this
-            let res = await do_fetch_get(explorer_url+'/api/address/balance?unitmei=1&address='+t.addr)
+            let res = await do_fetch_get(fullnode_url+'/query/balance?unit=mei&address='+t.addr)
+            res = res.list[0]
             // console.log(res)
             t.blsobj = {HAC: res.hacash, HACD:  res.diamond, SAT:  res.satoshi}
         }
@@ -121,7 +123,7 @@ let refreshHomeTrsLog = nil
         ,vwdiaexpl(){
             let t = this
             , dias = t.dialis.join(',')
-            t.opurl(explorer_url+'/diaviews?dianames='+dias)
+            t.opurl(explorer_url+'/diamond-views?name='+dias)
         }
         ,cpdianms(){
             let dias = this.dialis.join(',')
@@ -165,15 +167,16 @@ let refreshHomeTrsLog = nil
             let updtsome = no
             for(let i in updtrs){
                 let li = updtrs[i]
-                let res = await do_fetch_get(wallet_url+'/api/tx_status?txhash='+li.hash) || {}
-                , stat = res.status
-                if(stat == 'confirm'){
+                let res = await do_fetch_get(fullnode_url+'/query/transaction?hash='+li.hash) || {}
+                // console.log(res)
+                if(res.confirm){
                     li.stat = 1 // ok
                     updtsome = yes
-                }else if(stat != 'txpool') {
-                    li.stat = 2 // fail
+                }else if( ! res.pending) {
+                    li.stat = 2 // not find, fail
                     updtsome = yes
                 }
+                // res['pending']
                 // console.log(res)
             }
             if(updtsome) {

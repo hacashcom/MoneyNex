@@ -5,8 +5,7 @@ var routePageSignTx = (adr, clbk) => {
     if(!txbody){
         return alert('tx body must give!')
     }
-    let params = {}
-    , sa = 'sign_addr'
+    let sa = 'sign_addr'
     // console.log(txbody)
     // ok
     let {app} = VueCreateApp('sgtx', vue_tpl_signtx, {
@@ -33,17 +32,20 @@ var routePageSignTx = (adr, clbk) => {
         , async req_check() {
             let t = this
             // await sleep(500)
-            let resp = await checkTx(txbody, params)
-            t.txres = resp
-            t.txsgck = resp.need_sign_address
+            let resp = await checkTransaction(txbody, { 
+                unit: 'mei', sign_address: adr,
+                signature: true, description: true,
+            })
             console.log(resp)
+            t.txres = resp
+            t.txsgck = resp.signatures
             return resp
         }
         // check trs
         , async crtrs() {
             let t = this
             t.lding = yes
-            params[sa] = t.adr
+            // params[sa] = t.adr
             let resp = await t.req_check()
             t.lding = no
             t.txdesc = parseTxDesc(resp)
@@ -81,19 +83,32 @@ var routePageSignTx = (adr, clbk) => {
             if(t.ing) return
             t.ing = yes;
             // console.log(gasset,"HAC gas")
+            // console.log(t.txres)
             let signobj = await stoCurAccDoSign(t.txres.sign_hash)
-            console.log("signobj", signobj)
+            // console.log("signobj", signobj)
             if(signobj.err) {
                 t.txerr = signobj.err
-                t.ing = yes;
+                t.ing = no;
                 return
             }
-            // req new tx body
-            params.sign_pubkey = signobj.pubkey
-            params.sign_data = signobj.signature
-            let resp = await t.req_check()
+            // do sign
+            let sigp = await signTransaction(txbody, {
+                signature: true,
+                pubkey: signobj.pubkey,
+                sigdts: signobj.signature,
+            })
+            // console.log(sigp)
+            // submit 
+            let subp = await submitTransaction(sigp.body)
+            // console.log(subp)
+            if(subp.err) {
+                t.txerr = subp.err
+                t.ing = no;
+                return
+            }
             // success return
-            await returnDataToUserPage(resp)
+            sigp.submit = true;
+            await returnDataToUserPage(sigp)
             // ok
             t.ing = no
             t.end = yes
@@ -137,10 +152,11 @@ function parseTxDesc(tx) {
             .replace(/([a-km-zA-HJ-NP-Z1-9]{28,34})/g, ` <a class="addr" href="https://explorer.hacash.org/address/$1" target="_blank" title="$1">$1</a> `)
         return `<span>${1+i}</span> ${li}`
     }
-    let desc = tx.description
-    for(let i in desc){
-        let li = desc[i]
-        txdesc.push(parse(parseInt(i), li))
+    txdesc.push(parse(0, tx.description)) // main addr
+
+    for(let i in tx.actions){
+        let li = tx.actions[i]
+        txdesc.push(parse(parseInt(i)+1, li.description))
     }
     return txdesc
 }

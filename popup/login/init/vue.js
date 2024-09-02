@@ -1,4 +1,4 @@
-
+const ACC_INIT_MV_NUM = 600;
 
 var routePageInit = async (sc, force) => {
 
@@ -53,7 +53,7 @@ var routePageInit = async (sc, force) => {
             , culkey = recordRandomString((e._vts+'').substring(9) + e.screenX + e.screenY)
             // init first
             if(!t.rdnstr){
-                if(t.rdnbct>=600){
+                if(t.rdnbct>=ACC_INIT_MV_NUM){
                     t.rdnstr = culkey
                     await stoSaveRandomKey(SHA256(culkey))
                 }

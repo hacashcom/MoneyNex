@@ -200,7 +200,7 @@
             <div class="hd">
                 <div><label>{{dialis.length}} HACD:</label></div>
             </div>
-            <p class="nms">{{dialis.join(",")}}</p>
+            <p class="nms" v-html="'<i>'+dialis.join('</i>,<i>')+'</i>'"></p>
             <div class="btns">
                 <a @click="cpdianms">Copy name list</a>
                 <a @click="vwdiaexpl">View in explorer</a>
