@@ -162,7 +162,12 @@ async function mergeFile(etx, fss, tarf, hdf, beforeist, rplsfn) {
 
 function jsminify(con) {
     // console.log(con)
-    return uglifyjs.minify(con, uglifyjsconfig).code
+    let res = uglifyjs.minify(con, uglifyjsconfig);
+    if(res.error) {
+        console.log(res.errpr)
+        process.exit(0)
+    }
+    return res.code
 }
 function htmlminify(con) {
     return htmlMinify.minify(con, htmlMinifyOptions)
