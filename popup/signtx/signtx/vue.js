@@ -36,7 +36,7 @@ var routePageSignTx = (adr, clbk) => {
                 unit: 'mei', sign_address: adr,
                 signature: true, description: true,
             })
-            console.log(resp)
+            // console.log(resp)
             t.txres = resp
             t.txsgck = resp.signatures
             return resp
@@ -98,16 +98,7 @@ var routePageSignTx = (adr, clbk) => {
                 sigdts: signobj.signature,
             })
             // console.log(sigp)
-            // submit 
-            let subp = await submitTransaction(sigp.body)
-            // console.log(subp)
-            if(subp.err) {
-                t.txerr = subp.err
-                t.ing = no;
-                return
-            }
             // success return
-            sigp.submit = true;
             await returnDataToUserPage(sigp)
             // ok
             t.ing = no

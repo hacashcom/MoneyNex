@@ -39,7 +39,7 @@ var routePageSigTrs = (adr, clbk) => {
             // console.log(txobj)
             // await sleep(500)
             let resp = await createTransaction(txobj)
-            console.log(resp)
+            // console.log(resp)
             t.lding = no
             t.txres = resp
             t.txdesc = parseTxDesc(resp)
@@ -84,9 +84,9 @@ var routePageSigTrs = (adr, clbk) => {
             , gasset = t.gasw.get()
             if(t.ing) return
             t.ing = yes;
-            console.log(gasset,"HAC gas")
+            // console.log(gasset,"HAC gas")
             let signobj = await stoCurAccDoSign(t.txres.txhashfee)
-            console.log("signobj", signobj)
+            // console.log("signobj", signobj)
             if(signobj.err) {
                 t.txerr = signobj.err
                 t.ing = yes;
@@ -95,7 +95,7 @@ var routePageSigTrs = (adr, clbk) => {
             // 提交交易
             let cmtres = await commitTransactionBySign(
                 t.txres.txbody, signobj.pubkey, signobj.signature)
-            console.log("cmtres", cmtres)
+            // console.log("cmtres", cmtres)
             if(cmtres.err){
                 t.txerr = cmtres.err
                 t.ing = yes;
