@@ -170,7 +170,7 @@ var refreshHomeTrsLog = nil
                 , res = (await do_fetch_get(fullnode_url+'/query/transaction?hash='+li.hash)) || {}
                 ;
                 // console.log(res)
-                if(res.confirm){
+                if(parseInt(res.confirm) >= 0){
                     li.stat = 1 // ok
                     updtsome = yes
                 }else if( ! res.pending) {
