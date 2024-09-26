@@ -166,23 +166,3 @@ var routePageSigTrs = (adr, clbk) => {
 
 
 }
-
-
-function parseTxDesc(tx) {
-    let txdesc = []
-    if(!tx || !tx.description){
-        return []
-    }
-    // parse 1[a-km-zA-HJ-NP-Z0-9]{26,33}
-    let parse = (i, v) => {
-        let li = v.replace(/(\s[0-9\.]+)HAC\s/g, ` <b class="amt">$1</b> HAC `)
-            .replace(/([a-km-zA-HJ-NP-Z1-9]{28,34})/g, ` <a class="addr" href="https://explorer.hacash.org/address/$1" target="_blank" title="$1">$1</a> `)
-        return `<span>${1+i}</span> ${li}`
-    }
-    let desc = tx.description
-    for(let i in desc){
-        let li = desc[i]
-        txdesc.push(parse(parseInt(i), li))
-    }
-    return txdesc
-}
