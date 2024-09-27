@@ -7,8 +7,13 @@ var routePageSigTrs = (adr, clbk) => {
     }
     // console.log(txobj)
     txobj = JSON_parse(txobj)
-    txobj.timestamp = tsnow() // 固定时间戳
-    txobj.addtxsize = 33 + 64 + 2
+    if(!txobj.timestamp) {
+        txobj.timestamp = tsnow() // 时间戳
+    }
+    if(txobj.main_address && txobj.main_address!=adr){
+        return alert(`main address ${txobj.main_address} not match wallet current account ${adr}`)
+    }
+    txobj.main_address = adr
     // ok
 
     let {app} = VueCreateApp('sgtx', vue_tpl_sigtrs, {
@@ -27,6 +32,7 @@ var routePageSigTrs = (adr, clbk) => {
         txerr: nil,
         // swtgas app
         gasw: nil,
+        gaswst: false,
     },{
         nop() {
             window.close()
@@ -35,10 +41,28 @@ var routePageSigTrs = (adr, clbk) => {
         , async crtrs() {
             let t = this
             t.lding = yes
-            txobj.address = t.adr
+            // console.log(txobj)
+            // set fee
+            if(!t.gaswst){
+                if(txobj.fee){
+                    txobj.fee += ''
+                    let rcmfee = hac_mei_unit(txobj.fee)
+                    t.gasw.setb(rcmfee)
+                    t.gaswst = true
+                }else{
+                    txobj.fee = '0.0001' // def
+                }
+            }
             // console.log(txobj)
             // await sleep(500)
             let resp = await createTransaction(txobj)
+            // console.log(resp)
+            if(!t.gaswst){
+                txobj.fee = await t.gasw.req(resp.body.length/2 + 100) // add 100 sign size
+                txobj.fee += ''
+                t.gaswst = true
+                return await t.crtrs() // re create by req fee
+            }
             // console.log(resp)
             t.lding = no
             t.txres = resp
@@ -46,15 +70,7 @@ var routePageSigTrs = (adr, clbk) => {
             // deal err
             t.txerr = resp.error || nil
             // set or req gas
-            // set
-            if(!txobj.fee){
-                let rcmfee = hac_mei_unit(resp.txfee)
-                t.gasw.setb(rcmfee)
-            }
-            // req
-            // let txsz = (resp.txbody.length/2) + txobj.addtxsize // add one sign
-            // await t.gasw.req(txsz) // get gas
-        }   
+        }
         , async cfim() {
             let t = this
             if(t.txerr){
@@ -85,24 +101,30 @@ var routePageSigTrs = (adr, clbk) => {
             if(t.ing) return
             t.ing = yes;
             // console.log(gasset,"HAC gas")
-            let signobj = await stoCurAccDoSign(t.txres.txhashfee)
+            let signobj = await stoCurAccDoSign(t.txres.hash_with_fee)
             // console.log("signobj", signobj)
             if(signobj.err) {
                 t.txerr = signobj.err
                 t.ing = yes;
                 return
             }
-            // 提交交易
-            let cmtres = await commitTransactionBySign(
-                t.txres.txbody, signobj.pubkey, signobj.signature)
-            // console.log("cmtres", cmtres)
-            if(cmtres.err){
-                t.txerr = cmtres.err
+            // do sign
+            let sigp = await signTransaction(t.txres.body, {
+                signature: true,
+                pubkey: signobj.pubkey,
+                sigdts: signobj.signature,
+            })
+            console.log(sigp)
+            if(sigp.err){
+                t.txerr = sigp.err
                 t.ing = yes;
                 return
             }
-            if(!cmtres.success){
-                t.txerr = 'Commit transaction failed'
+            // submit tx
+            let sbmtx = await submitTransaction(sigp.body)
+            console.log(sbmtx)
+            if(sbmtx.err){
+                t.txerr = sbmtx.err
                 t.ing = yes;
                 return
             }
@@ -110,9 +132,9 @@ var routePageSigTrs = (adr, clbk) => {
             let txlog = {
                 payment_address: t.adr,
                 timestamp: txobj.timestamp,
-                tx_hash: cmtres.txhash,
-                tx_body: cmtres.txbody,
-                desc: t.txres.description.join('\n')
+                tx_hash: sigp.hash,
+                tx_body: sigp.body,
+                desc: parseTxDesc(t.txres).join('<br/>')
             };
             let acts = txobj.actions
             console.log(acts)
@@ -134,15 +156,15 @@ var routePageSigTrs = (adr, clbk) => {
             }
             await saveTransactionLog(txlog)
             // ret page data
-            t.txres.txbody = cmtres.txbody
+            t.txres.body = sigp.body
             await returnDataToUserPage(t.txres)
             // ok
             t.ing = no
             t.end = yes
-            _setTimeout(t.nop, 2500)
+            _setTimeout(t.nop, 3000) // close
             _setTimeout(_=>t.ende=1, 150)
             // ok
-            // showWPtip("Tx submitted successfully!")
+            showWPtip("Tx submitted successfully!")
             // close window
             // window.href = './moneynex.html'
         }

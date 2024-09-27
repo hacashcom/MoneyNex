@@ -82,6 +82,7 @@
             if(t.rcmgas > t.bgas){
                 t.bgas = t.rcmgas
             }
+            return t.bgas
         }
     }
 };
