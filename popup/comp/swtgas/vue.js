@@ -47,13 +47,9 @@
             if(t.gsus==2) {
                 gas *= 4
             }else if(t.gsus==3) {
-                    gas *= 12
+                gas *= 12
             }else if(t.gsus==4) {
-                if(t.setgas.indexOf(':')>0){
-                    gas = t.setgas
-                }else{
-                    gas = parseFloat(t.setgas)||0
-                }
+                gas = parseFloat(hac_mei_unit(t.setgas)) || 0
             }
             return t.dectwo(gas)
         },
