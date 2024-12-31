@@ -2,6 +2,8 @@
 
     node build.js --release
 
+    
+    git reset --soft HEAD^
 */
 // mark
 var is_release = false

@@ -97,17 +97,28 @@ var routePageSignTx = (adr, clbk) => {
                 pubkey: signobj.pubkey,
                 sigdts: signobj.signature,
             })
+            let check_all_sigs_ok = function() {
+                for( sg in sigp.signatures ) {
+                    let isok = sigp.signatures[sg].complete
+                    if(!isok) {
+                        return false
+                    }
+                }
+                return true
+            } 
+            if( check_all_sigs_ok() ) {
+                // submit 
+                let subp = await submitTransaction(sigp.body)
+                // console.log(subp)
+                if(subp.err) {
+                    t.txerr = subp.err
+                    t.ing = no;
+                    return
+                }
+                sigp.submit = true;
+            } 
             // console.log(sigp)
-            // submit 
-            let subp = await submitTransaction(sigp.body)
-            // console.log(subp)
-            if(subp.err) {
-                t.txerr = subp.err
-                t.ing = no;
-                return
-            }
             // success return
-            sigp.submit = true;
             await returnDataToUserPage(sigp)
             // ok
             t.ing = no
