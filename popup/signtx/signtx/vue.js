@@ -5,6 +5,7 @@ var routePageSignTx = (adr, clbk) => {
     if(!txbody){
         return alert('tx body must give!')
     }
+    let autosubmit = urlquery.autosubmit||false
     let sa = 'sign_addr'
     // console.log(txbody)
     // ok
@@ -97,6 +98,7 @@ var routePageSignTx = (adr, clbk) => {
                 pubkey: signobj.pubkey,
                 sigdts: signobj.signature,
             })
+            // console.log(sigp)
             let check_all_sigs_ok = function() {
                 for( sg in sigp.signatures ) {
                     let isok = sigp.signatures[sg].complete
@@ -106,7 +108,7 @@ var routePageSignTx = (adr, clbk) => {
                 }
                 return true
             } 
-            if( check_all_sigs_ok() ) {
+            if( autosubmit && check_all_sigs_ok() ) {
                 // submit 
                 let subp = await submitTransaction(sigp.body)
                 // console.log(subp)
@@ -117,7 +119,6 @@ var routePageSignTx = (adr, clbk) => {
                 }
                 sigp.submit = true;
             } 
-            // console.log(sigp)
             // success return
             await returnDataToUserPage(sigp)
             // ok
