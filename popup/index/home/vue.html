@@ -125,7 +125,7 @@
                             </div>
                             <div><b class="btn" v-if="!v.ufd" @click="v.ufd=1">Check info</b></div>
                         </div>
-                        <p class="desc" v-if="v.ufd">{{v.desc}}</p>
+                        <p class="desc" v-if="v.ufd" v-html="v.desc"></p>
                     </div>
                     <div v-else class="hd">
                         <div><h1 class="amt">

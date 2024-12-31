@@ -36,7 +36,7 @@ var routePageSignTx = (adr, clbk) => {
                 unit: 'mei', sign_address: adr,
                 signature: true, description: true,
             })
-            console.log(resp)
+            // console.log(resp)
             t.txres = resp
             t.txsgck = resp.signatures
             return resp
@@ -151,23 +151,3 @@ var routePageSignTx = (adr, clbk) => {
 
 }
 
-
-function parseTxDesc(tx) {
-    let txdesc = []
-    if(!tx || !tx.description){
-        return []
-    }
-    // parse 1[a-km-zA-HJ-NP-Z0-9]{26,33}
-    let parse = (i, v) => {
-        let li = v.replace(/(\s[0-9\.]+)HAC\s/g, ` <b class="amt">$1</b> HAC `)
-            .replace(/([a-km-zA-HJ-NP-Z1-9]{28,34})/g, ` <a class="addr" href="https://explorer.hacash.org/address/$1" target="_blank" title="$1">$1</a> `)
-        return `<span>${1+i}</span> ${li}`
-    }
-    txdesc.push(parse(0, tx.description)) // main addr
-
-    for(let i in tx.actions){
-        let li = tx.actions[i]
-        txdesc.push(parse(parseInt(i)+1, li.description))
-    }
-    return txdesc
-}

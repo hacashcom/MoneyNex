@@ -642,6 +642,18 @@
             border-radius: 7px;
             word-break: break-all;
             white-space: pre-wrap;
+            a {
+                font-size: inherit;
+                &.addr {
+                    max-width: 80px;
+                    display: inline-block;
+                    overflow: hidden;
+                    word-break: keep-all;
+                    vertical-align: text-bottom;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                }
+            }
         }
     }
 

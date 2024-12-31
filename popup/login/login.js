@@ -6,6 +6,7 @@ var explorer_url = 'https://explorer.hacash.org'
 // local test
 // explorer_url = 'http://127.0.0.1:8002'
 // fullnode_url = 'http://127.0.0.1:8009/fullnode'
+// fullnode_url = 'http://127.0.0.1:18081'
 
 // test end
 
@@ -280,7 +281,7 @@ var getAmtTip = (obj) => {
 }
 , createTransaction = async (txjson) => {
     return proxyFullnodeApiPost(
-        "/create/transaction", JSON_stringify(txjson)
+        "/create/transaction", JSON_stringify(txjson), {unit: 'mei', action: true, description: true, signature: true}
     )
 }
 , checkTransaction = async (txbody, params) => {
@@ -295,6 +296,25 @@ var getAmtTip = (obj) => {
     )
 }
 
+, parseTxDesc = tx => {
+    let txdesc = []
+    if(!tx || !tx.description){
+        return []
+    }
+    // parse 1[a-km-zA-HJ-NP-Z0-9]{26,33}
+    let parse = (i, v) => {
+        let li = v.replace(/(\s[0-9\.]+)HAC\s/g, ` <b class="amt">$1</b> HAC `)
+            .replace(/([a-km-zA-HJ-NP-Z1-9]{28,34})/g, ` <a class="addr" href="https://explorer.hacash.org/address/$1" target="_blank" title="$1">$1</a> `)
+        return `<span>${1+i}</span> ${li}`
+    }
+    txdesc.push(parse(0, tx.description)) // main addr
+
+    for(let i in tx.actions){
+        let li = tx.actions[i]
+        txdesc.push(parse(parseInt(i)+1, li.description))
+    }
+    return txdesc
+}
 
 ;
 

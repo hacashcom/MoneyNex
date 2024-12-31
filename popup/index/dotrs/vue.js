@@ -23,8 +23,8 @@ var routePageDotrs = (clbk) => {
     },{
         getamt(){
             let t = this
-            , hac = t.amthac
-            , hacd = t.nmshacd
+            , hac = t.amthac.trim()
+            , hacd = t.nmshacd.trim()
             ;
             if(t.cisx==2 && hacd.length>=6){
                 return hacd
@@ -77,7 +77,7 @@ var routePageDotrs = (clbk) => {
         },
         async dotrs(){
             let t = this
-            , recadr = t.recaddr
+            , recadr = t.recaddr.trim()
             , amt = t.getamt()
             , gas = t.getgas()
             ;

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MoneyNex",
   "description": "A Hacash and Bitcoin Wallet with open SDK",
-  "version": "0.2.2",
+  "version": "0.2.6",
   "icons": {
     "64": "image/icos/64.png"
   }, 
@@ -11,10 +11,12 @@
     "clipboardWrite"
   ],
   "host_permissions": [
-    "https://*.hacash.org/*",
-    "https://*.hacash.com/*",
+    "http://hacash.org/*",
     "http://*.hacash.org/*",
-    "http://*.hacash.com/*"
+    "https://hacash.org/*",
+    "https://*.hacash.org/*",
+    "http://*.hacash.com/*",
+    "https://*.hacash.com/*"
   ],
   "optional_permissions": [
   ],
@@ -28,18 +30,20 @@
   }, 
   "content_scripts": [
     {
+      "matches": ["<all_urls>"],
+      "exclude_matches": ["*://*.google.com/*"],
       "js": ["content/content.min.js"],
-      "css": ["content/content.min.css"],
-      "matches": ["<all_urls>"]
+      "css": ["content/content.min.css"]
     }
   ],
   "web_accessible_resources": [{
+    "matches": ["<all_urls>"],
+    "exclude_matches": ["*://*.google.com/*"],
     "resources": ["content/hacash_api.min.js",
       "image/icos/128.png",
       "image/icos/64.png",
       "image/*/*.*"
-    ],
-    "matches": ["<all_urls>"]
+    ]
   }],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
