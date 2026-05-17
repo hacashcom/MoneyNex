@@ -242,6 +242,101 @@
     overflow: hidden;
     overflow-y: auto;
 
+    .chainbar {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        text-align: left;
+        padding: 4px 8px 4px @pgpd;
+        margin: 0 @pgpd @pgpd*0.5;
+        border-radius: 5px;
+        background: #00ccff12;
+        .info {
+            min-width: 0;
+            flex: 1;
+        }
+        .top {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        b, i, em, span {
+            display: block;
+            font-size: 12px;
+        }
+        b {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: @clblue;
+            font-weight: bold;
+        }
+        em {
+            flex: none;
+            height: 16px;
+            line-height: 16px;
+            padding: 0 5px;
+            border-radius: 5px;
+            font-style: normal;
+            font-size: 10px;
+            color: #fffc;
+            background: #fff2;
+        }
+        span {
+            flex: none;
+            max-width: 140px;
+            height: 16px;
+            line-height: 16px;
+            padding: 0 5px;
+            border: 1px solid #00ccff33;
+            border-radius: 5px;
+            background: #00ccff12;
+            color: #9fefff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        i {
+            color: #fff7;
+            margin-top: 1px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .swt {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            padding: 0;
+            border: 1px solid #0000;
+            border-radius: 5px;
+            box-shadow: none;
+            background: #00ccff18;
+            opacity: 0.5;
+            flex: none;
+            img {
+                display: block;
+                width: 16px;
+                height: 16px;
+            }
+        }
+        &:hover {
+            background: #00ccff22;
+            .swt {
+                opacity: 1;
+                border-color: #00ccff33;
+            }
+        }
+    }
+
     .adcp {
         text-align: center;
         .btn {
@@ -712,4 +807,3 @@
     }
 
 }
-

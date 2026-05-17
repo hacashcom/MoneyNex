@@ -20,7 +20,7 @@ MoneyNex-*.crx
 *.crx
 *.pem
 *.zip
-
+*-debug-*/
 
 
 *-lock.json

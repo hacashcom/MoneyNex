@@ -14,6 +14,8 @@ var refreshHomeTrsLog = nil
     let {app, ctx} = VueCreateApp('home', vue_tpl_home, {
         icfp: icfpath,
         lgtip: '',
+        chain: default_chain_configs[MAIN_CHAIN_ID],
+        chaintip: '',
         addr: '',
         sadr: '',
         /* header */
@@ -110,6 +112,18 @@ var refreshHomeTrsLog = nil
             copyToClipboard(this.addr)
             showWPtip(copyoktip)
         }
+        ,chainName(){
+            let t = this
+            return chainName(t.chain)
+        }
+        ,chainRemark(){
+            let t = this
+            return (t.chain.remark || '') + ''
+        }
+        ,chainRpc(){
+            let t = this
+            return (t.chain.rpc || '').replace(/^https?:\/\//i, '')
+        }
         // load balance
         ,async ldbls() {
             // return
@@ -144,6 +158,11 @@ var refreshHomeTrsLog = nil
                 pushhpgw('acinf')
             })
         }
+        , opchains(){
+            routePageChains(()=>{
+                pushhpgw('chains')
+            })
+        }
         , optx(tx) {
             this.opurl(explorer_url+'/tx/'+tx)
         }
@@ -167,8 +186,12 @@ var refreshHomeTrsLog = nil
             let updtsome = no
             for(let i in updtrs){
                 let li = updtrs[i]
-                , res = (await do_fetch_get(fullnode_url+'/query/transaction?hash='+li.hash)) || {}
+                , res = nil
                 ;
+                if((parseInt(li.chain_id)||0) != chainIdOf(await getCurrentChain())) {
+                    continue
+                }
+                res = (await do_fetch_get(fullnode_url+'/query/transaction?hash='+li.hash)) || {}
                 // console.log(res)
                 if(parseInt(res.confirm) >= 0){
                     li.stat = 1 // ok
@@ -188,6 +211,8 @@ var refreshHomeTrsLog = nil
         // update balance and trs log
         , async refreshAll() {
             let t = this
+            t.chain = await stoReadCurrentChain()
+            t.chaintip = chainTip(t.chain)
             t.blsobj = nil
             await refreshHomeTrsLog()
             // load balance
@@ -198,6 +223,8 @@ var refreshHomeTrsLog = nil
     }, async (t) => {
         t.addr = adr
         t.sadr = addrOmitted(adr)
+        t.chain = await stoReadCurrentChain()
+        t.chaintip = chainTip(t.chain)
         clbk && clbk()
         // load transaction
         await t.swttab(1)
@@ -219,6 +246,9 @@ var refreshHomeTrsLog = nil
 
     homePageAppPtr = app
     homePageCtxPtr = ctx
+    setHpgwRefresher('home', async()=>{
+        homePageCtxPtr && await homePageCtxPtr.refreshAll()
+    })
 
     // console.log(app)
 
@@ -235,6 +265,12 @@ var refreshHomeTrsLog = nil
         for(var i in homeTrsDatas) {
             let one = homeTrsDatas[i]
             if(one.from == t.addr){
+                if(one.chain_id === undefined) {
+                    one.chain_id = MAIN_CHAIN_ID
+                }
+                if((parseInt(one.chain_id)||0) != chainIdOf(await getCurrentChain())) {
+                    continue
+                }
                 curtrs.push(one)
             }
             if(one.stat == 0){

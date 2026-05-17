@@ -23,6 +23,10 @@
 
 
 <div class="ipt">
+    <div class="item net">
+        <label>Network</label>
+        <p>{{chaintip}}</p>
+    </div>
 
     <div class="item">
         <label>Tx Hash</label>
@@ -31,6 +35,9 @@
     <div class="item">
         <label>Fee</label>
         <input v-model="fee" placeholder="The tx fee needs to be reset, such as '1:245' or '0.0012'" />
+    </div>
+    <div class="item err" v-if="err">
+        <p>{{err}}</p>
     </div>
 </div>
 

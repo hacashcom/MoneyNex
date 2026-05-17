@@ -18,6 +18,8 @@ var routePageSignTx = (adr, clbk) => {
         lding: yes,
         adr: adr,
         sadr: addrOmitted(adr),
+        chain: default_chain_configs[MAIN_CHAIN_ID],
+        chaintip: '',
         adrswct: no,
         adrmaps: {},
         txres: {},
@@ -39,7 +41,14 @@ var routePageSignTx = (adr, clbk) => {
             })
             // console.log(resp)
             t.txres = resp
-            t.txsgck = resp.signatures
+            t.txsgck = resp.signatures || {}
+            if(!resp.error) {
+                let cherr = await assertCheckedBodyChain(resp, yes)
+                if(cherr) {
+                    resp.error = cherr.err
+                    await returnDataToUserPage(cherr)
+                }
+            }
             return resp
         }
         // check trs
@@ -59,7 +68,7 @@ var routePageSignTx = (adr, clbk) => {
             if(t.txerr){
                 return
             }
-            if( ! await wpcfm_open('Once the transaction is signed, it cannot be reversed, can it be confirmed?', 'Confirm')  ) {
+            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Once the transaction is signed, it cannot be reversed, can it be confirmed?</p>`, 'Confirm')  ) {
                 return
             }
             // do sign
@@ -82,6 +91,12 @@ var routePageSignTx = (adr, clbk) => {
             let t = this
             // , gasset = t.gasw.get()
             if(t.ing) return
+            let cherr = await assertCheckedBodyChain(t.txres, yes)
+            if(cherr) {
+                t.txerr = cherr.err
+                await returnDataToUserPage(cherr)
+                return
+            }
             t.ing = yes;
             // console.log(gasset,"HAC gas")
             // console.log(t.txres)
@@ -100,7 +115,7 @@ var routePageSignTx = (adr, clbk) => {
             })
             // console.log(sigp)
             let check_all_sigs_ok = function() {
-                for( sg in sigp.signatures ) {
+                for(let sg in sigp.signatures ) {
                     let isok = sigp.signatures[sg].complete
                     if(!isok) {
                         return false
@@ -133,6 +148,8 @@ var routePageSignTx = (adr, clbk) => {
         }
     }, async(t)=>{
         clbk && clbk()   
+        t.chain = await stoReadCurrentChain()
+        t.chaintip = chainTip(t.chain)
         // t.gasw = t.$refs.swtgas
         // t.gasw.swt(gas => {
         //     // console.log(gas)
@@ -151,4 +168,3 @@ var routePageSignTx = (adr, clbk) => {
 
 
 }
-

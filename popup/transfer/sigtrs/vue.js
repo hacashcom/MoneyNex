@@ -7,6 +7,10 @@ var routePageSigTrs = (adr, clbk) => {
     }
     // console.log(txobj)
     txobj = JSON_parse(txobj)
+    if(urlquery.chain_id === undefined && txobj.chain_id !== undefined) {
+        urlquery.chain_id = txobj.chain_id
+    }
+    delete txobj.chain_id
     if(!txobj.timestamp) {
         txobj.timestamp = tsnow() // 时间戳
     }
@@ -25,6 +29,8 @@ var routePageSigTrs = (adr, clbk) => {
         lding: yes,
         adr: adr,
         sadr: addrOmitted(adr),
+        chain: default_chain_configs[MAIN_CHAIN_ID],
+        chaintip: '',
         adrswct: no,
         adrmaps: {},
         txres: {},
@@ -41,6 +47,21 @@ var routePageSigTrs = (adr, clbk) => {
         , async crtrs() {
             let t = this
             t.lding = yes
+            let reqerr = await assertUrlRequestChain(yes)
+            if(reqerr) {
+                t.lding = no
+                t.txerr = reqerr.err
+                await returnDataToUserPage(reqerr)
+                return
+            }
+            let chtx = await applyCurrentChainToTxobj(txobj)
+            if(chtx.err) {
+                t.lding = no
+                t.txerr = chtx.err
+                await returnDataToUserPage(chtx)
+                return
+            }
+            txobj = chtx
             // console.log(txobj)
             // set fee
             if(!t.gaswst){
@@ -57,6 +78,13 @@ var routePageSigTrs = (adr, clbk) => {
             // await sleep(500)
             let resp = await createTransaction(txobj)
             // console.log(resp)
+            if(resp.err || resp.error) {
+                t.lding = no
+                t.txres = resp
+                t.txdesc = parseTxDesc(resp)
+                t.txerr = resp.err || resp.error
+                return
+            }
             if(!t.gaswst){
                 txobj.fee = await t.gasw.req(resp.body.length/2 + 100) // add 100 sign size
                 txobj.fee += ''
@@ -76,7 +104,7 @@ var routePageSigTrs = (adr, clbk) => {
             if(t.txerr){
                 return
             }
-            if( ! await wpcfm_open('Once the transaction is signed and commited, it cannot be reversed, can it be confirmed?', 'Confirm')  ) {
+            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Once the transaction is signed and commited, it cannot be reversed, can it be confirmed?</p>`, 'Confirm')  ) {
                 return
             }
             // do sign
@@ -99,6 +127,12 @@ var routePageSigTrs = (adr, clbk) => {
             let t = this
             , gasset = t.gasw.get()
             if(t.ing) return
+            let cherr = await assertUrlRequestChain(yes)
+            if(cherr) {
+                t.txerr = cherr.err
+                await returnDataToUserPage(cherr)
+                return
+            }
             t.ing = yes;
             // console.log(gasset,"HAC gas")
             let signobj = await stoCurAccDoSign(t.txres.hash_with_fee)
@@ -136,21 +170,25 @@ var routePageSigTrs = (adr, clbk) => {
                 tx_body: sigp.body,
                 desc: parseTxDesc(t.txres).join('<br/>')
             };
-            let acts = txobj.actions
+            let acts = (txobj.actions || []).filter(act => parseInt(act.kind) !== CHAIN_ALLOW_KIND)
             console.log(acts)
             if(acts.length==1){
                 let act = acts[0]
-                , kd = act.kind
-                if(kd==1 || kd==5 || kd==6 || kd==8){
+                , kd = parseInt(act.kind)
+                , amount = act.amount || act.hacash
+                , diamonds = act.diamonds || act.diamond
+                if(kd==1 || kd==5 || kd==6 || kd==7 || kd==8){
                     // transfer
-                    txlog.collection_address = act.to
-                    if(kd==1) {
-                        txlog.amount = act.amount // HAC
-                    }else if(kd==8) {
-                        txlog.amount = act.amount + ' SAT'
-                    }else{
-                        txlog.diamonds = act.diamonds
-                        txlog.diamond_count = act.diamonds.split(',').length
+                    if(kd==1 && amount) {
+                        txlog.collection_address = act.to
+                        txlog.amount = amount // HAC
+                    }else if(kd==8 && amount) {
+                        txlog.collection_address = act.to
+                        txlog.amount = amount + ' SAT'
+                    }else if(diamonds){
+                        txlog.collection_address = act.to
+                        txlog.diamonds = diamonds
+                        txlog.diamond_count = diamonds.split(',').length
                     }
                 }
             }
@@ -170,6 +208,8 @@ var routePageSigTrs = (adr, clbk) => {
         }
     }, async(t)=>{
         clbk && clbk()   
+        t.chain = await stoReadCurrentChain()
+        t.chaintip = chainTip(t.chain)
         t.gasw = t.$refs.swtgas
         t.gasw.swt(gas => {
             // console.log(gas)

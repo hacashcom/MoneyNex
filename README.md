@@ -29,3 +29,12 @@ Of course, you can also download the version we have already built for you:
 
 - [releases/latest](https://github.com/hacashcom/MoneyNex/releases)
 
+
+
+### Debug
+
+Push to Edge:
+
+```sh
+
+```

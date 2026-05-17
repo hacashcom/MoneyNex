@@ -41,6 +41,10 @@
                     <img :src="`${icfp}info.svg`" />
                     <a>Account details</a>
                 </li>
+                <li @click="opchains">
+                    <img :src="`${icfp}network.svg`" />
+                    <a>Networks<i>{{chaintip}}</i></a>
+                </li>
                 <li @click="dolock">
                     <img :src="`${icfp}lock.svg`" />
                     <a>Lock wallet</a>
@@ -61,6 +65,20 @@
 
 
 <div class="hmpg">
+    <div class="chainbar" @click="opchains">
+        <div class="info">
+            <div class="top">
+                <b>{{chainName()}}</b>
+                <span v-if="chainRemark()">{{chainRemark()}}</span>
+                <em>ID {{chain.id}}</em>
+            </div>
+            <i>{{chainRpc()}}</i>
+        </div>
+        <button class="swt" title="Switch network">
+            <img :src="`${icfp}switch.svg`" />
+        </button>
+    </div>
+
     <div class="adcp" title="copy address">
         <button class="btn" @click="cpadr"><b>{{sadr}}</b><img :src="`${icfp}copy.svg`" /></button>
     </div>
@@ -138,8 +156,10 @@
                                 <img :src="`${icfp}right.svg`" />
                                 <b>{{v.to.substring(0, 9)}}...</b>
                             </div>
+                            <a class="abtn" v-if="v.desc&&!v.ufd" @click="v.ufd=1">Actions</a>
                         </div>
                     </div>
+                    <p class="desc" v-if="v.type!='MUL'&&v.ufd&&v.desc" v-html="v.desc"></p>
                     <div class="bd">
                         <div>
                             <a v-if="v.stat==1" title="Open tx in explorer" class="hxj" @click="optx(v.hash)"><b>Tx: {{v.hash.substring(0,16)}}...</b><img :src="`${icfp}jump.svg`" /></a>

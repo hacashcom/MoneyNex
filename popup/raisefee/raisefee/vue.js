@@ -18,6 +18,8 @@ var routePageRaiseFee = (adr, clbk) => {
         lding: yes,
         adr: adr,
         sadr: addrOmitted(adr),
+        chain: default_chain_configs[MAIN_CHAIN_ID],
+        chaintip: '',
         adrswct: no,
         adrmaps: {},
         // data
@@ -39,6 +41,13 @@ var routePageRaiseFee = (adr, clbk) => {
             }
             if(t.ing) return
             t.ing = yes;
+            let reqerr = await assertUrlRequestChain(yes)
+            if(reqerr) {
+                t.ing = no
+                t.err = reqerr.err
+                await returnDataToUserPage(reqerr)
+                return showWPerr(reqerr.err)
+            }
             // get tx body
             let res = await queryTransaction(t.hash)
             console.log(res)
@@ -51,9 +60,16 @@ var routePageRaiseFee = (adr, clbk) => {
                 body: true, set_fee: t.fee,
             })
             console.log("txobj", txobj)
-            if(!txobj || txobj.err) {
+            if(!txobj || txobj.err || txobj.error) {
                 t.ing = no;
-                return showWPerr('Check Tx Error: '+txobj.err)
+                return showWPerr('Check Tx Error: '+(txobj ? (txobj.err || txobj.error) : 'empty response'))
+            }
+            let cherr = await assertCheckedBodyChain(txobj, yes)
+            if(cherr) {
+                t.ing = no
+                t.err = cherr.err
+                await returnDataToUserPage(cherr)
+                return showWPerr(cherr.err)
             }
             let signobj = await stoCurAccDoSign(txobj.hash_with_fee)
             console.log("signobj", signobj)
@@ -68,6 +84,10 @@ var routePageRaiseFee = (adr, clbk) => {
                 sigdts: signobj.signature,
             })
             // console.log(sigp)
+            if(sigp.err) {
+                t.ing = no
+                return showWPerr('Sign Tx Error: '+sigp.err)
+            }
             // submit 
             let subp = await submitTransaction(sigp.body)
             console.log(subp)
@@ -88,7 +108,7 @@ var routePageRaiseFee = (adr, clbk) => {
             if(t.txerr){
                 return
             }
-            if( ! await wpcfm_open(`Attention: once the tx fee is raised to '${t.fee}', it can't be reduced or revoked.`, 'Confirm')  ) {
+            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Attention: once the tx fee is raised to '${t.fee}', it can't be reduced or revoked.</p>`, 'Confirm')  ) {
                 return
             }
             // do raise
@@ -111,6 +131,8 @@ var routePageRaiseFee = (adr, clbk) => {
 
     }, async(t)=>{
         clbk && clbk()   
+        t.chain = await stoReadCurrentChain()
+        t.chaintip = chainTip(t.chain)
         // t.gasw = t.$refs.swtgas
         // t.gasw.swt(gas => {
         //     // console.log(gas)

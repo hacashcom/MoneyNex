@@ -50,9 +50,17 @@ let page_defs = {
             'index/home',
             'index/acinf',
             'index/dotrs',
+            'index/chains',
+            'index/chainform',
         ],
         ['index']
     ], // index
+    'switchChain': [
+        [
+            'switchChain/switchChain'
+        ],
+        ['switchChain']
+    ], // dapp request switch chain
     'connect': [
         [
             'connect/conn'   
@@ -265,7 +273,7 @@ async function build(is_release) {
     // build page: moneynex and more 
     for(let k in page_defs){
         let v = page_defs[k]
-        buildPageSource(k, v, is_release)
+        await buildPageSource(k, v, is_release)
     }
 
     // build ok

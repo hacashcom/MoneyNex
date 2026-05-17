@@ -1,0 +1,32 @@
+<div class="header">
+    <div class="bk" @click="back">
+        <img :src="`${icfp}left.svg`" />
+    </div>
+    <h1 class="ptt">Networks</h1>
+</div>
+
+<div class="chlist">
+    <ul>
+        <li v-for="(c, id) in chains" :class="`${curid==c.id?'active':''}`">
+            <div class="hd">
+                <div>
+                    <h2>
+                        <span>{{cname(c)}}</span>
+                        <em v-if="cremark(c)">{{cremark(c)}}</em>
+                    </h2>
+                    <p>ID: {{c.id}}</p>
+                </div>
+                <b v-if="curid==c.id">Current</b>
+            </div>
+            <p class="rpc">{{c.rpc}}</p>
+            <div class="btns">
+                <a @click="swt(c)" v-if="curid!=c.id">Switch</a>
+                <a @click="edit(c)">Edit</a>
+                <a class="red" @click="rmv(c)" v-if="c.id!=0">Delete</a>
+            </div>
+        </li>
+    </ul>
+    <div class="add">
+        <button class="mid blue" @click="add">Add Network</button>
+    </div>
+</div>

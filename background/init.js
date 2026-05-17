@@ -62,7 +62,7 @@ async function openWalletPopupPageInNextTab(req) {
     , params = `?tid=${tabid}`;
     delete req.action
     for(let k in req){
-        params += `&${k}=${req[k]}`
+        params += `&${encodeURIComponent(k)}=${encodeURIComponent(req[k])}`
     }
     // chrome.storage.local.set({'origin_tab_id': tabid})
     // console.log(curtab)
@@ -84,7 +84,6 @@ chrome.runtime.onInstalled.addListener(async ({reason}) => {
     }
 });
   
-
 
 
 

@@ -7,7 +7,7 @@ function parseUrlQuery(url){
     let  params = arr[1].split('&')
     for(let i=0;i<params.length;i++){
         let param = params[i].split('=');
-        obj[param[0]] = param[1];
+        obj[decodeURIComponent(param[0]||'')] = decodeURIComponent(param.slice(1).join('=')||'');
     }
     return obj;
 }
@@ -223,6 +223,5 @@ let hac_mei_unit = amt => {
 , hac_show_mei_unit = amt => {
     return hac_mei_unit(amt) + ' HAC'
 }
-
 
 

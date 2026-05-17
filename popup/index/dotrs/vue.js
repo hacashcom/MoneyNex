@@ -6,6 +6,8 @@ var routePageDotrs = (clbk) => {
         icfp: icfpath,
         isrcd : no,
         myadr: '',
+        chain: default_chain_configs[MAIN_CHAIN_ID],
+        chaintip: '',
         recaddr: '',
         amthac: '',
         // recaddr: '1LRi6Wn38JtUppbFv2uWyAwtctcDLtFDFr',
@@ -101,27 +103,54 @@ var routePageDotrs = (clbk) => {
                 return showWPerr('Account unlocking failed')
             }
             t.ing = yes
-            let txres = hacash_api.general_transfer("0", privkey, recadr, amt, gas+"", ctime()+"")
-            let txobj = nil
-            try {
-                txobj = JSON_parse(txres)
-            } catch (e) {
+            let act = nil
+            if(t.cisx == 1) {
+                act = {kind: 1, to: recadr, hacash: amt}
+            }else{
+                act = {kind: 7, to: recadr, diamonds: amt}
+            }
+            let txobj = await applyCurrentChainToTxobj({
+                main_address: t.myadr,
+                fee: gas+'',
+                timestamp: ctime(),
+                actions: [act],
+            })
+            if(txobj.err) {
                 t.ing = no
-                return showWPerr(txres)
+                return showWPerr(txobj.err)
+            }
+            let txres = await createTransaction(txobj)
+            if(txres.err || txres.error) {
+                t.ing = no
+                return showWPerr(txres.err || txres.error)
             }
             // ok pass get amt tip
             // console.log(resobj)
-            let amtip = getAmtTip(txobj)
+            let amtip = t.cisx == 1 ? hac_show_mei_unit(amt) : `${amt.split(',').length} HACD (${amt})`
             , gastip = hac_show_mei_unit(gas)
             , to = addrOmitted(recadr);
             // confirm
-            let ok = await wpcfm_open(`<p>Check transfer detail</p><br><table><tr><td>Asset</td><td>${amtip}</td></tr><tr><td>Gas</td><td>${gastip}</tr><tr><td>To</td><td>${to}</td></tr></table>`, btncon_confirm)
+            let ok = await wpcfm_open(`<p>Check transfer detail</p><br><table><tr><td>Network</td><td>${t.chaintip}</td></tr><tr><td>Asset</td><td>${amtip}</td></tr><tr><td>Gas</td><td>${gastip}</tr><tr><td>To</td><td>${to}</td></tr></table>`, btncon_confirm)
             if(!ok) {
                 t.ing = no
                 return
             }
+            let signobj = await stoCurAccDoSign(txres.hash_with_fee)
+            if(signobj.err) {
+                t.ing = no
+                return showWPerr(signobj.err)
+            }
+            let sigp = await signTransaction(txres.body, {
+                signature: true,
+                pubkey: signobj.pubkey,
+                sigdts: signobj.signature,
+            })
+            if(sigp.err) {
+                t.ing = no
+                return showWPerr(sigp.err)
+            }
             // submit to blockchain
-            let sdrs = await submitTransaction(txobj.tx_body)
+            let sdrs = await submitTransaction(sigp.body)
             , err = sdrs.err
             if(err) {
                 t.ing = no
@@ -131,7 +160,17 @@ var routePageDotrs = (clbk) => {
                 }
                 return showWPerr(err)
             }
-            await saveTransactionLog(txobj)
+            await saveTransactionLog({
+                payment_address: t.myadr,
+                timestamp: txobj.timestamp,
+                tx_hash: sigp.hash,
+                tx_body: sigp.body,
+                collection_address: recadr,
+                amount: t.cisx == 1 ? amt : nil,
+                diamonds: t.cisx == 2 ? amt : nil,
+                diamond_count: t.cisx == 2 ? amt.split(',').length : nil,
+                desc: parseTxDesc(txres).join('<br/>'),
+            })
             showWPtip("Tx submitted successfully!")
             // ok
             t.ing = no
@@ -140,6 +179,8 @@ var routePageDotrs = (clbk) => {
         }
     }, async(t)=>{
         clbk && clbk()
+        t.chain = await stoReadCurrentChain()
+        t.chaintip = chainTip(t.chain)
         t.myadr = await stoReadCurrentAccount()
         t.gasw = t.$refs.swtgas
         t.gasw.req(200)
