@@ -3,7 +3,7 @@ var routePageSignTx = (adr, clbk) => {
 
     let txbody = urlquery.txbody||''
     if(!txbody){
-        return alert('tx body must give!')
+        return alert('Missing tx body')
     }
     let autosubmit = urlquery.autosubmit||false
     let sa = 'sign_addr'
@@ -68,7 +68,7 @@ var routePageSignTx = (adr, clbk) => {
             if(t.txerr){
                 return
             }
-            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Once the transaction is signed, it cannot be reversed, can it be confirmed?</p>`, 'Confirm')  ) {
+            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Once signed, this transaction cannot be reversed. Confirm?</p>`, 'Confirm')  ) {
                 return
             }
             // do sign

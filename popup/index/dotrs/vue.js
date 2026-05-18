@@ -64,20 +64,20 @@
                 return
             }
             if(!recadr) {
-                return showWPerr('Please enter receiving address')
+                return showWPerr('Enter recipient address')
             }
             if(!amt) {
-                return showWPerr('Please enter asset')
+                return showWPerr('Enter asset')
             }
             if(!gas) {
-                return showWPerr('Please enter gas fee')
+                return showWPerr('Enter gas fee')
             }
             if(t.myadr == recadr) {
                 return showWPerr('Cannot transfer to yourself')
             }
             let privkey = await stoUnlockAccount()
             if(!privkey) {
-                return showWPerr('Account unlocking failed')
+                return showWPerr('Unlock failed')
             }
             t.ing = yes
             let act = nil
@@ -107,7 +107,7 @@
             , gastip = hac_show_mei_unit(gas)
             , to = addrOmitted(recadr);
             // confirm
-            let ok = await wpcfm_open(`<p>Check transfer detail</p><br><table><tr><td>Network</td><td>${t.chaintip}</td></tr><tr><td>Asset</td><td>${amtip}</td></tr><tr><td>Gas</td><td>${gastip}</tr><tr><td>To</td><td>${to}</td></tr></table>`, btncon_confirm)
+            let ok = await wpcfm_open(`<p>Transfer details</p><br><table><tr><td>Network</td><td>${t.chaintip}</td></tr><tr><td>Asset</td><td>${amtip}</td></tr><tr><td>Gas</td><td>${gastip}</td></tr><tr><td>To</td><td>${to}</td></tr></table>`, btncon_confirm)
             if(!ok) {
                 t.ing = no
                 return
@@ -132,7 +132,7 @@
                 diamond_count: t.cisx == 2 ? amt.split(',').length : nil,
                 desc: parseTxDesc(txres).join('<br/>'),
             })
-            showWPtip("Tx submitted successfully!")
+            showWPtip("Tx submitted")
             // ok
             t.ing = no
             t.isrcd = yes

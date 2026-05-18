@@ -21,7 +21,7 @@ var routePageChainForm = (chain, clbk) => {
             let t = this
             , id = parseInt(t.id)
             if(isNaN(id) || id < 0) {
-                return showWPerr('Chain ID format invalid')
+                return showWPerr('Invalid Chain ID')
             }
             if(id === MAIN_CHAIN_ID && !t.isedit) {
                 return showWPerr('Mainnet already exists')

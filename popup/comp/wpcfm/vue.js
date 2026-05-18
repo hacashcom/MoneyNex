@@ -51,8 +51,8 @@ let {ctx: wpcfm} = VueCreateApp('wpcfm', vue_tpl_wpcfm, {
     })
 }
 , backup_privkey_open = async ()=>{
-    return (await wpcfm_open(`If you don't back up your private key, you risk losing all your assets permanently`, 
-    'I have backed up the private key', 
+    return (await wpcfm_open(`Back up your private key or you may lose your assets.`, 
+    'Backed up', 
     'red'))
 }
 

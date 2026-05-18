@@ -18,7 +18,7 @@
                     {{k}}
                 </li>
                 <div class="add">
-                    <button class="mid" @click="donewacc">Create or import a new account</button>
+                    <button class="mid" @click="donewacc">Create or import account</button>
                 </div>
             </ul>
         </div>
@@ -79,7 +79,7 @@
         </button>
     </div>
 
-    <div class="adcp" title="copy address">
+    <div class="adcp" title="Copy address">
         <button class="btn" @click="cpadr"><b>{{sadr}}</b><img :src="`${icfp}copy.svg`" /></button>
     </div>
 
@@ -141,7 +141,7 @@
                                 <img class="lg" :src="`${icfp}ftag.svg`" />
                                 <b>Multiple actions</b></h1>
                             </div>
-                            <div><b class="btn" v-if="!v.ufd" @click="v.ufd=1">Check info</b></div>
+                            <div><b class="btn" v-if="!v.ufd" @click="v.ufd=1">Details</b></div>
                         </div>
                         <p class="desc" v-if="v.ufd" v-html="v.desc"></p>
                     </div>
@@ -198,7 +198,7 @@
         <img v-if="trslgs==null" class="ldf" src="../image/ld/w.gif" />
         <div v-else>
             <p v-if="trslgs.length>0" class="end">- END -</p>
-            <p v-else class="end">- You have no transactions -</p>
+            <p v-else class="end">- No transactions -</p>
         </div>
     </div>
 
@@ -209,27 +209,27 @@
         <img v-if="actvlgs==null" class="ldf" src="../image/ld/w.gif" />
         <div v-else>
             <p v-if="actvlgs.length>0" class="end">- END -</p>
-            <p v-else class="end">- You have no activitys -</p>
+            <p v-else class="end">- No activity -</p>
         </div>
     </div>
 
     <!-- collection -->
     <div class="lgw clct" v-if="tabx==3">
-        <p class="fpt">Display assets only after four block confirmations</p>     
+        <p class="fpt">Assets appear after 4 confirmations</p>     
         <div class="dias" v-if="dialis && dialis.length>0">
             <div class="hd">
                 <div><label>{{dialis.length}} HACD:</label></div>
             </div>
             <p class="nms" v-html="'<i>'+dialis.join('</i>,<i>')+'</i>'"></p>
             <div class="btns">
-                <a @click="cpdianms">Copy name list</a>
+                <a @click="cpdianms">Copy names</a>
                 <a @click="vwdiaexpl">View in explorer</a>
             </div>
         </div>
         <img v-if="dialis==null" class="ldf" src="../image/ld/w.gif" />
         <div v-else>
             <p v-if="dialis.length>0" class="end">- END -</p>
-            <p v-else class="end">- You have no collections -</p>
+            <p v-else class="end">- No collections -</p>
         </div>   
     </div>
 

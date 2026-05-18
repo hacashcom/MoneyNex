@@ -23,7 +23,7 @@
 
 <div class="permt">
     <div class="con">
-        <p class="tip"><b>{{dmu}}</b> create a new transaction and request your signature, please check the transaction actions:</p>
+        <p class="tip"><b>{{dmu}}</b> created a transaction and requests your signature. Review the actions:</p>
         <p class="net">Network: <b>{{chaintip}}</b></p>
     </div>
 </div>
@@ -40,7 +40,7 @@
     </div>
 
     <div v-if="txerr" class="txerr">
-        <h1>Tx validation failed:</h1>
+        <h1>Tx validation failed</h1>
         <p>{{txerr}}</p>
     </div>
 </div>
@@ -52,14 +52,13 @@
 
 <div class="btns" v-if="!end">  
     <div><button @click="nop">Cancel</button></div>
-    <div><button @click="cfim" :class="`blue ${txerr?'ban':''} ${ing?'ing':''}`">Commit Tx</button></div>
+    <div><button @click="cfim" :class="`blue ${txerr?'ban':''} ${ing?'ing':''}`">Submit Tx</button></div>
 </div>
 <div v-else class="success">
     <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
-    <p>The transaction has been successfully signed and submitted to the blockchain for confirmation</p>
+    <p>Tx signed and submitted</p>
 </div>
 
 <div class="wtip" v-if="!end"   >
-    <p>Tips: Transactions are initiated by third-party services, please pay attention to the safety of funds and carefully check the content of the transaction</p>
+    <p>Third-party transaction. Review it carefully.</p>
 </div>
-

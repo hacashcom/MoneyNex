@@ -34,10 +34,10 @@ var routePageRaiseFee = (adr, clbk) => {
             let t = this
             // , gasset = t.gasw.get()
             if(!t.hash){
-                return showWPerr('Please enter the tx hash.')
+                return showWPerr('Enter tx hash')
             }
             if(!t.fee){
-                return showWPerr('Please enter the tx fee.')
+                return showWPerr('Enter tx fee')
             }
             if(t.ing) return
             t.ing = yes;
@@ -52,7 +52,7 @@ var routePageRaiseFee = (adr, clbk) => {
             let res = await queryTransaction(t.hash)
             if(!res || !res.pending) {
                 t.ing = no;
-                return showWPerr('Error: Tx not find in tx pool')
+                return showWPerr('Tx not found in pool')
             }
             // reset fee
             let txobj = await checkTransaction(res.body, {
@@ -60,7 +60,7 @@ var routePageRaiseFee = (adr, clbk) => {
             })
             if(!txobj || txobj.err || txobj.error) {
                 t.ing = no;
-                return showWPerr('Check Tx Error: '+(txobj ? (txobj.err || txobj.error) : 'empty response'))
+                return showWPerr('Tx check failed: '+(txobj ? (txobj.err || txobj.error) : 'empty response'))
             }
             let cherr = await assertCheckedBodyChain(txobj, yes)
             if(cherr) {
@@ -72,7 +72,7 @@ var routePageRaiseFee = (adr, clbk) => {
             let sigp = await signAndSubmitTxBody(txobj.body, txobj.hash_with_fee)
             if(sigp.err) {
                 t.ing = no
-                return showWPerr('Error: '+sigp.err)
+                return showWPerr(sigp.err)
             }
             t.end = yes
             _setTimeout(t.nop, 3000)
@@ -85,7 +85,7 @@ var routePageRaiseFee = (adr, clbk) => {
             if(t.txerr){
                 return
             }
-            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Attention: once the tx fee is raised to '${t.fee}', it can't be reduced or revoked.</p>`, 'Confirm')  ) {
+            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Raise fee to '${t.fee}'? This cannot be undone.</p>`, 'Confirm')  ) {
                 return
             }
             // do raise

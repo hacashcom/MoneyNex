@@ -136,7 +136,7 @@ var MAIN_CHAIN_ID = 0
     , curid = chainIdOf(cur)
     if(reqid !== curid) {
         return {
-            err: `Wallet chain mismatch: current ${chainTip(cur)}, request chain #${reqid}. Please switch chain manually first.`,
+            err: `Network mismatch: current ${chainTip(cur)}, requested #${reqid}. Switch networks first.`,
             current_chain_id: curid,
             request_chain_id: reqid,
         }
@@ -173,13 +173,13 @@ var MAIN_CHAIN_ID = 0
     , ca = findChainAllowAction(txobj.actions)
     if(isMainChainId(cid)) {
         if(ca) {
-            return {err: 'Mainnet transaction must not include ChainAllow action'}
+            return {err: 'Mainnet tx cannot include ChainAllow action'}
         }
         return txobj
     }
     if(ca) {
         if(!actionAllowsChain(ca, cid)) {
-            return {err: `ChainAllow action does not match current ${chainTip(cur)}`}
+            return {err: `ChainAllow action does not match ${chainTip(cur)}`}
         }
         return txobj
     }
@@ -196,15 +196,15 @@ var MAIN_CHAIN_ID = 0
     , ca = findChainAllowAction(acts)
     if(isMainChainId(cid)) {
         if(ca) {
-            return {err: 'Current chain is Mainnet, but transaction contains ChainAllow action'}
+            return {err: 'Mainnet tx contains ChainAllow action'}
         }
         return nil
     }
     if(!ca) {
-        return {err: `Current ${chainTip(cur)} requires ChainAllow action in the transaction`}
+        return {err: `Current ${chainTip(cur)} requires ChainAllow action`}
     }
     if(!actionAllowsChain(ca, cid)) {
-        return {err: `Transaction ChainAllow does not include current ${chainTip(cur)}`}
+        return {err: `ChainAllow does not include current ${chainTip(cur)}`}
     }
     return nil
 }

@@ -1,7 +1,7 @@
 var stoCurAccDoSign = async msg => {
     let privkey = await stoUnlockAccount()
     if(!privkey) {
-        return {err:'Account unlocking failed'}
+        return {err:'Unlock failed'}
     }
     let res = hacash_api.sign(privkey, msg)
     try{

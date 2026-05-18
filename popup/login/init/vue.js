@@ -93,8 +93,8 @@ var routePageInit = async (sc, force) => {
             // console.log(pk)
             if( e1 || e2) {
                 return showWPerr(e2 
-                    ? 'The format is incorrect and includes unsupported characters'
-                    : 'The password length cannot be less than 6')
+                    ? 'Unsupported characters'
+                    : 'Use at least 6 characters')
             }
             // console.log(pk)
             createaccount(t, pk)
@@ -120,7 +120,7 @@ var routePageInit = async (sc, force) => {
                 return showWPerr('Enter at least 8 characters')
             }
             if(t.pass1 != t.pass2) {
-                return showWPerr('Password not match')
+                return showWPerr("Passwords don't match")
             }
             // save password
             await initroutetohome(t.acc, t.pass1)
@@ -137,12 +137,12 @@ var routePageInit = async (sc, force) => {
             var t = this
             , p = t.ulkpass
             if(!p) {
-                return showWPerr('Please enter your password')
+                return showWPerr('Enter your password')
             }
             let pm = MD5(p+salthcxwlt)
             , psk = await stoReadPasskey()
             if(psk != pm){
-                return showWPerr('Password error')
+                return showWPerr('Wrong password')
             }
             // unlock success / update password
             await stoSavePassword(p)

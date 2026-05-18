@@ -3,7 +3,7 @@ var routePageSigTrs = (adr, clbk) => {
 
     let txobj = window.atob(decodeURIComponent(urlquery.txobj||''))
     if(!txobj){
-        return alert('tx object must give!')
+        return alert('Missing tx object')
     }
     // console.log(txobj)
     txobj = JSON_parse(txobj)
@@ -15,7 +15,7 @@ var routePageSigTrs = (adr, clbk) => {
         txobj.timestamp = tsnow() // 时间戳
     }
     if(txobj.main_address && txobj.main_address!=adr){
-        return alert(`main address ${txobj.main_address} not match wallet current account ${adr}`)
+        return alert(`Main address ${txobj.main_address} does not match current account ${adr}`)
     }
     txobj.main_address = adr
     // ok
@@ -104,7 +104,7 @@ var routePageSigTrs = (adr, clbk) => {
             if(t.txerr){
                 return
             }
-            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Once the transaction is signed and committed, it cannot be reversed, can it be confirmed?</p>`, 'Confirm')  ) {
+            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Once submitted, this transaction cannot be reversed. Confirm?</p>`, 'Confirm')  ) {
                 return
             }
             // do sign
@@ -179,7 +179,7 @@ var routePageSigTrs = (adr, clbk) => {
             _setTimeout(t.nop, 3000) // close
             _setTimeout(_=>t.ende=1, 150)
             // ok
-            showWPtip("Tx submitted successfully!")
+            showWPtip("Tx submitted")
             // close window
             // window.href = './moneynex.html'
         }

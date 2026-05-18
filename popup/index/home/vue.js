@@ -87,13 +87,13 @@ var refreshHomeTrsLog = nil
             if(!ok) {
                 return
             }
-            ok = await wpcfm_open(`Resetting your wallet will erase all transaction history, private keys, and passwords. Ensure you have backups for all account private keys, as failing to do so will result in permanent loss of all your assets`, 
-            'I Acknowledge the Risk', 
+            ok = await wpcfm_open(`Resetting your wallet will erase all history, private keys, and passwords. Back up every private key first.`, 
+            'I understand', 
             'red')
             if(!ok) {
                 return
             }
-            let rskcf = prompt ("Please type 'I ACKNOWLEDGE THE RISK' in the box below and click Confirm to delete all data, including private keys.", '')
+            let rskcf = prompt ("Type 'I ACKNOWLEDGE THE RISK' to delete all data, including private keys.", '')
             if('IACKNOWLEDGETHERISK'!=rskcf.replace(/\s+/ig, '')){
                 return
             }

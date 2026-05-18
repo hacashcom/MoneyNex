@@ -23,7 +23,7 @@
 
 <div class="permt">
     <div class="con">
-        <p class="tip"><b>{{dmu}}</b> has created a new transaction and is requesting your signature. Please review the transaction details:</p>
+        <p class="tip"><b>{{dmu}}</b> requests your signature. Review the transaction:</p>
         <p class="net">Network: <b>{{chaintip}}</b></p>
     </div>
 </div>
@@ -40,7 +40,7 @@
     </div>
 
     <div v-if="txerr" class="txerr">
-        <h1>Transaction Validation Failed:</h1>
+        <h1>Tx validation failed</h1>
         <p>{{txerr}}</p>
     </div>
 </div>
@@ -62,10 +62,9 @@
 </div>
 <div v-else class="success">
     <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
-    <p>The transaction has been successfully signed!</p>
+    <p>Tx signed</p>
 </div>
 
 <div class="wtip" v-if="!end"   >
-    <p>Tips: Transactions are initiated by third-party services. Please pay attention to the safety of your funds and carefully review the transaction content.</p>
+    <p>Third-party transaction. Review it carefully.</p>
 </div>
-

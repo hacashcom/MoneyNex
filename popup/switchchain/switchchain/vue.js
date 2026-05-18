@@ -13,7 +13,7 @@ var routePageSwitchchain = (adr, clbk) => {
         err: '',
     },{
         nop(){
-            returnDataToUserPage({err: 'User rejected chain switch'}).then(()=>{
+            returnDataToUserPage({err: 'User rejected network switch'}).then(()=>{
                 window.close()
             })
         },

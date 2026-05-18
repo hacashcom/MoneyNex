@@ -17,15 +17,15 @@
     </div>
 
     <div class="ipw">
-        <label>Select asset</label>
+        <label>Asset</label>
         <div class="cis">
             <div :class="`it f ${cisx==1?'active':''}`" @click="swtcis(1)">
                 <a><img :src="`${icfp}hac.svg`" />HAC</a></div>
             <div :class="`it e ${cisx==2?'active':''}`" @click="swtcis(2)">
                 <a><img :src="`${icfp}hacd.svg`" />HACD</a></div>
         </div>
-        <input v-if="cisx==1" v-model="amthac" placeholder="Enter HAC amount (e.g., 0.1, 10, 1:247, 1:249)" />
-        <textarea class="diary" v-if="cisx==2" v-model="nmshacd" placeholder="Enter HACD names separated by commas, like 'AAABBB,HYYMMN'(Max 200)"></textarea>
+        <input v-if="cisx==1" v-model="amthac" placeholder="HAC amount, e.g. 0.1 or 1:247" />
+        <textarea class="diary" v-if="cisx==2" v-model="nmshacd" placeholder="HACD names, e.g. AAABBB,HYYMMN (max 200)"></textarea>
     </div>
 
     <div class="ipw" id="gasw">

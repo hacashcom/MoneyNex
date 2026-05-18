@@ -6,7 +6,7 @@
         <div class="itpr" v-if="!rdnstr">
             <div class="per"><b :style="{width: rdnbct/6+'%'}"></b></div>
             <p>{{(rdnbct/6).toFixed(1)}}%</p>
-            <p>Securely initialize your wallet by <i>moving your mouse randomly</i>, ensuring the wallet created is fully protected</p>
+            <p>Move your mouse randomly to secure your wallet</p>
         </div>
         <div v-else >
             <div class="ttl">
@@ -23,10 +23,10 @@
             </div>
             <div v-else-if="setpass" class="stps">
 
-                <label>Set a password to manage your wallet</label>
+                <label>Set a wallet password</label>
 
                 <input type="password" v-model="pass1" placeholder="Password" />
-                <input type="password" v-model="pass2" placeholder="Repeat password" />
+                <input type="password" v-model="pass2" placeholder="Confirm password" />
 
                 <button @click="dopass">OK</button>
 
@@ -34,7 +34,7 @@
             <div v-else-if="backup" class="bkup">
 
                 <div class="adr">
-                    <label>Your new wallet address</label>
+                    <label>New wallet address</label>
                     <h1>{{acc.address.substring(0, 17)}}...</h1>
                 </div>
                 <label class="tip">Back up your private key</label>
@@ -53,16 +53,16 @@
                     <div @click="pgi=2" :class="`swt ${pgi==2?'active':''}`"><h1>Import</h1></div>
                 </div>
                 <div class="p1" v-if="pgi==1">
-                    <label>Create a new wallet by generating a random private key</label>
+                    <label>Create a wallet with a random private key</label>
                     <button :class="`blue ${crting?'ing':''}`" @click="create">Create wallet</button>
                     <!-- <a @click="clswd">Cancel</a> -->
 
                 </div>
                 <div class="p2" v-if="pgi==2">
-                    <label>Import your private key</label>
+                    <label>Import your private key or password</label>
                     <div class="ipt">
                         <label></label>
-                        <textarea @input="cleanerr" v-model="importkey" placeholder="Paste or input your private key or password"></textarea>
+                        <textarea @input="cleanerr" v-model="importkey" placeholder="Paste or enter your private key or password"></textarea>
                     </div>
                     <button @click="importpk" :class="`${crting?'ing':''}`">Import wallet</button>
                 </div>

@@ -38,7 +38,7 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
             let md5 = MD5(p+salthcxwlt)
             , pmd5 = await stoReadPasskey()
             if(md5 != pmd5){
-                t.err = "Password error"
+                t.err = "Wrong password"
             }else{
                 // pass check ok !!!
                 t.c1&&t.c1()
@@ -48,12 +48,12 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
         }
         if(p) {
             if(p.length < 8){
-                t.err = "Minimum length 8"
+                t.err = "Use at least 8 characters"
             }else{
                 dops( p ).then()
             }
         }else{
-            t.err = "Please enter password"
+            t.err = "Enter password"
         }
 
         // t.c1 && t.c1()
