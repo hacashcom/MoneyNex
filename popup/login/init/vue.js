@@ -120,7 +120,7 @@ var routePageInit = async (sc, force) => {
                 return showWPerr('Enter at least 8 characters')
             }
             if(t.pass1 != t.pass2) {
-                return showWPerr('Password not macth')
+                return showWPerr('Password not match')
             }
             // save password
             await initroutetohome(t.acc, t.pass1)
@@ -221,4 +221,3 @@ var routePageInit = async (sc, force) => {
 
 
 }
-

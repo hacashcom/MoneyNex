@@ -53,7 +53,7 @@
                     <div @click="pgi=2" :class="`swt ${pgi==2?'active':''}`"><h1>Import</h1></div>
                 </div>
                 <div class="p1" v-if="pgi==1">
-                    <label>Create a new wallet by generating a randonm private key</label>
+                    <label>Create a new wallet by generating a random private key</label>
                     <button :class="`blue ${crting?'ing':''}`" @click="create">Create wallet</button>
                     <!-- <a @click="clswd">Cancel</a> -->
 
@@ -62,7 +62,7 @@
                     <label>Import your private key</label>
                     <div class="ipt">
                         <label></label>
-                        <textarea @input="cleanerr" v-model="importkey" placeholder="Past or input your private key or password"></textarea>
+                        <textarea @input="cleanerr" v-model="importkey" placeholder="Paste or input your private key or password"></textarea>
                     </div>
                     <button @click="importpk" :class="`${crting?'ing':''}`">Import wallet</button>
                 </div>

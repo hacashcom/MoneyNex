@@ -12,8 +12,7 @@ var routePageConn = (adr, clbk) => {
         },
         async doconn(){
             let t = this
-            , dms = await stoAppendConnectDomains(t.dmu)
-            console.log(dms)
+            await stoAppendConnectDomains(t.dmu)
             await returnDataToUserPage({address: adr})
             window.close()
         }

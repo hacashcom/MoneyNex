@@ -12,10 +12,3 @@ dealHandleHacashApiToPopup(optkey_list_to_popup)
  */
 dealAccountApi()
 
-
-
-
-console.log("MoneyNex background OK.")
-
-
-

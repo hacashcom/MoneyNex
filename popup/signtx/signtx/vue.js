@@ -98,42 +98,12 @@ var routePageSignTx = (adr, clbk) => {
                 return
             }
             t.ing = yes;
-            // console.log(gasset,"HAC gas")
-            // console.log(t.txres)
-            let signobj = await stoCurAccDoSign(t.txres.sign_hash)
-            // console.log("signobj", signobj)
-            if(signobj.err) {
-                t.txerr = signobj.err
+            let sigp = await signTxBodyAndMaybeSubmit(txbody, t.txres.sign_hash, autosubmit)
+            if(sigp.err) {
+                t.txerr = sigp.err
                 t.ing = no;
                 return
             }
-            // do sign
-            let sigp = await signTransaction(txbody, {
-                signature: true,
-                pubkey: signobj.pubkey,
-                sigdts: signobj.signature,
-            })
-            // console.log(sigp)
-            let check_all_sigs_ok = function() {
-                for(let sg in sigp.signatures ) {
-                    let isok = sigp.signatures[sg].complete
-                    if(!isok) {
-                        return false
-                    }
-                }
-                return true
-            } 
-            if( autosubmit && check_all_sigs_ok() ) {
-                // submit 
-                let subp = await submitTransaction(sigp.body)
-                // console.log(subp)
-                if(subp.err) {
-                    t.txerr = subp.err
-                    t.ing = no;
-                    return
-                }
-                sigp.submit = true;
-            } 
             // success return
             await returnDataToUserPage(sigp)
             // ok

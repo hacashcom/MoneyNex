@@ -1,7 +1,7 @@
-var routePageSwitchChain = (adr, clbk) => {
+var routePageSwitchchain = (adr, clbk) => {
 
     let reqc = chainConfigFromUrlQuery()
-    let {app} = VueCreateApp('swchn', vue_tpl_switchChain, {
+    let {app} = VueCreateApp('swchn', vue_tpl_switchchain, {
         icfp: icfpath,
         dmu: urlquery.dmu,
         sadr: addrOmitted(adr || ''),

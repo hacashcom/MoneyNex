@@ -11,19 +11,14 @@ messageHandler[msg_create_account_by] = async function(req, sender, ok){
 
 
 messageHandler['wallet'] = async function(req, sender, ok){
-    // console.log(`!!!!!messageHandler['wallet']`, req)
     let address = await stoReadCurrentAccount()
-    await sendMessageToCurrentTabContent(req, {address});
+    await sendMessageToCurrentTabContent(req, {address}, sender);
     ok({})
-    // ok({address:'1x...address'})
 }
 
 
 
 
 }
-
-
-
 
 

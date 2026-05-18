@@ -50,7 +50,6 @@ var routePageRaiseFee = (adr, clbk) => {
             }
             // get tx body
             let res = await queryTransaction(t.hash)
-            console.log(res)
             if(!res || !res.pending) {
                 t.ing = no;
                 return showWPerr('Error: Tx not find in tx pool')
@@ -59,7 +58,6 @@ var routePageRaiseFee = (adr, clbk) => {
             let txobj = await checkTransaction(res.body, {
                 body: true, set_fee: t.fee,
             })
-            console.log("txobj", txobj)
             if(!txobj || txobj.err || txobj.error) {
                 t.ing = no;
                 return showWPerr('Check Tx Error: '+(txobj ? (txobj.err || txobj.error) : 'empty response'))
@@ -71,32 +69,11 @@ var routePageRaiseFee = (adr, clbk) => {
                 await returnDataToUserPage(cherr)
                 return showWPerr(cherr.err)
             }
-            let signobj = await stoCurAccDoSign(txobj.hash_with_fee)
-            console.log("signobj", signobj)
-            if(signobj.err) {
-                t.ing = no;
-                return showWPerr('Sign Error: '+signobj.err)
-            }
-            // do sign
-            let sigp = await signTransaction(txobj.body, {
-                signature: true,
-                pubkey: signobj.pubkey,
-                sigdts: signobj.signature,
-            })
-            // console.log(sigp)
+            let sigp = await signAndSubmitTxBody(txobj.body, txobj.hash_with_fee)
             if(sigp.err) {
                 t.ing = no
-                return showWPerr('Sign Tx Error: '+sigp.err)
+                return showWPerr('Error: '+sigp.err)
             }
-            // submit 
-            let subp = await submitTransaction(sigp.body)
-            console.log(subp)
-            if(subp.err) {
-                t.ing = no;
-                return showWPerr('Error: '+subp.err)
-            }
-            // success return
-            sigp.submit = true;
             t.end = yes
             _setTimeout(t.nop, 3000)
             _setTimeout(_=>t.ende=1, 150)

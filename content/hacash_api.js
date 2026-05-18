@@ -79,6 +79,4 @@ if(window.MoneyNexInit){
     window.MoneyNexInit(wltinfo, hacApiObj)
 }
 
-console.log("MoneyNex SDK ok.")
-
 }, 15)

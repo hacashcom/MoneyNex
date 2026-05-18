@@ -104,7 +104,7 @@ var routePageSigTrs = (adr, clbk) => {
             if(t.txerr){
                 return
             }
-            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Once the transaction is signed and commited, it cannot be reversed, can it be confirmed?</p>`, 'Confirm')  ) {
+            if( ! await wpcfm_open(`<p>Network: <b>${t.chaintip}</b></p><p>Once the transaction is signed and committed, it cannot be reversed, can it be confirmed?</p>`, 'Confirm')  ) {
                 return
             }
             // do sign
@@ -134,32 +134,10 @@ var routePageSigTrs = (adr, clbk) => {
                 return
             }
             t.ing = yes;
-            // console.log(gasset,"HAC gas")
-            let signobj = await stoCurAccDoSign(t.txres.hash_with_fee)
-            // console.log("signobj", signobj)
-            if(signobj.err) {
-                t.txerr = signobj.err
-                t.ing = yes;
-                return
-            }
-            // do sign
-            let sigp = await signTransaction(t.txres.body, {
-                signature: true,
-                pubkey: signobj.pubkey,
-                sigdts: signobj.signature,
-            })
-            console.log(sigp)
+            let sigp = await signAndSubmitTxBody(t.txres.body, t.txres.hash_with_fee)
             if(sigp.err){
                 t.txerr = sigp.err
-                t.ing = yes;
-                return
-            }
-            // submit tx
-            let sbmtx = await submitTransaction(sigp.body)
-            console.log(sbmtx)
-            if(sbmtx.err){
-                t.txerr = sbmtx.err
-                t.ing = yes;
+                t.ing = no;
                 return
             }
             // success
@@ -171,7 +149,6 @@ var routePageSigTrs = (adr, clbk) => {
                 desc: parseTxDesc(t.txres).join('<br/>')
             };
             let acts = (txobj.actions || []).filter(act => parseInt(act.kind) !== CHAIN_ALLOW_KIND)
-            console.log(acts)
             if(acts.length==1){
                 let act = acts[0]
                 , kd = parseInt(act.kind)

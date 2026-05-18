@@ -12,7 +12,7 @@ var hpgwstks = ['home']
     try {
         fn && await fn()
     } catch(e) {
-        console.log(e)
+        showWPerr(e.toString())
     }
 }
 , pushhpgw = (name, clbk) => {

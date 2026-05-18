@@ -8,87 +8,16 @@
 // mark
 var is_release = false
 var drop_console = false
-const auto_rebuild = false
-const refresh_rebuild = true
-
-
-
-// start
-let bgd = './background/'
-, ppd = './popup/'
-, bgdsk = bgd + 'hacash_sdk'
-, bgfls = [
-    `./jslib/crypto-js.4.1.1`,
-    `./jslib/crypto-util`,
-    `./jslib/message-types`,
-    `./jslib/hacash_sdk`,
-    `${bgd}init`,
-    `${bgd}listener`,
-    `${bgd}account`,
-    `${bgd}main`,
-]
-, pppjslibs = [
-    `./jslib/crypto-util`,
-    `./jslib/message-types`,
-    `./jslib/hacash_sdk`,
-]
-, popup_common = [
-    [
-        'comp/wptip',
-        'comp/wpcfm',
-        'comp/wpass',
-        'comp/swtgas',
-        'login/init',
-    ],
-    ['html', 'comp'] // add login
-]
-;
-// page def
-let page_defs = {
-    'moneynex': [
-        [
-            'index/home',
-            'index/acinf',
-            'index/dotrs',
-            'index/chains',
-            'index/chainform',
-        ],
-        ['index']
-    ], // index
-    'switchChain': [
-        [
-            'switchChain/switchChain'
-        ],
-        ['switchChain']
-    ], // dapp request switch chain
-    'connect': [
-        [
-            'connect/conn'   
-        ],
-        ['connect']
-    ], // connect wallet
-
-    'transfer': [
-        [
-            'transfer/sigtrs'
-        ],
-        ['transfer']
-    ], // do transfer
-
-    'signtx': [
-        [
-            'signtx/signtx'
-        ],
-        ['signtx']
-    ], // sign tx
-
-    'raisefee': [
-        [
-            'raisefee/raisefee'
-        ],
-        ['raisefee']
-    ] // raise fee
-}
+const build_config = require('./build.cfg')
+, auto_rebuild = build_config.auto_rebuild
+, refresh_rebuild = build_config.refresh_rebuild
+, bgd = build_config.bgd
+, ppd = build_config.ppd
+, bgfls = build_config.bgfls
+, pppjslibs = build_config.pppjslibs
+, popup_common = build_config.popup_common
+, popup_services = build_config.popup_services
+, page_defs = build_config.page_defs
 ;
 
 
@@ -204,6 +133,7 @@ function release() {
     for(let i in dirs) {
         try{ fs.mkdirSync(dirs[i]) }catch(e){}
     }
+    cleanPageOutputs(bd+'popup')
     // copy
     var cpfs = [
         'manifest.json',
@@ -232,6 +162,22 @@ function release() {
     // copy dir
     copyDir('./image', bd+'image')
     copyDir('./jslib', bd+'jslib')
+}
+
+function cleanPageOutputs(dir) {
+    if(!fs.existsSync(dir)) return
+    let keep = {}
+    for(let k in page_defs) {
+        keep[`${k}.html`] = true
+        keep[`${k}.css`] = true
+        keep[`${k}.js`] = true
+    }
+    for(let f of fs.readdirSync(dir)) {
+        if(!/\.(html|css|js)$/.test(f)) continue
+        if(!keep[f]) {
+            try{ fs.unlinkSync(path.join(dir, f)) }catch(e){}
+        }
+    }
 }
 
 function getVueTplToJs(tpls, is_release) {
@@ -271,6 +217,7 @@ async function build(is_release) {
 
 
     // build page: moneynex and more 
+    cleanPageOutputs(ppd)
     for(let k in page_defs){
         let v = page_defs[k]
         await buildPageSource(k, v, is_release)
@@ -292,6 +239,7 @@ async function buildPageSource(pname, plist, is_release) {
         .concat(popups(popup_common[1]))
         .concat(vuepuplist(popup_common[0]))
         .concat(vuepuplist(plist[0]))
+        .concat(popup_services)
         .concat(popups(plist_1))
     
     // console.log(pupjss)

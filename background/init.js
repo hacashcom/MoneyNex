@@ -39,6 +39,15 @@ async function stoReadCurrentAccount() {
     return obj[acccurkey]
 }
 
+function getDappDomainFromSender(sender) {
+    try {
+        let url = new URL(((sender || {}).tab || {}).url || '')
+        return url.host || 'hacash.com'
+    }catch(e){
+        return 'hacash.com'
+    }
+}
+
 async function getOpenerTabIdFromStorage() {
     let tid = await chrome_storage_local.get('origin_tab_id')
     // console.log(tid)
@@ -46,20 +55,25 @@ async function getOpenerTabIdFromStorage() {
     return tid.origin_tab_id
 }
 
-async function sendMessageToCurrentTabContent(req, msg) {
-    let curtab = await getCurrentTab()
+async function sendMessageToCurrentTabContent(req, msg, sender) {
+    let tabid = ((sender || {}).tab || {}).id
+    if(tabid === undefined || tabid === null) {
+        let curtab = await getCurrentTab()
+        tabid = curtab.id
+    }
     msg.did = req.did
-    chrome.tabs.sendMessage(curtab.id, msg);
+    chrome.tabs.sendMessage(tabid, msg);
 }
 
-async function openWalletPopupPageInNextTab(req) {
+async function openWalletPopupPageInNextTab(req, sender) {
     // console.log(req)
     req = req || {}
-    let curtab = await getCurrentTab()
+    let curtab = ((sender || {}).tab) || await getCurrentTab()
     , cidx = curtab.index
     , tabid = curtab.id
     , actpage = req.action || 'moneynex'
     , params = `?tid=${tabid}`;
+    req.dmu = getDappDomainFromSender(sender)
     delete req.action
     for(let k in req){
         params += `&${encodeURIComponent(k)}=${encodeURIComponent(req[k])}`
@@ -84,8 +98,4 @@ chrome.runtime.onInstalled.addListener(async ({reason}) => {
     }
 });
   
-
-
-
-
 

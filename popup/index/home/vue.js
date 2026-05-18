@@ -117,12 +117,10 @@ var refreshHomeTrsLog = nil
             return chainName(t.chain)
         }
         ,chainRemark(){
-            let t = this
-            return (t.chain.remark || '') + ''
+            return chainRemark(this.chain)
         }
         ,chainRpc(){
-            let t = this
-            return (t.chain.rpc || '').replace(/^https?:\/\//i, '')
+            return chainRpcText(this.chain)
         }
         // load balance
         ,async ldbls() {

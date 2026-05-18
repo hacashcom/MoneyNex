@@ -1,4 +1,4 @@
-var routePageDotrs = (clbk) => {
+﻿var routePageDotrs = (clbk) => {
 
     // alert(adr)
 
@@ -38,29 +38,6 @@ var routePageDotrs = (clbk) => {
         getgas() {
             return this.gasw.get()
         },
-        /*
-        getgas() {
-            let t = this
-            , gas = parseFloat(t.rcmgas)
-            if(gas < t.bgas){
-                gas = t.bgas
-            }
-            if(t.gsus==2) {
-                gas *= 4
-            }else if(t.gsus==3) {
-                if(t.setgas.indexOf(':')>0){
-                    gas = t.setgas
-                }else{
-                    gas = parseFloat(t.setgas)||0
-                }
-            }
-            return gas
-        },
-        swtgas(g) {
-            let t = this
-            t.gsus = g
-        },
-        */
         swtcis(c) {
             let t = this
             t.cisx = c
@@ -135,28 +112,12 @@ var routePageDotrs = (clbk) => {
                 t.ing = no
                 return
             }
-            let signobj = await stoCurAccDoSign(txres.hash_with_fee)
-            if(signobj.err) {
-                t.ing = no
-                return showWPerr(signobj.err)
-            }
-            let sigp = await signTransaction(txres.body, {
-                signature: true,
-                pubkey: signobj.pubkey,
-                sigdts: signobj.signature,
-            })
+            let sigp = await signAndSubmitTxBody(txres.body, txres.hash_with_fee)
             if(sigp.err) {
                 t.ing = no
-                return showWPerr(sigp.err)
-            }
-            // submit to blockchain
-            let sdrs = await submitTransaction(sigp.body)
-            , err = sdrs.err
-            if(err) {
-                t.ing = no
-                // Transaction Add to MemTxPool error: address 1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9 balance ㄜ0:0 not enough， need ㄜ123:248.
-                if(err.indexOf('not enough') > 0){
-                    err = "Insufficient Balance"
+                let err = sigp.err
+                if(err.indexOf && err.indexOf('not enough') > 0){
+                    err = 'Insufficient Balance'
                 }
                 return showWPerr(err)
             }

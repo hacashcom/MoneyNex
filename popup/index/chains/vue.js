@@ -27,7 +27,7 @@ var chainPageAppPtr = nil
             return chainName(c)
         },
         cremark(c){
-            return (c.remark || '') + ''
+            return chainRemark(c)
         },
         async load(){
             let t = this
@@ -44,15 +44,11 @@ var chainPageAppPtr = nil
         add(){
             routePageChainForm(nil, ()=>{
                 pushhpgw('chainform')
-            }, async()=>{
-                await this.load()
             })
         },
         edit(c){
             routePageChainForm(c, ()=>{
                 pushhpgw('chainform')
-            }, async()=>{
-                await this.load()
             })
         },
         async rmv(c){

@@ -89,29 +89,6 @@ injectScript( chrome.runtime.getURL('content/hacash_api.min.js'));
 
 
 // ok
-console.log("hacash api runtime ok.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

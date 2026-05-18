@@ -1,4 +1,4 @@
-var routePageChainForm = (chain, clbk, saved) => {
+var routePageChainForm = (chain, clbk) => {
 
     let rawchain = chain
     chain = chainNormalize(chain || {})
@@ -47,7 +47,6 @@ var routePageChainForm = (chain, clbk, saved) => {
             if(chainIdOf(await getCurrentChain()) === id) {
                 await stoReadCurrentChain()
             }
-            saved && await saved(cfg)
             showWPtip('Network saved')
             this.back()
         }
