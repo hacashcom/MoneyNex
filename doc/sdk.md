@@ -64,6 +64,10 @@ The SDK interface of the wallet is almost always registered in the form of an as
 1. `wallet` obtains the current primary address of the user's wallet, and returns an Error if it is not authorized
 2. `connect` initiates authorization to connect to the wallet, and returns the user's wallet information after success
 3. `transfer` initiates various transactions and signs broadcasts, returning transaction information
+4. `signtx` signs a built transaction body and optionally broadcasts it
+5. `raisefee` raises the fee of a pending transaction
+6. `chain` queries the current chain and a target chain's configuration status without opening a confirmation page
+7. `switchchain` requests the wallet to add or switch to a chain ID
 
 ### Get the user's wallet address / Check if the wallet is authorized to be connected
 
@@ -93,10 +97,72 @@ MoneyNex.connect({}, acc => {
 
 Call the connect interface, the wallet will open an authorization page connected to the wallet, and when the user completes the authorization, the wallet will notify the success through a callback. If the user cancels or does not click Confirm Authorization, the callback function will not be called.
 
+### Query chain status
+
+```js
+MoneyNex.chain({chain_id: 1}, res => {
+    console.log(res)
+    // {
+    //     current_chain_id: 0,
+    //     current_chain: {...},
+    //     target_chain_id: 1,
+    //     target_chain: {...}, // null when not configured
+    //     request_chain: {...},
+    //     configured: true,
+    //     matched: false,
+    //     need_add: false,
+    //     need_switch: true,
+    //     diff: false
+    // }
+})
+```
+
+The `chain` interface is read-only. It does not open a wallet page, does not request authorization, and does not modify the wallet. Use it before `switchchain` when a dApp wants to customize the user flow.
+
+### Add or switch chain ID
+
+```js
+MoneyNex.switchchain({
+    chain_id: 1,
+    name: 'Hacash Testnet',
+    rpc: 'https://example.com/fullnode',
+    explorer: 'https://example.com/explorer',
+    remark: 'Test network',
+
+    // Optional policy fields
+    mode: 'addOrSwitch',        // addOrSwitch | switch | add
+    update: 'ask',              // ask | never | always
+    silentIfCurrent: true
+}, res => {
+    console.log(res)
+    // {
+    //     chain_id: 1,
+    //     chain: {id: 1, name: 'Hacash Testnet', rpc: '...', explorer: '...', remark: '...', builtin: false},
+    //     switched: true
+    // }
+})
+```
+
+Call the `switchchain` interface to request the wallet to add or switch to a specific chain ID. If the wallet is already on the target chain and `silentIfCurrent` is not `false`, the callback returns success without opening a confirmation page. If the target chain is already configured, the wallet only asks the user to confirm switching. If the target chain is not configured, the wallet asks the user to confirm adding the chain and switching to it. If the user rejects the request, the callback returns an error such as `{err: 'User rejected network switch'}`.
+
+Supported parameters:
+
+- `chain_id` or `id`: target chain ID. `0` means Hacash mainnet.
+- `name`: chain display name. If omitted, the wallet uses `Chain ID {id}`.
+- `rpc`: full node RPC URL. This field is required for non-mainnet chains.
+- `explorer`: explorer URL.
+- `remark`: chain description shown in the wallet.
+- `mode`: optional. `addOrSwitch` is the default. `switch` only switches to an already configured chain and returns `{err: 'Chain not configured', need_add: true}` if missing. `add` only adds or updates the chain configuration and does not switch.
+- `update`: optional. `ask` is the default. When the chain ID is already configured but the dApp provides different settings, `ask` lets the user choose "Switch Only" or "Update & Switch"; `never` switches using the saved wallet configuration; `always` asks for one confirmation and updates the saved configuration.
+- `silentIfCurrent`: optional. Defaults to `true`. When the current chain already matches the target and there is no configuration difference, the wallet returns `{already_current: true, switched: false}` without opening a confirmation page.
+
 ### Initiate transactions such as HAC transfers
 
 ```js
 let txobj = JSON.stringify({
+    // Optional. When set, the wallet checks that the current network matches this chain ID.
+    // For non-mainnet chains, the wallet automatically adds a ChainAllow action to the transaction.
+    chain_id: 1,
     actions: [{
         kind: 1, // HAC transfer
         to: '19vyHUgwSqQci1kUcAa5ryShm1Aau3qxod',
@@ -113,6 +179,8 @@ MoneyNex.transfer({txobj}, (a, b) => {
 ```
 
 By encoding the JSON data describing the transaction and passing it to the SDK, you can initiate the creation of a transaction such as a transfer, request the user's signature, and broadcast it to the Hacash blockchain for packaging and confirmation. After the signature is successful, the transaction information will be return back as follows:
+
+The `chain_id` field is optional and can be placed either inside `txobj` or in the API params as `MoneyNex.transfer({txobj, chain_id: 1}, callback)`. If it is provided, the wallet must already be switched to the requested chain; otherwise the callback returns a network mismatch error with `current_chain_id` and `request_chain_id`. On non-mainnet chains, the wallet automatically inserts a ChainAllow action (`kind: 1041`) before creating the transaction. On mainnet, transactions must not include a ChainAllow action.
 
 ```js
 {
@@ -150,7 +218,7 @@ The currently supported trading `actions` are:
 }
 ```
 
-2. HACD inscription:
+3. HACD inscription:
 
 ```js
 {
@@ -171,11 +239,16 @@ Hacash supports high-end functions such as native DEX atomic transactions and mu
 ```js
     let txbody = "02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed18f40104000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500000000"
     // call api
-    MoneyNex.signtx({txbody}, (a, b) => {
+    MoneyNex.signtx({txbody, chain_id: 1, autosubmit: false}, (a, b) => {
         sgtw.innerHTML = JSON.stringify(a)
         console.log(a, b)
     })
 ```
+
+Optional parameters:
+
+- `chain_id`: target chain ID. If omitted, the wallet treats the request as mainnet (`0`).
+- `autosubmit`: when truthy, the wallet submits the transaction after signing if all required signatures are complete.
 
 API return:
 
@@ -204,6 +277,8 @@ API return:
 
 Among them, the `body` field is the signed transaction body data, and the user's signature data will be automatically added to the body and needs to be saved. Wait for all users to sign and then submit the body to the chain.
 
+The wallet checks whether the transaction body is allowed on the current chain before signing. Mainnet transaction bodies must not contain a ChainAllow action. Non-mainnet transaction bodies must contain a ChainAllow action (`kind: 1041`) whose `chains` list includes the current chain ID.
+
 ### Raise Tx Fee
 
 Hacash supports real-time fee increases to change the order of transactions in the transaction pool, so as to achieve the purpose of packaging and confirming as soon as possible. The HACD Bidding Fee is essentially a transaction fee, and it can also be used in this way to change the bidding order.
@@ -212,11 +287,13 @@ Hacash supports real-time fee increases to change the order of transactions in t
     let hash = "e2700db4558ef1e1b540fd53f5e7a0fa7b9d096947f9dc20d07bd507969987b9"
     let fee = "2:245" // or 0.002
     // call api
-    MoneyNex.raisefee({hash, fee}, (a) => {
+    MoneyNex.raisefee({hash, fee, chain_id: 1}, (a) => {
         // sgtw.innerHTML = JSON.stringify(a)
         console.log(a)
     })
 ```
+
+The `chain_id` parameter is optional. If provided, the wallet checks that the current network matches the requested chain before querying and signing the pending transaction. The fetched transaction body is also checked against the current chain before the fee-raising transaction is signed and submitted.
 
 API return:
 
@@ -234,4 +311,3 @@ API return:
 The test reference use cases of the above SDK interfaces can be found in the following directory and can be used as a writing example for developers:
 
 - [SDK Test](https://github.com/hacashcom/MoneyNex/tree/main/test)
-

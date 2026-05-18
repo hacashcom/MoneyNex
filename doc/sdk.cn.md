@@ -62,6 +62,10 @@ window.MoneyNex 对象可用，即代表钱包 SDK 可用。
 1. `wallet` 获取用户钱包的当前主地址，未授权则返回 Error
 2. `connect` 发起连接钱包的授权，成功后返回用户钱包信息
 3. `transfer` 发起各种交易并签名广播，返回交易信息
+4. `signtx` 对已经构建好的交易体签名，并可选择自动广播
+5. `raisefee` 为交易池中的待确认交易提升手续费
+6. `chain` 无弹窗查询当前链和目标链的配置状态
+7. `switchchain` 请求钱包添加或切换到指定 Chain ID
 
 ### 获取用户钱包地址 / 检查是否授权连接钱包
 
@@ -91,10 +95,72 @@ MoneyNex.connect({}, acc => {
 
 调用 connect 接口，钱包将打开一个连接到钱包的授权页面，当用户完成授权时，钱包将通过回调通知成功。如果用户取消或者一直未点击确认授权，则回调函数不会被调用。
 
+### 查询 Chain 状态
+
+```js
+MoneyNex.chain({chain_id: 1}, res => {
+    console.log(res)
+    // {
+    //     current_chain_id: 0,
+    //     current_chain: {...},
+    //     target_chain_id: 1,
+    //     target_chain: {...}, // 未配置时为 null
+    //     request_chain: {...},
+    //     configured: true,
+    //     matched: false,
+    //     need_add: false,
+    //     need_switch: true,
+    //     diff: false
+    // }
+})
+```
+
+`chain` 接口是只读接口，不打开钱包页面，不请求授权，也不修改钱包状态。dApp 如果需要定制用户流程，可以先调用它判断目标 Chain ID 是否已经配置、当前是否已经匹配、配置是否存在差异。
+
+### 添加或切换 Chain ID
+
+```js
+MoneyNex.switchchain({
+    chain_id: 1,
+    name: 'Hacash Testnet',
+    rpc: 'https://example.com/fullnode',
+    explorer: 'https://example.com/explorer',
+    remark: 'Test network',
+
+    // 可选策略参数
+    mode: 'addOrSwitch',        // addOrSwitch | switch | add
+    update: 'ask',              // ask | never | always
+    silentIfCurrent: true
+}, res => {
+    console.log(res)
+    // {
+    //     chain_id: 1,
+    //     chain: {id: 1, name: 'Hacash Testnet', rpc: '...', explorer: '...', remark: '...', builtin: false},
+    //     switched: true
+    // }
+})
+```
+
+调用 `switchchain` 接口可以请求钱包添加或切换到指定 Chain ID。如果钱包已经处于目标链，且 `silentIfCurrent` 未设置为 `false`，钱包会直接回调成功而不打开确认页面。目标链已经配置时，钱包只要求用户确认切换；目标链未配置时，钱包要求用户确认添加并切换。如果用户拒绝请求，回调会返回类似 `{err: 'User rejected network switch'}` 的错误。
+
+支持参数：
+
+- `chain_id` 或 `id`：目标 Chain ID。`0` 表示 Hacash 主网。
+- `name`：链显示名称。不传时钱包会使用 `Chain ID {id}`。
+- `rpc`：全节点 RPC URL。非主网链必须提供。
+- `explorer`：区块浏览器 URL。
+- `remark`：钱包内展示的链备注。
+- `mode`：可选。默认值为 `addOrSwitch`。`switch` 表示只切换到已配置链，未配置时返回 `{err: 'Chain not configured', need_add: true}`；`add` 表示只添加或更新链配置，不切换当前链。
+- `update`：可选。默认值为 `ask`。当 Chain ID 已配置但 dApp 传入的配置不同，`ask` 会让用户选择“Switch Only”或“Update & Switch”；`never` 使用钱包内保存的配置直接切换；`always` 在用户确认后更新保存的配置。
+- `silentIfCurrent`：可选。默认值为 `true`。当前链已是目标链且配置无差异时，钱包直接返回 `{already_current: true, switched: false}`，不打开确认页面。
+
 ### 发起转账等交易
 
 ```js
 let txobj = JSON.stringify({
+    // 可选。设置后钱包会检查当前网络是否匹配这个 Chain ID。
+    // 非主网链会由钱包自动向交易中添加 ChainAllow 动作。
+    chain_id: 1,
     actions: [{
         kind: 1, // HAC transfer
         to: '19vyHUgwSqQci1kUcAa5ryShm1Aau3qxod',
@@ -111,6 +177,8 @@ MoneyNex.transfer({txobj}, (a, b) => {
 ```
 
 通过将描述交易的 JSON 数据编码后传递给 SDK ，即可发起创建转账等交易的，并请求用户签名后广播给 Hacash 区块链打包和确认。签名成功后将交易信息回调返回：
+
+`chain_id` 字段为可选项，可以放在 `txobj` 内，也可以作为 API 参数传入：`MoneyNex.transfer({txobj, chain_id: 1}, callback)`。传入后，钱包必须已经切换到对应链，否则回调会返回网络不匹配错误，并带上 `current_chain_id` 与 `request_chain_id`。在非主网链上，钱包会在创建交易前自动插入 ChainAllow 动作（`kind: 1041`）。在主网上，交易不能包含 ChainAllow 动作。
 
 ```js
 {
@@ -148,7 +216,7 @@ MoneyNex.transfer({txobj}, (a, b) => {
 }
 ```
 
-2. HACD 铭刻：
+3. HACD 铭刻：
 
 ```js
 {
@@ -169,11 +237,16 @@ Hacash 支持原生 DEX 原子交易、多签交易等高阶功能，通过 SDK 
 ```js
     let txbody = "02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed18f40104000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500000000"
     // call api
-    MoneyNex.signtx({txbody}, (a, b) => {
+    MoneyNex.signtx({txbody, chain_id: 1, autosubmit: false}, (a, b) => {
         sgtw.innerHTML = JSON.stringify(a)
         console.log(a, b)
     })
 ```
+
+可选参数：
+
+- `chain_id`：目标 Chain ID。不传时钱包会按主网（`0`）请求处理。
+- `autosubmit`：为真值时，如果签名后所有必需签名都已完成，钱包会自动广播交易。
 
 接口返回值：
 
@@ -202,6 +275,8 @@ Hacash 支持原生 DEX 原子交易、多签交易等高阶功能，通过 SDK 
 
 其中，`body` 字段即为已经签名后的交易体数据，用户签名数据会自动添加进 body 内，需保存。等待所有用户签名完成后，即可将 body 提交上链。
 
+钱包在签名前会检查交易体是否允许在当前链上使用。主网交易体不能包含 ChainAllow 动作；非主网交易体必须包含 ChainAllow 动作（`kind: 1041`），且其 `chains` 列表需要包含当前 Chain ID。
+
 ### 提升交易手续费
 
 Hacash 支持实时提升手续费来改变在交易池内的排序，以达到尽快打包确认的目的。HACD 竞价费本质上也是交易的手续费，也可以采用此种方式来改变竞价排序。
@@ -210,11 +285,13 @@ Hacash 支持实时提升手续费来改变在交易池内的排序，以达到�
     let hash = "e2700db4558ef1e1b540fd53f5e7a0fa7b9d096947f9dc20d07bd507969987b9"
     let fee = "2:245" // or 0.002
     // call api
-    MoneyNex.raisefee({hash, fee}, (a) => {
+    MoneyNex.raisefee({hash, fee, chain_id: 1}, (a) => {
         // sgtw.innerHTML = JSON.stringify(a)
         console.log(a)
     })
 ```
+
+`chain_id` 参数为可选项。传入后，钱包会在查询和签名待确认交易前检查当前网络是否匹配请求链；拉取到的交易体也会在签名并提交提高手续费交易前，再按当前链进行检查。
 
 接口返回值：
 

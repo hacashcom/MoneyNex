@@ -121,6 +121,26 @@ var MAIN_CHAIN_ID = 0
     explorer: urlquery.explorer,
     remark: urlquery.remark,
 })
+, rawChainConfigFromUrlQuery = () => ({
+    id: urlquery.chain_id || urlquery.id,
+    chain_id: urlquery.chain_id,
+    name: urlquery.name,
+    rpc: urlquery.rpc,
+    explorer: urlquery.explorer,
+    remark: urlquery.remark,
+})
+, chainConfigHasRequestedDiff = (saved, raw) => {
+    if(!saved) return no
+    raw = raw || {}
+    let fields = ['name', 'rpc', 'explorer', 'remark']
+    for(let i in fields) {
+        let k = fields[i]
+        if(raw[k] !== undefined && raw[k] !== '' && (raw[k] + '') !== ((saved[k] || '') + '')) {
+            return yes
+        }
+    }
+    return no
+}
 , requestChainId = defaultMainnet => {
     if(urlquery.chain_id === undefined || urlquery.chain_id === '') {
         return defaultMainnet ? MAIN_CHAIN_ID : nil

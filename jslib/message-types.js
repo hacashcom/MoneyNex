@@ -6,6 +6,7 @@ var optkey_check_wallet = "wallet"
 , optkey_do_transfer = "transfer"
 , optkey_sign_tx = "signtx"
 , optkey_raise_fee = "raisefee"
+, optkey_chain = "chain"
 , optkey_switch_chain = "switchchain"
 // , optkey_wallet_info = "wallet_info"
 // , optkey_open_wallet = "open_wallet"
@@ -19,5 +20,6 @@ var optkey_list_to_popup = [
     optkey_do_transfer,
     optkey_sign_tx,
     optkey_raise_fee,
+    optkey_chain,
     optkey_switch_chain,
 ];
