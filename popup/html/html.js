@@ -7,7 +7,7 @@ function parseUrlQuery(url){
     let  params = arr[1].split('&')
     for(let i=0;i<params.length;i++){
         let param = params[i].split('=');
-        obj[param[0]] = param[1];
+        obj[decodeURIComponent(param[0]||'')] = decodeURIComponent(param.slice(1).join('=')||'');
     }
     return obj;
 }
@@ -109,7 +109,6 @@ var yes = true
     let ctx = app.mount('#'+id);
     app.directive('auto-focus',{
         mounted: (el) => {
-            console.log("v-focus", el)
             el.focus()
         }
     });
@@ -135,8 +134,8 @@ var yes = true
 
 , icfpath = '../image/ftic/'
 
-,tsnow = ms => {
-    dv = ms ? 1 : 1000
+, tsnow = ms => {
+    let dv = ms ? 1 : 1000
     return parseInt((new Date()).getTime()/dv)
 }
 , sleep = time => {
@@ -223,6 +222,3 @@ let hac_mei_unit = amt => {
 , hac_show_mei_unit = amt => {
     return hac_mei_unit(amt) + ' HAC'
 }
-
-
-

@@ -49,8 +49,14 @@ var acinfLoadLib= no
             if(!ok) {
                 return
             }
-            // do remove
-            let curadr = await stoRemoveCurrentAccount()
+            // do remove — 按本页展示的地址删（t.myadr），绝不删可变的 current 指针：
+            // 其它窗口可能已把 current 切到别的账户
+            let curadr = await stoRemoveAccount(t.myadr)
+            if(!curadr){
+                // 最后一个账户被拒删（no）/ 记录不存在或写后校验失败（nil）：
+                // 状态未变，留在原地不重路由
+                return
+            }
             // reload page
             pophpgw(()=>{
                 app.unmount()

@@ -13,6 +13,7 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
     open(okcall, cancelcall){
         let t = this
         // t.okbtn = 'Confirm'
+        _clearTimeout(t._ht)
         t.pswd = '' // reset
         t.c1 = okcall
         t.c2 = cancelcall
@@ -24,7 +25,8 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
     hide(){
         let t = this
         t.cnsh = no
-        _setTimeout(()=>{
+        _clearTimeout(t._ht)
+        t._ht = _setTimeout(()=>{
             t.show = no
         },500)
     },
@@ -38,7 +40,7 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
             let md5 = MD5(p+salthcxwlt)
             , pmd5 = await stoReadPasskey()
             if(md5 != pmd5){
-                t.err = "Password error"
+                t.err = "Wrong password"
             }else{
                 // pass check ok !!!
                 t.c1&&t.c1()
@@ -48,12 +50,12 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
         }
         if(p) {
             if(p.length < 8){
-                t.err = "Minimum length 8"
+                t.err = "Use at least 8 characters"
             }else{
                 dops( p ).then()
             }
         }else{
-            t.err = "Please enter password"
+            t.err = "Enter password"
         }
 
         // t.c1 && t.c1()

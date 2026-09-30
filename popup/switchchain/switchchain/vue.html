@@ -1,0 +1,28 @@
+<div class="header">
+    <div class="lg">
+        <img src='../image/icos/128.png' />
+    </div>
+    <div class="pttl">Switch Network</div>
+    <div class="adrs"><h1>{{sadr}}</h1></div>
+</div>
+
+<div class="req">
+    <p class="site">{{dmu}}</p>
+    <p>{{mode == 'add' ? 'requests adding network:' : 'requests network access:'}}</p>
+    <table>
+        <tr><td>Current</td><td>{{ctip(cur)}}</td></tr>
+        <tr><td>Target</td><td>{{ctip(req)}}</td></tr>
+        <tr><td>ID</td><td>{{req.id}}</td></tr>
+        <tr><td>RPC</td><td>{{req.rpc}}</td></tr>
+        <tr v-if="req.explorer"><td>Explorer</td><td>{{req.explorer}}</td></tr>
+        <tr v-if="req.remark"><td>Remark</td><td>{{req.remark}}</td></tr>
+    </table>
+    <p class="warn" v-if="diff">A saved network with this ID already exists but uses different settings.</p>
+    <p class="warn" v-if="err">{{err}}</p>
+</div>
+
+<div class="btns">
+    <button @click="nop">Cancel</button>
+    <button v-if="diff && update == 'ask' && mode != 'add'" @click="switchOnly" :class="`${ing?'ing':''}`">Switch Only</button>
+    <button @click="confirm" :class="`blue ${ing?'ing':''}`">{{actionTitle()}}</button>
+</div>

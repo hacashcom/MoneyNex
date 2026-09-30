@@ -70,12 +70,16 @@
             t.bgas = bgas || 0.0001
             // t.doswt(1)
         },
-        async req(txsz) {
+        async req(txsz, opts) {
             txsz = txsz || 166
             let t = this
-            t.rcmgas = parseFloat((await reqFeasibleFee(txsz)).feasible)
-            // console.log('gas req ret = ', t.rcmgas)
-            if(t.rcmgas > t.bgas){
+            let res = await reqFeasibleFee(txsz, opts)
+            t.rcmgas = parseFloat(res && res.feasible)
+            if(!isFinite(t.rcmgas)){
+                // 拿不到建议费（网络失败/网关异常）：保持最低费继续，但必须让用户知道，
+                // 否则一笔低于地板价的交易会被静默广播然后被节点拒绝
+                showWPerr('Fee suggestion unavailable (network?) — using minimum fee')
+            }else if(t.rcmgas > t.bgas){
                 t.bgas = t.rcmgas
             }
             return t.bgas

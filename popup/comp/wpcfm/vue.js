@@ -10,6 +10,9 @@ let {ctx: wpcfm} = VueCreateApp('wpcfm', vue_tpl_wpcfm, {
 }, {
     open(tip, okbtn, okcall, cancelcall, colset){
         let t = this
+        // Cancel any pending hide timer before opening: with two back-to-back popups
+        // (complex-action confirm -> sign confirm), the previous hide's 500ms timer would close the new popup.
+        _clearTimeout(t._ht)
         t.tip = tip
         t.okbtn = okbtn||'OK'
         t.c1 = okcall
@@ -23,7 +26,8 @@ let {ctx: wpcfm} = VueCreateApp('wpcfm', vue_tpl_wpcfm, {
     hide(){
         let t = this
         t.cnsh = no
-        _setTimeout(()=>{
+        _clearTimeout(t._ht)
+        t._ht = _setTimeout(()=>{
             t.show = no
         },500)
     },
@@ -51,8 +55,8 @@ let {ctx: wpcfm} = VueCreateApp('wpcfm', vue_tpl_wpcfm, {
     })
 }
 , backup_privkey_open = async ()=>{
-    return (await wpcfm_open(`If you don't back up your private key, you risk losing all your assets permanently`, 
-    'I have backed up the private key', 
+    return (await wpcfm_open(`Back up your private key or you may lose your assets.`, 
+    'Backed up', 
     'red'))
 }
 

@@ -1,0 +1,34 @@
+<div class="header">
+    <div class="bk" @click="back">
+        <img :src="`${icfp}left.svg`" />
+    </div>
+    <h1 class="ptt">{{isedit?'Edit Network':'Add Network'}}</h1>
+</div>
+
+<div class="chnfrm">
+    <div class="item">
+        <label>Chain ID</label>
+        <input v-model="id" :disabled="isedit" placeholder="0" />
+    </div>
+    <div class="item">
+        <label>Name</label>
+        <input v-model="name" placeholder="Network name" />
+    </div>
+    <div class="item">
+        <label>RPC</label>
+        <input v-model="rpc" placeholder="https://.../fullnode" />
+    </div>
+    <div class="item">
+        <label>Explorer</label>
+        <input v-model="explorer" placeholder="https://..." />
+    </div>
+    <div class="item">
+        <label>Remark</label>
+        <textarea v-model="remark" placeholder="Short note"></textarea>
+    </div>
+</div>
+
+<div class="btns">
+    <button @click="back">Cancel</button>
+    <button class="blue" @click="save">Save</button>
+</div>

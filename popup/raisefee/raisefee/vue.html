@@ -23,6 +23,10 @@
 
 
 <div class="ipt">
+    <div class="item net">
+        <label>Network</label>
+        <p>{{chaintip}}</p>
+    </div>
 
     <div class="item">
         <label>Tx Hash</label>
@@ -30,7 +34,10 @@
     </div>
     <div class="item">
         <label>Fee</label>
-        <input v-model="fee" placeholder="The tx fee needs to be reset, such as '1:245' or '0.0012'" />
+        <input v-model="fee" placeholder="New fee, e.g. 1:245 or 0.0012" />
+    </div>
+    <div class="item err" v-if="err">
+        <p>{{err}}</p>
     </div>
 </div>
 
@@ -41,12 +48,12 @@
 </div>
 <div v-else class="success">
     <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
-    <p>The tx fee has been increased!</p>
+    <p>Tx fee increased</p>
 </div>
 
 
 <div class="permt">
     <div class="con">
-        <p class="tip">Improve the ordering of transactions in the transaction pool so that they can be packaged and confirmed as soon as possible, or make a manual quote for HACD bidding.</p>
+        <p class="tip">Raise a pending tx fee or HACD bid.</p>
     </div>
 </div>

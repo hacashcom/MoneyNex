@@ -8,80 +8,26 @@
 // mark
 var is_release = false
 var drop_console = false
-const auto_rebuild = false
-const refresh_rebuild = true
 
+// bundle/page layout lives in build.cfg.js (merged from remote's cfg-module refactor)
+const build_config = require('./build.cfg')
+, auto_rebuild = build_config.auto_rebuild
+, refresh_rebuild = build_config.refresh_rebuild
+, bgd = build_config.bgd
+, ppd = build_config.ppd
+, bgfls = build_config.bgfls
+, pppjslibs = build_config.pppjslibs
+, popup_common = build_config.popup_common
+, popup_services = build_config.popup_services
+, page_defs = build_config.page_defs
 
-
-// start
-let bgd = './background/'
-, ppd = './popup/'
-, bgdsk = bgd + 'hacash_sdk'
-, bgfls = [
-    `./jslib/crypto-js.4.1.1`,
-    `./jslib/crypto-util`,
-    `./jslib/message-types`,
-    `./jslib/hacash_sdk`,
-    `${bgd}init`,
-    `${bgd}listener`,
-    `${bgd}account`,
-    `${bgd}main`,
-]
-, pppjslibs = [
-    `./jslib/crypto-util`,
-    `./jslib/message-types`,
-    `./jslib/hacash_sdk`,
-]
-, popup_common = [
-    [
-        'comp/wptip',
-        'comp/wpcfm',
-        'comp/wpass',
-        'comp/swtgas',
-        'login/init',
-    ],
-    ['html', 'comp'] // add login
-]
-;
-// page def
-let page_defs = {
-    'moneynex': [
-        [
-            'index/home',
-            'index/acinf',
-            'index/dotrs',
-        ],
-        ['index']
-    ], // index
-    'connect': [
-        [
-            'connect/conn'   
-        ],
-        ['connect']
-    ], // connect wallet
-
-    'transfer': [
-        [
-            'transfer/sigtrs'
-        ],
-        ['transfer']
-    ], // do transfer
-
-    'signtx': [
-        [
-            'signtx/signtx'
-        ],
-        ['signtx']
-    ], // sign tx
-
-    'raisefee': [
-        [
-            'raisefee/raisefee'
-        ],
-        ['raisefee']
-    ] // raise fee
+// MoneyNex SDK build-time config (default public gateway / mainnet chain_id=0)
+var mnx_cfg = {
+    fullnode_url: 'http://wallet.hacash.com/fullnode',
+    fullnode_host: null,
+    chain_id: 0, // ChainId::MAINNET
 }
-;
+
 
 
 // check command line argv
@@ -91,7 +37,22 @@ for(let i in pavs) {
     if(p == '--release'){
         is_release = true
         drop_console = true
+    }else if(p.indexOf('--fullnode-url=') == 0){
+        mnx_cfg.fullnode_url = p.split('=')[1]
+    }else if(p.indexOf('--fullnode-host=') == 0){
+        mnx_cfg.fullnode_host = p.split('=')[1]
+    }else if(p.indexOf('--chain-id=') == 0){
+        mnx_cfg.chain_id = parseInt(p.split('=')[1])
     }
+}
+
+// Inject RPC config at build time: override login.js defaults fullnode_url / mnx_chain_id
+var js_rplsfn = (fcon) => {
+    fcon += `\n;fullnode_url = ${JSON.stringify(mnx_cfg.fullnode_url)};\n`
+    if(mnx_cfg.chain_id !== 0){
+        fcon += `\n;mnx_chain_id = ${mnx_cfg.chain_id};\n`
+    }
+    return fcon
 }
 
 let popups = (list) => {
@@ -196,6 +157,20 @@ function release() {
     for(let i in dirs) {
         try{ fs.mkdirSync(dirs[i]) }catch(e){}
     }
+    cleanPageOutputs(bd+'popup')
+    // Remove leftover SDK artifacts from previously generated releases
+    // (old page-bundle name, and the separate wasm/zip that used to ship beside it),
+    // and any test files an older build copied into the runtime jslib dir.
+    for(const name of ['hacash_sdk2.js', 'hacash_sdk.wasm', 'hacash_wasm_sdk.zip']){
+        try{ fs.unlinkSync(bd+'jslib/'+name) }catch(e){}
+    }
+    try{
+        for(const f of fs.readdirSync(bd+'jslib')){
+            if(f.endsWith('.test.js')){
+                try{ fs.unlinkSync(bd+'jslib/'+f) }catch(e){}
+            }
+        }
+    }catch(e){}
     // copy
     var cpfs = [
         'manifest.json',
@@ -221,9 +196,78 @@ function release() {
             console.log(e)
         }
     }
-    // copy dir
+    // Copy only runtime assets. Do not copy leftover wasm/zip artifacts
+    // (or test files) into a release bundle where they can be mistaken for active code.
+    const runtimeJslib = [
+        'crypto-js.4.1.1.js', 'crypto-util.js', 'elliptic.min.js',
+        'hacash_sdk.js', 'message-types.js', 'moneynx_sdk_facade.js',
+        'msglayout.js', 'qrcode.min.js', 'vue.runtime.global.prod.js',
+    ]
     copyDir('./image', bd+'image')
-    copyDir('./jslib', bd+'jslib')
+    for(const name of runtimeJslib){
+        fs.copyFileSync('./jslib/'+name, bd+'jslib/'+name)
+    }
+    // Test build: append private-chain host_permissions to the release manifest (not injected for production builds)
+    if(mnx_cfg.fullnode_host){
+        let mf = JSON.parse(fs.readFileSync(bd+'manifest.json','utf8'))
+        mf.host_permissions = mf.host_permissions || []
+        if(mf.host_permissions.indexOf(mnx_cfg.fullnode_host) < 0){
+            mf.host_permissions.push(mnx_cfg.fullnode_host)
+        }
+        fs.writeFileSync(bd+'manifest.json', JSON.stringify(mf, null, 2))
+    }
+}
+
+function cleanPageOutputs(dir) {
+    if(!fs.existsSync(dir)) return
+    let keep = {}
+    for(let k in page_defs) {
+        keep[`${k}.html`] = true
+        keep[`${k}.css`] = true
+        keep[`${k}.js`] = true
+    }
+    for(let f of fs.readdirSync(dir)) {
+        if(!/\.(html|css|js)$/.test(f)) continue
+        if(!keep[f]) {
+            try{ fs.unlinkSync(path.join(dir, f)) }catch(e){}
+        }
+    }
+}
+
+// Remove stale generated page outputs not in page_defs (remote's addition; keeps
+// legacy bundles like popup/sign.* from shipping by accident)
+function cleanPageOutputs(dir) {
+    if(!fs.existsSync(dir)) return
+    let keep = {}
+    for(let k in page_defs) {
+        keep[`${k}.html`] = true
+        keep[`${k}.css`] = true
+        keep[`${k}.js`] = true
+    }
+    for(let f of fs.readdirSync(dir)) {
+        if(!/\.(html|css|js)$/.test(f)) continue
+        if(!keep[f]) {
+            try{ fs.unlinkSync(path.join(dir, f)) }catch(e){}
+        }
+    }
+}
+
+// Remove stale generated page outputs not in page_defs (remote's addition; keeps
+// legacy bundles like popup/sign.* from shipping by accident)
+function cleanPageOutputs(dir) {
+    if(!fs.existsSync(dir)) return
+    let keep = {}
+    for(let k in page_defs) {
+        keep[`${k}.html`] = true
+        keep[`${k}.css`] = true
+        keep[`${k}.js`] = true
+    }
+    for(let f of fs.readdirSync(dir)) {
+        if(!/\.(html|css|js)$/.test(f)) continue
+        if(!keep[f]) {
+            try{ fs.unlinkSync(path.join(dir, f)) }catch(e){}
+        }
+    }
 }
 
 function getVueTplToJs(tpls, is_release) {
@@ -259,13 +303,16 @@ async function build(is_release) {
     ], `content/content.min.js`, is_release?jsminify:null)
     await mergeFile('less', ['content/content'], `content/content.min.css`, less2css)
     // background
-    await mergeFile('js', bgfls, `${bgd}background.js`, is_release?jsminify:null)
+    await mergeFile('js', bgfls, `${bgd}background.js`, is_release?jsminify:null, null, js_rplsfn)
 
 
     // build page: moneynex and more 
+    cleanPageOutputs(ppd)
     for(let k in page_defs){
         let v = page_defs[k]
-        buildPageSource(k, v, is_release)
+        // buildPageSource 是 async：不 await 的话 release() 会在页面产物写完前就开始 copy，
+        // 导致 release/ 里偶尔残留上一轮内容（改了源码但产物没变，需重跑一次才好）。
+        await buildPageSource(k, v, is_release)
     }
 
     // build ok
@@ -284,10 +331,11 @@ async function buildPageSource(pname, plist, is_release) {
         .concat(popups(popup_common[1]))
         .concat(vuepuplist(popup_common[0]))
         .concat(vuepuplist(plist[0]))
+        .concat(popup_services)
         .concat(popups(plist_1))
     
     // console.log(pupjss)
-    await mergeFile('js', pupjss, `${ppd}${pname}.js`, is_release?jsminify:null, beforejs)
+    await mergeFile('js', pupjss, `${ppd}${pname}.js`, is_release?jsminify:null, beforejs, js_rplsfn)
     await mergeFile('html', popups(popup_common[1]).concat(popups(plist_1)), `${ppd}${pname}.html`, is_release?htmlminify:null, null, res=>{
         return res.replace(
             `href=./popup.css`, `href=./${pname}.css`).replace(

@@ -255,6 +255,20 @@
     .item {
         margin-top: @pgpd * 2;
     }
+    .net {
+        p {
+            color: @clblue;
+            font-size: 13px;
+            word-break: break-all;
+        }
+    }
+    .err {
+        p {
+            color: @clerr;
+            font-size: 13px;
+            word-break: break-all;
+        }
+    }
 }
 
 .success {
@@ -279,4 +293,38 @@
     }
 }
 
+}
+
+// 二次确认弹窗里的完整 actions 列表（parseTxDesc 输出，内容已转义）。
+// wpcfm 弹窗在 #rsfe 之外，必须用顶层选择器。
+.rfdesc {
+    display: block;
+    margin: 8px 0 0 0;
+    padding: 8px;
+    background: #0006;
+    border: 1px solid #fff2;
+    border-radius: 5px;
+    max-height: 260px;
+    overflow-y: auto;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.7;
+    word-break: break-all;
+    & > span {
+        color: #fff;
+    }
+    span {
+        color: #fff6;
+        margin-right: 6px;
+    }
+    a {
+        color: @clblue;
+        text-decoration: none;
+    }
+    b.amt, .mf b {
+        color: #fff;
+    }
+    .hexplain, .hexgray, code {
+        font-size: 11px;
+    }
 }

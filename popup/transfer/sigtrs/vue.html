@@ -37,6 +37,7 @@
             <li v-for="(v, i) in txdesc" :class="'l'+i" v-html="v"></li>
         </ul>
     </div>
+    <p v-if="layouterr" class="layouterr">{{layouterr}}</p>
 
     <div v-if="txerr" class="txerr">
         <h1>Tx validation failed:</h1>
@@ -51,6 +52,7 @@
 
 <div class="btns" v-if="!end">  
     <div><button @click="nop">Cancel</button></div>
+    <div v-if="txres && txres.auditability && txres.auditability!='full'"><button class="blue" @click="openactv">All Actions</button></div>
     <div><button @click="cfim" :class="`blue ${txerr?'ban':''} ${ing?'ing':''}`">Commit Tx</button></div>
 </div>
 <div v-else class="success">

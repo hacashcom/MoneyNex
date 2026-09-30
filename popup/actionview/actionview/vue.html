@@ -1,0 +1,36 @@
+<div class="header">
+    <div class="lg">
+        <img src='../image/icos/128.png' />
+    </div>
+    <div class="pttl">Full Action Review</div>
+    <div class="adrs">
+        <h1>{{sadr}}</h1>
+    </div>
+</div>
+
+<div v-if="err" class="txerr">
+    <h1>Error:</h1>
+    <p>{{err}}</p>
+</div>
+<div v-else class="aview">
+    <p v-if="layouterr" class="layouterr">{{layouterr}}</p>
+
+    <div class="avmeta" v-html="meta"></div>
+
+    <div class="avacts">
+        <div v-for="(v, i) in lines" :key="i" class="avline" v-html="v"></div>
+    </div>
+
+    <div class="sgck" v-if="signers && Object.keys(signers).length">
+        <h5>Signature Status:</h5>
+        <p v-for="(v, k) in signers">
+            <span class="avaddr">{{v.address}}</span>
+            <b v-if="v.complete" class="yes">Signed</b>
+            <b v-else class="no">Not Yet</b>
+        </p>
+    </div>
+</div>
+
+<div class="btns">
+    <div><button @click="nop">Close</button></div>
+</div>

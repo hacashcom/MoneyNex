@@ -64,6 +64,11 @@ The SDK interface of the wallet is almost always registered in the form of an as
 1. `wallet` obtains the current primary address of the user's wallet, and returns an Error if it is not authorized
 2. `connect` initiates authorization to connect to the wallet, and returns the user's wallet information after success
 3. `transfer` initiates various transactions and signs broadcasts, returning transaction information
+4. `signtx` signs a built transaction body and optionally broadcasts it
+5. `raisefee` raises the fee of a pending transaction
+6. `chain` queries the current chain and a target chain's configuration status without opening a confirmation page
+7. `switchchain` requests the wallet to add or switch to a chain ID
+8. `signtext` requests a text signature from the user (see [Sign Text](#sign-text))
 
 ### Get the user's wallet address / Check if the wallet is authorized to be connected
 
@@ -93,10 +98,72 @@ MoneyNex.connect({}, acc => {
 
 Call the connect interface, the wallet will open an authorization page connected to the wallet, and when the user completes the authorization, the wallet will notify the success through a callback. If the user cancels or does not click Confirm Authorization, the callback function will not be called.
 
+### Query chain status
+
+```js
+MoneyNex.chain({chain_id: 1}, res => {
+    console.log(res)
+    // {
+    //     current_chain_id: 0,
+    //     current_chain: {...},
+    //     target_chain_id: 1,
+    //     target_chain: {...}, // null when not configured
+    //     request_chain: {...},
+    //     configured: true,
+    //     matched: false,
+    //     need_add: false,
+    //     need_switch: true,
+    //     diff: false
+    // }
+})
+```
+
+The `chain` interface is read-only. It does not open a wallet page, does not request authorization, and does not modify the wallet. Use it before `switchchain` when a dApp wants to customize the user flow.
+
+### Add or switch chain ID
+
+```js
+MoneyNex.switchchain({
+    chain_id: 1,
+    name: 'Hacash Testnet',
+    rpc: 'https://example.com/fullnode',
+    explorer: 'https://example.com/explorer',
+    remark: 'Test network',
+
+    // Optional policy fields
+    mode: 'addOrSwitch',        // addOrSwitch | switch | add
+    update: 'ask',              // ask | never | always
+    silentIfCurrent: true
+}, res => {
+    console.log(res)
+    // {
+    //     chain_id: 1,
+    //     chain: {id: 1, name: 'Hacash Testnet', rpc: '...', explorer: '...', remark: '...', builtin: false},
+    //     switched: true
+    // }
+})
+```
+
+Call the `switchchain` interface to request the wallet to add or switch to a specific chain ID. If the wallet is already on the target chain and `silentIfCurrent` is not `false`, the callback returns success without opening a confirmation page. If the target chain is already configured, the wallet only asks the user to confirm switching. If the target chain is not configured, the wallet asks the user to confirm adding the chain and switching to it. If the user rejects the request, the callback returns an error such as `{err: 'User rejected network switch'}`.
+
+Supported parameters:
+
+- `chain_id` or `id`: target chain ID. `0` means Hacash mainnet.
+- `name`: chain display name. If omitted, the wallet uses `Chain ID {id}`.
+- `rpc`: full node RPC URL. This field is required for non-mainnet chains.
+- `explorer`: explorer URL.
+- `remark`: chain description shown in the wallet.
+- `mode`: optional. `addOrSwitch` is the default. `switch` only switches to an already configured chain and returns `{err: 'Chain not configured', need_add: true}` if missing. `add` only adds or updates the chain configuration and does not switch.
+- `update`: optional. `ask` is the default. When the chain ID is already configured but the dApp provides different settings, `ask` lets the user choose "Switch Only" or "Update & Switch"; `never` switches using the saved wallet configuration; `always` asks for one confirmation and updates the saved configuration.
+- `silentIfCurrent`: optional. Defaults to `true`. When the current chain already matches the target and there is no configuration difference, the wallet returns `{already_current: true, switched: false}` without opening a confirmation page.
+
 ### Initiate transactions such as HAC transfers
 
 ```js
 let txobj = JSON.stringify({
+    // Optional. When set, the wallet checks that the current network matches this chain ID.
+    // For non-mainnet chains, the wallet automatically adds a ChainAllow action to the transaction.
+    chain_id: 1,
     actions: [{
         kind: 1, // HAC transfer
         to: '19vyHUgwSqQci1kUcAa5ryShm1Aau3qxod',
@@ -114,6 +181,8 @@ MoneyNex.transfer({txobj}, (a, b) => {
 
 By encoding the JSON data describing the transaction and passing it to the SDK, you can initiate the creation of a transaction such as a transfer, request the user's signature, and broadcast it to the Hacash blockchain for packaging and confirmation. After the signature is successful, the transaction information will be return back as follows:
 
+The `chain_id` field is optional and can be placed either inside `txobj` or in the API params as `MoneyNex.transfer({txobj, chain_id: 1}, callback)`. If it is provided, the wallet must already be switched to the requested chain; otherwise the callback returns a network mismatch error with `current_chain_id` and `request_chain_id`. On non-mainnet chains, the wallet automatically inserts a ChainAllow action (`kind: 1041`) before creating the transaction. On mainnet, transactions must not include a ChainAllow action.
+
 ```js
 {
     description: ['1ARE89cbY5UnVv8UT14p1WiCMEh21YLfQT as executed account and pay 0.00011HAC tx fee', 'Transfer 1HAC to 19vyHUgwSqQci1kUcAa5ryShm1Aau3qxod'],
@@ -126,15 +195,29 @@ By encoding the JSON data describing the transaction and passing it to the SDK, 
 }
 ```
 
-The callback API returns information such as the transaction description, hash, and transaction body.
+The callback API returns information such as the transaction description, hash, and transaction body. Field semantics (dapp-side contract):
 
-The currently supported trading `actions` are:
+- `submit` (`true` on success): the wallet has **already broadcast** this transaction to the chain and it sits in the txpool / a block. `false` must only mean the transaction was signed but not sent.
+- `txhash` is the transaction's **plain body hash** (the on-chain identifier an explorer shows); `txhashfee` is the `hash_with_fee`.
+- `sign_hash` / `hash` are the current signer's per-address sign digest. For a Type-2 transaction whose signer is also the fee payer, that digest equals `hash_with_fee` — so `hash == sign_hash == txhashfee` is normal and **not** the on-chain tx hash.
+- If signing succeeded but the chain broadcast was rejected, the wallet replies with `ret != 0`, `code: 'submit_failed'`, `err: 'Signed, but chain submission failed: ...'` plus the signed `txbody`/`body`; the DApp decides when/how to retry broadcasting that body itself.
+
+The currently supported trading `actions` are listed below. Each `kind` accepts either the legacy **numeric** dapp kind or its **SDK registry name** (they map to the same action):
+
+| kind | SDK name | action |
+| --- | --- | --- |
+| 1 | `transfer_hac_to` | HAC transfer |
+| 5 | `transfer_hacd_single_to` | single-name HACD transfer |
+| 6 | `transfer_hacd_to` | multi-name HACD transfer |
+| 8 | `transfer_sat_to` | SAT transfer |
+| 17 | `transfer_asset_to` | Asset transfer |
+| 32 | `hacd_insc_push` | HACD inscription |
 
 1. HAC transfer:
 
 ```js
 {
-    kind: 1, // HAC transfer
+    kind: 1, // or 'transfer_hac_to'
     to: '19vyHUgwSqQci1kUcAa5ryShm1Aau3qxod',
     amount: '1:248'
 }
@@ -144,21 +227,41 @@ The currently supported trading `actions` are:
 
 ```js
 {
-    kind: 6,
+    kind: 6, // or 'transfer_hacd_to'
     to: '19vyHUgwSqQci1kUcAa5ryShm1Aau3qxod',
     diamond: 'AAABBB,WWWWTT'
 }
 ```
 
-2. HACD inscription:
+3. Asset transfer:
 
 ```js
 {
-    kind: 32,
-    diamond: 'AAABBB,WWWWTT', // one or more max 200
-    inscription: 'First HACD inscription!' 
+    kind: 17, // or 'transfer_asset_to'
+    to: '19vyHUgwSqQci1kUcAa5ryShm1Aau3qxod',
+    asset: {
+        serial: '1001',
+        amount: '123456'
+    }
 }
 ```
+
+Always prefer decimal strings for `serial` and `amount` so values above JavaScript's safe integer range remain exact. `amount` is expressed in the Asset's smallest units (atoms), not as a display amount formatted using the Asset's `decimal` value.
+
+4. HACD inscription:
+
+```js
+{
+    kind: 32, // or 'hacd_insc_push'
+    diamond: 'AAABBB,WWWWTT', // one or more max 200
+    inscription: 'First HACD inscription!',
+    protocol_cost: '0.1' // optional HAC burn paid by the main address (see the note below)
+}
+```
+
+**`protocol_cost` is an amount, not a fee-purity figure.** It is parsed like any other Hacash amount — a unit-annotated string (`'0.1:248'`, `'100000000000000:232'`) or a decimal HAC string (`'0.1'`) — and the chain compares HAC value, so the same burn can be written in any unit. The only constraints are that it must not be negative and must **encode in at most 4 bytes**: keep it a round value (`'0.1'`, `'1'`), never a long-digit string. The amount is burned from the transaction's main address; `'0'` (the default) means no burn.
+
+**Node fee figures are priced in the chain pricing unit u232, not in HAC.** Fees and gas are billed in the `fee_purity_unit` sub-unit (`= 232`, i.e. 10⁻¹⁶ HAC; 1 HAC = 10¹⁶ u232). Every figure the node reports — `fee_purity`, `fee_purity_floor`, `fee_full_u232` / `fee_discount_u232` (`/query/contract_storage_fee`), `minimum_fee` (`tx.estimate_fee`), `purity` (`/query/fee/average`) — is a u232 count and is **10⁶ × the legacy u238 value** (the mainnet fee-purity floor is now `50000000000`, formerly `50000`). Convert to HAC before using one as an amount (`HAC = purity × 10⁻¹⁶`); passing a raw purity number into a field that expects an amount such as `protocol_cost` overpays by ~10¹⁰–10¹⁶.
 
 The above transaction construction adopts Hacash's readable contract technology, a variety of transfers can be combined at will and signed at one time, which will be wrapped in a single transaction and confirmed by the block, and all transfers and inscriptions will take effect at the same time.
 
@@ -171,11 +274,16 @@ Hacash supports high-end functions such as native DEX atomic transactions and mu
 ```js
     let txbody = "02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed18f40104000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500000000"
     // call api
-    MoneyNex.signtx({txbody}, (a, b) => {
+    MoneyNex.signtx({txbody, chain_id: 1, autosubmit: false}, (a, b) => {
         sgtw.innerHTML = JSON.stringify(a)
         console.log(a, b)
     })
 ```
+
+Optional parameters:
+
+- `chain_id`: target chain ID. If omitted, the wallet treats the request as mainnet (`0`).
+- `autosubmit`: when truthy, the wallet submits the transaction after signing if all required signatures are complete.
 
 API return:
 
@@ -204,6 +312,104 @@ API return:
 
 Among them, the `body` field is the signed transaction body data, and the user's signature data will be automatically added to the body and needs to be saved. Wait for all users to sign and then submit the body to the chain.
 
+The wallet checks whether the transaction body is allowed on the current chain before signing. Mainnet transaction bodies must not contain a ChainAllow action. Non-mainnet transaction bodies must contain a ChainAllow action (`kind: 1041`) whose `chains` list includes the current chain ID.
+
+### TxMessage / TxBlob display layouts
+
+`tx_message` (kind 1025) and `tx_blob` (kind 1026) are opaque byte carriers. The wallet only ships a closed set of protocol extractors; the **layout is data** supplied by the caller. The wallet never upgrades for a third-party business schema.
+
+Each layout item is an array in one of three forms (`name` is an **untrusted caption**; omit it or pass `""` — both mean no caption):
+
+```js
+[field_id]                 // fixed-width extractor
+[field_id, "name"]         // same, plus untrusted note
+[field_id, "", len]        // variable-width extractor (empty name == omitted)
+// also allowed: [field_id, "name", len]
+```
+
+Fields are sliced **in order** and **must cover the entire message/blob**. If coverage fails, the sign page shows a single red warning and still allows signing; the bytes remain as a HEX dump. HEX fields are always rendered as an ugly hex dump.
+
+`field_id` (closed set, aliases in parentheses):
+
+| id | width | display |
+| --- | --- | --- |
+| `hacash_addr21` (`addr`) | 21 | Hacash address |
+| `evm_addr20` (`evm`, `evm20`) | 20 | `0x` + 20 bytes |
+| `u8` / `u16be` (`u16`) / `u32be` (`u32`) / `u64be` (`u64`) | 1/2/4/8 | unsigned big-endian |
+| `magic4` | 4 | printable ASCII or HEX |
+| `hex4` | 4 | HEX |
+| `hacd_name` (`hacd`) | 6 | HACD name |
+| `hac_zhu` (`hac`, `amount`) | `len` required | protocol Amount |
+| `hacd_names` (`hacds`) | `len` = 6n | HACD name list |
+| `asset_serial_amt` (`asset`) | `len` required | Fold64 serial + Fold64 atoms |
+| `ascii` (`text`) | `len` required | printable ASCII only |
+| `hex` (`bytes`) | `len` required | raw HEX dump |
+
+Pass **one table + `id`**, or **several tables at once**. Display does not distinguish `tx_message` vs `tx_blob`. `id` (also `msgid`) is the 0-based order of appearance among message/blob actions in the transaction's top-level action list. `action_id` is the array subscript in that same `actions[]`; if that slot is not a message/blob, the sign page shows a red one-line warning and still allows signing.
+
+Layout parse errors **only affect display**: one red sentence on the sign page. They never set a validation failure or disable Sign.
+
+```js
+// one message (id 0): BaseBridge deposit carrier magic|net|to
+MoneyNex.signtx({
+    txbody,
+    msgid: 0,
+    msglayout: [
+        ['magic4'],
+        ['u32be', 'net'],
+        ['evm_addr20', 'to'],
+    ],
+}, cb)
+
+// or pin by actions[] subscript
+MoneyNex.signtx({
+    txbody,
+    action_id: 0,
+    msglayout: [
+        ['magic4'],
+        ['u32be', 'net'],
+        ['evm_addr20', 'to'],
+    ],
+}, cb)
+
+// several messages / blobs (shared id sequence)
+MoneyNex.signtx({
+    txbody,
+    msglayouts: [
+        { id: 0, layout: [['magic4'], ['u32be', 'net'], ['evm_addr20', 'to']] },
+        { id: 1, layout: [['ascii', 'memo', 12]] },
+        { action_id: 3, layout: [['hex', '', 8]] },
+    ],
+}, cb)
+// equivalent map form for id: msglayouts: { "0": [...], "1": [...] }
+```
+
+A single `msglayout` without `id` / `action_id` is applied only when the transaction contains **exactly one** message/blob. Main labels always come from the wallet; `name` is shown as a plain caption. Transfer amounts stay on the protocol Transfer action, not on message HAC slices.
+
+`signtx` / `transfer` / `signtext` / `connect` / `wallet` / `raisefee` return a Promise if you omit the callback.
+
+### Sign Text
+
+Request the user to sign an **arbitrary text** with the wallet's current account. The signature is a local ECDSA signature (secp256k1-rfc6979-sha256) of `SHA-256(text)` and is **never broadcast on-chain** — it cannot be used as a transaction signature.
+
+```js
+MoneyNex.signtext({
+    text: "Login to ExampleApp at 2026-09-06 12:00:00 UTC",
+}, (a) => {
+    console.log(a)
+    // success: {ret:0, success:true, text, digest, public_key, signature, address}
+    //   digest  = SHA-256(text), 64-char hex
+    //   signature = 64-byte r||s hex over the digest
+    // canceled: {ret:1, err:"...", code:"user_canceled"}
+})
+```
+
+Security rules enforced by the wallet (the request is refused with an error and nothing is signed):
+
+- The text must be 8 to 4096 characters long.
+- Text that looks like a **raw 32-byte hash** (64 hex chars with optional `0x`/whitespace, or a 43-char base64/base64url payload) is always refused — never use `signtext` to ask the user to endorse a hash; use `signtx` for transactions.
+- The full text is displayed to the user verbatim in a dedicated review page before signing.
+
 ### Raise Tx Fee
 
 Hacash supports real-time fee increases to change the order of transactions in the transaction pool, so as to achieve the purpose of packaging and confirming as soon as possible. The HACD Bidding Fee is essentially a transaction fee, and it can also be used in this way to change the bidding order.
@@ -212,11 +418,13 @@ Hacash supports real-time fee increases to change the order of transactions in t
     let hash = "e2700db4558ef1e1b540fd53f5e7a0fa7b9d096947f9dc20d07bd507969987b9"
     let fee = "2:245" // or 0.002
     // call api
-    MoneyNex.raisefee({hash, fee}, (a) => {
+    MoneyNex.raisefee({hash, fee, chain_id: 1}, (a) => {
         // sgtw.innerHTML = JSON.stringify(a)
         console.log(a)
     })
 ```
+
+The `chain_id` parameter is optional. If provided, the wallet checks that the current network matches the requested chain before querying and signing the pending transaction. The fetched transaction body is also checked against the current chain before the fee-raising transaction is signed and submitted.
 
 API return:
 
@@ -234,4 +442,3 @@ API return:
 The test reference use cases of the above SDK interfaces can be found in the following directory and can be used as a writing example for developers:
 
 - [SDK Test](https://github.com/hacashcom/MoneyNex/tree/main/test)
-

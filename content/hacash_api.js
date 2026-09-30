@@ -43,17 +43,24 @@ for(var i in optkey_list_to_popup) {
             params = params || {}
             params.did = apiDataAutoIncrement
             params.dmu = location.host || 'hacash.com'
-            // console.log(params)
-            if(callback){
-                hacashApiMessageHandlerCallback[''+apiDataAutoIncrement] = callback
+            let done = false
+            let finishOk, finishErr
+            let p = new Promise((resolve, reject) => {
+                finishOk = resolve
+                finishErr = reject
+            })
+            hacashApiMessageHandlerCallback[''+apiDataAutoIncrement] = function(data) {
+                if(done){ return }
+                done = true
+                if(callback){ callback(data) }
+                if(data && data.err){ finishErr(data) }
+                else { finishOk(data) }
             }
-            // do call
             var li = $clas(apidiv, action)
-            // console.log(action)
             $attr(li, 'did', apiDataAutoIncrement)
             $attr(li, paramsk, JSON_stringify(params))
             li.click()
-            // console.log(hacashApiMessageHandlerCallback)
+            return p
         }
     })(one);
 }
@@ -78,7 +85,5 @@ window.MoneyNex = hacApiObj;
 if(window.MoneyNexInit){
     window.MoneyNexInit(wltinfo, hacApiObj)
 }
-
-console.log("MoneyNex SDK ok.")
 
 }, 15)

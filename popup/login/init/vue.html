@@ -59,10 +59,10 @@
 
                 </div>
                 <div class="p2" v-if="pgi==2">
-                    <label>Import your private key</label>
+                    <label>Supports mnemonic phrase, private key, and password</label>
                     <div class="ipt">
                         <label></label>
-                        <textarea @input="cleanerr" v-model="importkey" placeholder="Past or input your private key or password"></textarea>
+                        <textarea @input="cleanerr" v-model="importkey" placeholder="Paste your mnemonic, private key, or password"></textarea>
                     </div>
                     <button @click="importpk" :class="`${crting?'ing':''}`">Import wallet</button>
                 </div>

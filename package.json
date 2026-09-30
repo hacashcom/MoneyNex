@@ -1,7 +1,11 @@
 {
     "name": "MoneyNex",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "A Bitcoin and Hacash Wallet",
+    "scripts": {
+        "test": "node jslib/importkey.test.js && node jslib/assetamt.test.js && node jslib/msglayout.test.js",
+        "build": "node build.js --release"
+    },
     "dependencies": {
         "@vue/compiler-dom": "3.4.21",
         "less": "4.2.0",

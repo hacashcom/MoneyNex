@@ -252,6 +252,15 @@
             }
 
         }
+        .net {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #fff8;
+            b {
+                color: @clblue;
+                font-size: 12px;
+            }
+        }
     }
 
     .lding {
@@ -316,8 +325,10 @@
             border-top: 1px dashed @lic;
             // word-break: break-all;
             background-image: linear-gradient(to right bottom, #223d36, #0000);
+            // 徽标样式只作用于 li 的**直接子 span**（行号）；写成 `li span` 会把字段渲染里
+            // 的任意 span 也压成 16x16 小方块（文字被挤成竖排、跨行重叠）——签名页必须逐字可读
             // color: #ccc;
-            span{
+            > span{
                 vertical-align: middle;
                 display: inline-block;
                 margin-right: 4px;
@@ -351,6 +362,16 @@
             line-height: 20px;
             display: inline-block;
         }
+        .txhint {
+            display: inline;
+            vertical-align: middle;
+        }
+        .msgf {
+            margin-left: 4px;
+            b, i, code { display: inline; vertical-align: baseline; }
+            .fid { display: inline-block; }
+            .hexplain, .hexgray { display: block; }
+        }
         .amt {
             color: goldenrod;
             font-weight: bold;
@@ -371,10 +392,60 @@
                 color: cornflowerblue;
             }
         }
+        .codeprint {
+            display: block;
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: #0005;
+            border: 1px dashed #fff3;
+            border-radius: 8px;
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            font-size: 12px;
+            line-height: 16px;
+            color: #dce7f5;
+            white-space: pre;
+            overflow-x: auto;
+            &.sign {
+                max-height: 96px; // 6 lines × 16px
+                overflow-y: auto;
+            }
+            &.err {
+                color: #e07070;
+                white-space: pre-wrap;
+            }
+        }
     }
 
     .sgck {
+        position: relative;
         margin: @pgpd @pgpd * 2;
+        .actopen {
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 0;
+            z-index: 4;
+            line-height: 0;
+            button.mini {
+                min-width: 0;
+                width: auto;
+                height: 24px;
+                line-height: 24px;
+                padding: 0 10px;
+                font-size: 12px;
+                color: #9a9a9a;
+                background: #ffffff10;
+                border: 1px solid #ffffff18;
+                box-shadow: none;
+                text-shadow: none;
+                border-radius: 6px;
+                cursor: pointer;
+                &:hover {
+                    background: #ffffff22;
+                    color: #ddd;
+                }
+            }
+        }
         h5 {
             font-weight: normal;
             color: #888;

@@ -1,3 +1,10 @@
+
+.claude/
+
+*-sdk2.md
+
+*.loc.*
+
 release/
 file/
 # *.min.js
@@ -20,7 +27,7 @@ MoneyNex-*.crx
 *.crx
 *.pem
 *.zip
-
+*-debug-*/
 
 
 *-lock.json

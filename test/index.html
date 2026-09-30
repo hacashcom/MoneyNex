@@ -114,6 +114,19 @@ window.MoneyNexInit = function(wltinfo){
         })
         // sign_addr = "1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9"
 
+        /*
+        // TxMessage layout example (kind 1025): specify msgid or pass multiple tables at once
+        MoneyNex.signtx({
+            txbody,
+            msgid: 0,
+            msglayout: [
+                ['magic4'],
+                ['u32be', 'net'],
+                ['evm_addr20', 'to'],
+            ],
+        }, console.log)
+        */
+
     }
 
     // raise fee

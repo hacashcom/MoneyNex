@@ -14,6 +14,13 @@ var routePageInit = async (sc, force) => {
     if(curadr && psoverout===true){
         await stoDoLock() // clear password
     }
+    // Read-only review: the All Actions page is self-contained and needs no unlock.
+    // NOTE: the signing page (txbody) must NOT bypass the lock screen — a locked wallet
+    // would reach dosign with no way to unlock and always fail with 'Account unlocking
+    // failed'; it must go through the unlock view below, then routePageMain -> sign page.
+    if(!force && urlquery.key && typeof routePageActionView === 'function'){
+        return await routePageActionView(curadr || '', loginSwitchCloseAll)
+    }
     // console.log(curadr, passwd, psoverout)
     // console.log(`if(curadr && psoverout===false) force=`, force)
     if(curadr && psoverout===false && !force) {
@@ -85,19 +92,26 @@ var routePageInit = async (sc, force) => {
             showWPtip(copyoktip)
         },
         importpk(){
+            // 1) 64-hex private key (drop whitespace, optional 0x)
+            // 2) BIP39 English mnemonic (12/15/18/21/24 + checksum) -> seed[0:32]
+            // 3) otherwise password: privkey = SHA256(stuff)
             let t = this
-            , pk = t.importkey
-            , echar = pk.replace(/[A-Za-z0-9\~\!\@\#\$\%\^\&\*\_\+\-\=\,\.\:\;]+/ig, '')
-            , e1 = pk.length < 6
-            , e2 = echar.length > 0
-            // console.log(pk)
-            if( e1 || e2) {
-                return showWPerr(e2 
-                    ? 'The format is incorrect and includes unsupported characters'
-                    : 'The password length cannot be less than 6')
+            , r = mnx_resolve_import_secret(t.importkey)
+            , pk = r.stuff
+            if(r.err){
+                return showWPerr(r.err)
             }
-            // console.log(pk)
-            createaccount(t, pk)
+            if(r.kind === 'password'){
+                let echar = pk.replace(/[A-Za-z0-9\s\~\!\@\#\$\%\^\&\*\_\+\-\=\,\.\:\;]+/ig, '')
+                , e1 = pk.length < 6
+                , e2 = echar.length > 0
+                if( e1 || e2) {
+                    return showWPerr(e2 
+                        ? 'The format is incorrect and includes unsupported characters'
+                        : 'The password length cannot be less than 6')
+                }
+            }
+            createaccount(t, pk, no, r.rawkey)
         },
         async dobnk(){
             if(! (await backup_privkey_open())){
@@ -179,8 +193,14 @@ var routePageInit = async (sc, force) => {
     async function initroutetohome(acc, pass) {
         let adr
         if(acc){
+            let saved = await stoSaveAccount(acc, pass)
+            if(!saved){
+                // 会话已锁且没有可用口令：账户未落盘，也绝不把 current_account
+                // 指向一个不存在的记录（否则后续签名会一直解锁失败）
+                showWPerr('Wallet is locked — unlock first, then retry')
+                return
+            }
             adr = acc.address
-            await stoSaveAccount(acc, pass)
             await stoSaveCurrentAccount(adr)
         }else{
             adr = await stoReadCurrentAccount()
@@ -188,7 +208,7 @@ var routePageInit = async (sc, force) => {
         // console.log(await stoReadPassword())
         // console.log(await stoReadAccount())
         // console.log(await stoReadCurrentAccount())
-    
+
         // route to home
         await routePageMain(adr)
         app.unmount()
@@ -198,21 +218,24 @@ var routePageInit = async (sc, force) => {
     }
     
     
-    function createaccount(t, stuff, iscreatenew) {
+    function createaccount(t, stuff, iscreatenew, rawkey) {
         t.crting = yes
-        // let res = await sendMessage({
-        //     action: msg_create_account_by,
-        //     stuff,
-        // })
-        let res = JSON_parse(hacash_api.create_account_by(stuff))
-        t.crting = false
-        t.acc = res
-        // console.log(res)
-        if(iscreatenew) {
-            t.backup = yes
-        }else{
-            t.toifhome().then()
-        }
+        // SDK: privkey 默认 = SHA256(口令)（与旧 wasm create_account_by 派生一致）；
+        // rawkey=true 表示 stuff 已是 64-hex 私钥（直接导入，或由助记词 BIP39 seed 得到）。
+        let keyhex = rawkey ? stuff : SHA256(stuff)
+        mnx_derive_address(keyhex).then(res => {
+            t.crting = false
+            t.acc = res
+            // console.log(res)
+            if(iscreatenew) {
+                t.backup = yes
+            }else{
+                t.toifhome().then()
+            }
+        }, e => {
+            t.crting = false
+            showWPerr(mnx_err_message(e))
+        })
     }
     
     

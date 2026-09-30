@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MoneyNex",
-  "description": "A Hacash and Bitcoin Wallet with open SDK",
-  "version": "0.2.6",
+  "description": "A Hacash and Bitcoin wallet with an open SDK",
+  "version": "0.3.0",
   "icons": {
     "64": "image/icos/64.png"
   }, 

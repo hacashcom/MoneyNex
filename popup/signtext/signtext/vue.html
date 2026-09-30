@@ -1,0 +1,54 @@
+<div class="header">
+    <div class="lg">
+        <img src='../image/icos/128.png' />
+    </div>
+    <div class="pttl">Sign Text</div>
+    <div class="adrs">
+        <h1 class="btn" :title="adr">{{adr.substring(0,9)}}...
+            <img class="icf" :src="`${icfp}down.svg`" />
+        </h1>
+    </div>
+</div>
+
+<div class="permt">
+    <div class="con">
+        <p class="tip"><b>{{dmu}}</b> is requesting a text signature. Please review the full text carefully:</p>
+    </div>
+</div>
+
+
+<div v-if="lding" class="lding">
+    <img class="ldf" src="../image/ld/w.gif" />
+</div>
+<div v-else>
+    <div class="tx">
+        <pre class="sigtext">{{text}}</pre>
+    </div>
+
+    <div class="digest">
+        <p class="dgttl">Digest (SHA-256)</p>
+        <div class="hexdump">{{digest || '—'}}</div>
+        <p class="dgnote">The signature is a local ECDSA signature of this digest only. It is never broadcast on-chain, involves no assets, and can never be used as a transaction signature.</p>
+        <p class="dgnote">Signing with account: <span style="word-break:break-all">{{adr}}</span>
+            — if this is not the expected signer, Cancel and switch the account in the wallet first.</p>
+    </div>
+
+    <p v-if="texterr" class="txerr">
+        <h1>Cannot Sign:</h1>
+        <p>{{texterr}}</p>
+    </p>
+</div>
+
+
+<div class="btns" v-if="!end">
+    <div><button @click="nop">Cancel</button></div>
+    <div><button @click="cfim" :class="`blue ${texterr?'ban':''} ${ing?'ing':''}`">Sign Text</button></div>
+</div>
+<div v-else class="success">
+    <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
+    <p>The text has been successfully signed!</p>
+</div>
+
+<div class="wtip" v-if="!end">
+    <p>Tips: Beware of websites asking you to sign unclear text. MoneyNex refuses to sign raw 32-byte hashes, and a text signature can never substitute a transaction signature.</p>
+</div>

@@ -1,0 +1,85 @@
+#chains {
+    .chlist {
+        padding: 0 @pgpd @pgpd;
+        height: @bodyh - 70px;
+        overflow-y: auto;
+        li {
+            list-style: none;
+            padding: @pgpd;
+            border-bottom: 1px solid #fff1;
+            background: #ffffff05;
+            margin-bottom: @pgpd;
+            border-radius: 5px;
+            &.active {
+                border: 1px solid @clblue;
+                background: #00ccff18;
+            }
+        }
+        .hd {
+            display: flex;
+            justify-content: space-between;
+            h2 {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 6px;
+                font-size: 16px;
+                span {
+                    font-size: inherit;
+                }
+                em {
+                    display: inline-block;
+                    max-width: 190px;
+                    padding: 1px 5px;
+                    border: 1px solid #00ccff33;
+                    border-radius: 4px;
+                    background: #00ccff12;
+                    color: #9fefff;
+                    font-size: 11px;
+                    font-style: normal;
+                    line-height: 16px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+            }
+            p, b {
+                font-size: 12px;
+                color: #fff8;
+            }
+            b {
+                color: @clblue;
+            }
+        }
+        .rpc {
+            font-size: 12px;
+            color: #fffa;
+            margin-top: 6px;
+            word-break: break-all;
+        }
+        .btns {
+            margin-top: @pgpd;
+            text-align: right;
+            a {
+                display: inline-block;
+                padding: 5px 8px;
+                margin-left: 6px;
+                font-size: 12px;
+                cursor: pointer;
+                border-radius: 5px;
+                background: #fff1;
+                &:hover {
+                    background: @clblue;
+                    color: #fff;
+                }
+                &.red:hover {
+                    background: @clerr;
+                }
+            }
+        }
+        .add {
+            text-align: center;
+            padding: @pgpd 0;
+        }
+    }
+}

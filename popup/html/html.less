@@ -50,16 +50,16 @@ html {
 
 /************ scrollbar  **************/
 
-// 滚动条整体宽度
+// Scrollbar overall width
 ::-webkit-scrollbar {
     width: 6px;
 }
-// 滚动条滑槽样式
+// Scrollbar track style
 ::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
     border-radius: 6px;
 }
-// 滚动条样式
+// Scrollbar thumb style
 ::-webkit-scrollbar-thumb {
     border-radius: 6px;
     background: #fff8;
@@ -70,4 +70,150 @@ html {
 }
 ::-webkit-scrollbar-thumb:active{
     background: #999;
+}
+
+// TxMessage 展示块。虚线框内**只有解析出来的字段**：载荷字节数在 action 标题里
+// （`Message · N bytes`），源 HEX 在框外（.hexgray），两者都不进框。
+.msgf {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #0005;
+    border: 1px dashed #fff3;
+    border-radius: 8px;
+    text-align: left;
+    .fid {
+        color: #8ec8c8;
+        font-weight: normal;
+        font-size: 12px;
+    }
+    .untrust {
+        font-style: italic;
+        color: #c4a574;
+        font-size: 11px;
+        font-weight: normal;
+        margin-left: 6px;
+        // 与后面白色值之间再留一段距离（inline 模式下注记紧跟值，挤在一起读不清）
+        margin-right: 6px;
+    }
+    .layerr {
+        color: #e07070;
+        font-size: 12px;
+        margin: 4px 0;
+        word-break: break-word;
+    }
+    .mfhex .fid {
+        color: #d4a0a0;
+    }
+    code.evm, code.maddr, code.magic, code.uint, code.amt, code.hacd, code.asset, code.text {
+        font-family: ui-monospace, Consolas, "Courier New", monospace;
+        font-size: 12px;
+        color: #dce7f5;
+        word-break: break-all;
+    }
+    code.amt {
+        color: goldenrod;
+        font-weight: bold;
+    }
+    // inline（签名页）：紧凑单行，字段全部左对齐——弹窗只有 400px 宽，不排固定列宽
+    &.inline {
+        padding: 7px 9px;
+        .mf {
+            font-size: 13px;
+            line-height: 18px;
+            margin-top: 4px;
+            word-break: break-all;
+            b, i, code {
+                display: inline;
+                font-size: inherit;
+                line-height: inherit;
+                vertical-align: baseline;
+            }
+            .fid { margin-right: 4px; }
+        }
+    }
+    // table（All Actions 全览页）：两列对齐，值列在各字段间对齐
+    &.table {
+        .mfrow {
+            display: grid;
+            grid-template-columns: minmax(150px, 300px) 1fr;
+            gap: 14px;
+            align-items: start;
+            margin-top: 5px;
+            &:first-child { margin-top: 0; }
+        }
+        .mfk { line-height: 18px; }
+        .mfv {
+            font-size: 13px;
+            line-height: 18px;
+            word-break: break-all;
+            .fid { margin-right: 4px; }
+        }
+        .mf {
+            font-size: 13px;
+            line-height: 18px;
+            margin-top: 5px;
+            word-break: break-all;
+            b, i, code {
+                display: inline;
+                font-size: inherit;
+                line-height: inherit;
+                vertical-align: baseline;
+            }
+        }
+    }
+}
+
+// 十六进制显示（无背景框，区别于旧的 .hexdump 方框样式）：
+//   .hexplain = 白色值（本身即 HEX 的字段）  .hexgray = 灰色源数据（magic/u8..u64 的 0x 源、整条载荷原文）
+// 过长时截断并可点击开全文（事件委托在 msglayout.js 的 mnx_hex_bind_delegate）
+.hexplain, .hexgray {
+    font-family: ui-monospace, Consolas, "Courier New", monospace;
+    font-size: 11.5px;
+    line-height: 17px;
+    letter-spacing: 0.2px;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+.hexplain { color: #dce7f5; }
+.hexgray { color: #aab4bd; }
+.hexplain.clickable, .hexgray.clickable {
+    cursor: pointer;
+    &:hover { color: #cdd6de; }
+}
+// 虚线框内的 HEX 值（白色）与同行灰色源数据
+.msgf .hexsrc {
+    margin-left: 8px;
+    font-family: ui-monospace, Consolas, "Courier New", monospace;
+    font-size: 11.5px;
+    color: #aab4bd;
+}
+.msgf .mfv > .hexplain, .msgf .mfv > .hexgray, .msgf .mf > .hexplain, .msgf .mf > .hexgray {
+    display: inline;
+}
+.avmsg .hexgray { margin-top: 6px; }
+
+.layouterr {
+    margin: 0 @pgpd @pgpd;
+    padding: 8px @pgpd;
+    font-size: 13px;
+    line-height: 18px;
+    color: #e07070;
+    word-break: break-word;
+}
+
+// Inline note inside a visualized action line. Must not reuse page-level
+// `.txerr` (that banner is display-block with large margin/padding).
+.tx .txhint {
+    display: inline;
+    margin: 0 0 0 6px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: normal;
+    line-height: 16px;
+    vertical-align: middle;
+    color: #ffb4b4;
+    background: #ff000018;
+    border: 1px solid #ff00004d;
+    border-radius: 999px;
+    white-space: nowrap;
 }

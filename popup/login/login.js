@@ -1,7 +1,56 @@
 
 var explorer_url = 'https://explorer.hacash.org'
 , fullnode_url = 'http://wallet.hacash.com/fullnode'
-;
+, mnx_chain_id = 0 // Hacash ChainId::MAINNET; test builds override via build.js --chain-id
+// Runtime RPC config: chrome.storage.local overrides the build-time default node.
+// Used for balance queries and broadcast only; the signing hash is always computed locally from the tx body — the node cannot choose what gets signed.
+, rpccfgkey = 'mnx_fullnode_url'
+, stoReadRpcUrl = async () => {
+    let obj = await chrome_storage_local.get(rpccfgkey)
+    let v = (obj[rpccfgkey]||'').trim()
+    return v || nil
+}
+, stoSaveRpcUrl = async (uri) => {
+    let sv = {}
+    sv[rpccfgkey] = (uri||'').trim()
+    await chrome_storage_local.set(sv)
+}
+, mnx_get_fullnode_url = async () => {
+    // Priority: explicit RPC override (mnx_fullnode_url) > selected network's RPC
+    // (chain_configs/current_chain_id, managed by the Networks page) > build default.
+    let ov = await stoReadRpcUrl()
+    if(ov){ return ov }
+    try {
+        if(typeof stoReadCurrentChain === 'function'){
+            let c = await stoReadCurrentChain()
+            if(c && c.rpc){ return c.rpc }
+        }
+    } catch(e) {}
+    return fullnode_url
+}
+
+// All Actions 全览页打开方式：内容量大（多 action / json / raw），优先开一个独立的整屏窗口，
+// 而不是挤在扩展弹窗尺寸里。无窗口管理器的环境（CI/沙箱）不会响应 state:'maximized'，
+// 所以显式按屏幕可用尺寸建窗，再补一次 maximize；都不行才降级为普通标签页。
+, mnx_open_actionview = function(key) {
+    let url = `popup/actionview.html?key=${key}`
+    try {
+        if(typeof chrome != 'undefined' && chrome.windows && chrome.windows.create){
+            let sw = (typeof screen != 'undefined' && screen.availWidth) || 1280
+            , sh = (typeof screen != 'undefined' && screen.availHeight) || 900
+            ;
+            chrome.windows.create({ url: url, width: sw, height: sh, left: 0, top: 0, focused: true }, function(win){
+                if(chrome.runtime && chrome.runtime.lastError){
+                    chrome.tabs.create({ url: url })
+                    return
+                }
+                try{ chrome.windows.update(win.id, { state: 'maximized' }) }catch(e){}
+            })
+            return
+        }
+    } catch(e) {}
+    chrome.tabs.create({ url: url })
+}
 
 // local test
 // explorer_url = 'http://127.0.0.1:8002'
@@ -65,6 +114,18 @@ var randomString = ctime(yes)+''
     let ps = await chrome_storage_sync.get(accpsskey)
     return ps[accpsskey]
 }
+// 账户表整表 mutation 串行队列。chrome.storage.sync 的账户表只能整表 get→改→set，
+// 两个扩展页（多窗口/多标签）并发各写各的整表会互相覆盖——后写者整表胜出，
+// 先写者刚导入的账户会被抹掉（丢账户）。所有账户表变更必须经 accMutate 排队执行，
+// 且写后重读校验、失败重试；对不经过本队列的外部写入（如 sync 冲突）只能靠校验兜底。
+, ACC_MUTATE_RETRY = 3
+, acc_mutate_queue = Promise.resolve()
+, accMutate = (fn) => {
+    let run = acc_mutate_queue.then(fn)
+    // 链子吞掉失败继续排队；失败通过返回的 promise 交给调用方处理
+    acc_mutate_queue = run.then(() => nil, () => nil)
+    return run
+}
 , stoSaveAccount = async (acc, passwd) => {
     // await chrome_storage_sync.clear()
     let pmd5
@@ -73,15 +134,33 @@ var randomString = ctime(yes)+''
     }else{
         pmd5 = await stoReadPassword()
     }
-    let accs = await chrome_storage_sync.get(accstokey)
-    accs = accs[accstokey] || {}
-    accs[acc.address] = {
-        cryptkey: AES_encrypt(acc.private_key, pmd5)
+    if(!pmd5){
+        // 没有可用口令（会话已锁 / 传入口令与既有钱包口令不符）：
+        // 绝不把私钥用空口令加密落盘；调用方据返回值中止，current_account 不更新。
+        return nil
     }
-    let sv = {}
-    sv[accstokey] = accs
-    await chrome_storage_sync.set(sv)
-    // console.log(sv)
+    let cryptkey = AES_encrypt(acc.private_key, pmd5)
+    return await accMutate(async () => {
+        for(let i = 0; i < ACC_MUTATE_RETRY; i++){
+            let accs = await stoReadAccount()
+            accs = accs || {}
+            // 已存在的账户一律保留原 cryptkey：绝不覆盖、绝不重加密。
+            //（同口令下重导入本就得到相同密文；保留原值在并发/异常场景下永远更安全）
+            let existed = !!accs[acc.address]
+            if(!existed){
+                accs[acc.address] = { cryptkey: cryptkey }
+            }
+            let sv = {}
+            sv[accstokey] = accs
+            await chrome_storage_sync.set(sv)
+            // 写后校验：重读确认目标账户在表中，且 cryptkey 与本次落盘的值一致
+            let chk = await stoReadAccount()
+            if(chk && chk[acc.address] && chk[acc.address].cryptkey == accs[acc.address].cryptkey){
+                return pmd5
+            }
+        }
+        return nil // 重试后仍校验失败：视为未保存，调用方中止
+    })
 }
 , stoReadAccount = async (addr) => {
     let ary = await chrome_storage_sync.get(accstokey)
@@ -97,29 +176,46 @@ var randomString = ctime(yes)+''
     let obj = await chrome_storage_sync.get(acccurkey)
     return obj[acccurkey]
 }
-, stoRemoveCurrentAccount = async () => {
-    let cur = await stoReadCurrentAccount()
-    let accs = await stoReadAccount()
-    if(!accs[cur]){
-        return no // not find
-    }
-    let next = nil
-    for(let k in accs){
-        if(k!=cur){
-            next = k
-            break
+, stoRemoveAccount = async (addr) => {
+    // 按给定地址删除（绝不读可变的 current_account 来决定删谁）：
+    // 详情页展示的是打开时的地址，其它窗口可能已把 current 切到别的账户，
+    // 按 current 删会删错人。
+    return await accMutate(async () => {
+        for(let i = 0; i < ACC_MUTATE_RETRY; i++){
+            let cur = await stoReadCurrentAccount()
+            let accs = await stoReadAccount()
+            accs = accs || {}
+            if(!addr || !accs[addr]){
+                return nil // account not found
+            }
+            let wascur = (cur == addr)
+            let next = nil
+            if(wascur){
+                for(let k in accs){
+                    if(k != addr){ next = k; break }
+                }
+                if(!next){
+                    return no // 最后一个账户不可删（保留原拒绝语义）
+                }
+            }
+            delete accs[addr]
+            let sv = {}
+            sv[accstokey] = accs
+            if(wascur){
+                // 账户表与 current 指针放进同一条 set：删除与其它窗口的换账户/
+                // 导入交错时，指针不会指向已删除的地址
+                sv[acccurkey] = next
+            }
+            await chrome_storage_sync.set(sv)
+            // 写后校验：地址已删，且（若换了指针）新指针指向的账户仍存在
+            let chkaccs = await stoReadAccount()
+            let chkcur = await stoReadCurrentAccount()
+            if(chkaccs && !chkaccs[addr] && (!wascur || (chkcur && chkaccs[chkcur]))){
+                return wascur ? next : cur
+            }
         }
-    }
-    if(!next){
-        return no
-    }
-    // remove and set current
-    delete accs[cur]
-    let sv = {}
-    sv[accstokey] = accs
-    await chrome_storage_sync.set(sv)
-    await stoSaveCurrentAccount(next)
-    return next // remove success
+        return nil
+    })
 }
 , stoUnlockAccount = async (accsv) => {
     let pmd5 = await stoReadPassword()
@@ -129,6 +225,11 @@ var randomString = ctime(yes)+''
     if(!accsv) {
         let adr = await stoReadCurrentAccount()
         accsv = await stoReadAccount(adr)
+    }
+    if(!accsv){
+        // 账户记录不存在（current_account 悬空等存储不一致）：统一走"解锁失败"路径，
+        // 而不是在这里抛 TypeError 让调用方（按钮/回调）卡死
+        return nil
     }
     return AES_decrypt(accsv.cryptkey, pmd5)
 }
@@ -145,17 +246,29 @@ var randomString = ctime(yes)+''
     , tar = obj[randomkey]
     return tar
 }
-, stoCurAccDoSign = async msg => {
+, stoLocalRead = async (key, fallback) => {
+    let obj = await chrome_storage_local.get(key)
+    return obj[key] || fallback
+}
+, stoLocalSave = async (key, val) => {
+    let sv = {}
+    sv[key] = val
+    await chrome_storage_local.set(sv)
+    return val
+}
+, stoCurAccDoSign = async digesthex => {
+    // SDK: digest = SigningRequest.digest (32B hex), pure-JS ECDSA signing
     let privkey = await stoUnlockAccount()
     if(!privkey) {
         return {err:'Account unlocking failed'} // error
     }
-    let res = hacash_api.sign(privkey, msg)
     try{
-        let obj = JSON_parse(res)
-        return obj
+        return {
+            pubkey: mnx_privkey_to_pubkey(privkey),
+            signature: mnx_sign_digest(digesthex, privkey),
+        }
     }catch(e){
-        return {err: res} // err
+        return {err: mnx_err_message(e)} // err
     }
 }
 ;
@@ -189,39 +302,65 @@ var getAmtTip = (obj) => {
 }
 , saveTransactionLog = async (tx) => {
     console.log('saveTransactionLog', tx)
-    let type = 'MUL'
-    , svdata = {
+    let type = tx.type || 'MUL'
+    // 交易发生时的链上下文（Networks 页切换后，活动列表据此区分来源链；
+    // chain 服务不在 bundle 时静默跳过）
+    let logchain = nil
+    try {
+        if(typeof stoReadCurrentChain === 'function'){
+            logchain = await stoReadCurrentChain()
+        }
+    } catch(e) {}
+    let svdata = {
         from: tx.payment_address,
         time: tx.timestamp,
         hash: tx.tx_hash,
         body: tx.tx_body,
         desc: tx.desc || tx.diamonds || '',
-        stat: 0, // 0:pendding  1:ok  2:fail  
+        chain_id: logchain ? (parseInt(logchain.id || 0) || 0) : 0,
+        chain_name: logchain ? logchain.name : '',
+        chain_remark: logchain ? (logchain.remark || '') : '',
+        stat: 0, // 0:pending  1:ok  2:fail
     }
     if(tx.collection_address){
-        let ast = getAmtTip(tx)
         svdata.to = tx.collection_address
-        svdata.asset = ast
-        let t1 = 'HAC'
-        , t2 = 'HACD'
-        , t3 = 'SAT'
-        ;
-        if(ast.indexOf(t1)>0){
-            type = t1
-        }else if(ast.indexOf(t2)>0){
-            type = t2
-        }else if(ast.indexOf(t3)>0){
-            type = t3
+        if(type == 'ASSET' || (tx.asset && typeof tx.asset === 'object')){
+            type = 'ASSET'
+            let ast = tx.asset || {}
+            let serial = mnx_u64_string(ast.serial)
+            let atoms = mnx_u64_string(ast.amount != null ? ast.amount : ast.atoms)
+            // 调用方（如 DApp 请求的 action）可能没带 decimal/name/ticket：
+            // 用签名页/首页共用的链上元数据缓存补齐，否则 Activity 会显示原始 atoms。
+            let meta = (ast.decimal == null || ast.decimal === '') ? mnx_asset_meta_get(serial) : null
+            let decimal = (ast.decimal == null || ast.decimal === '') ? (meta ? meta.decimal : null) : ast.decimal
+            let name = ast.name || (meta && meta.name) || (serial ? ('Asset #' + serial) : 'Asset')
+            svdata.assetSerial = serial
+            svdata.assetAtoms = atoms
+            svdata.assetDecimal = decimal
+            svdata.assetName = name
+            svdata.assetTicket = ast.ticket || (meta && meta.ticket) || ''
+            svdata.asset = mnx_asset_log_amount(atoms, decimal, name)
+        }else{
+            let ast = getAmtTip(tx)
+            svdata.asset = ast
+            if(!tx.type){
+                // Legacy callers: infer from the display string. New code must pass type.
+                if(ast.indexOf('HACD')>0){
+                    type = 'HACD'
+                }else if(ast.indexOf('SAT')>0){
+                    type = 'SAT'
+                }else if(ast.indexOf('HAC')>0){
+                    type = 'HAC'
+                }
+            }
         }
-    }else{
-        // MUL
     }
-    svdata.type = type;
+    svdata.type = type
     // do save
     let logs = await readTransactionLogs()
     logs.unshift(svdata)
     if(logs.length>500) {
-        logs.pop() // max 200
+        logs.pop() // max 500
     }
     let sv = {}
     sv[trslogkey] = logs
@@ -251,70 +390,6 @@ var getAmtTip = (obj) => {
 , stoGetConnectDomains = stoAppendConnectDomains
 
 /////////
-
-, reqFeasibleFee = async (txsz) => {
-    let url = fullnode_url+"/query/fee/average?unit=mei"
-    if(txsz > 0){
-        url += `&consumption=${txsz}`
-    }
-    return do_fetch_get(url)
-}
-, jsdttyhdr = {
-    "Content-Type": "application/json"
-}
-, proxyFullnodeApiPost = (path, bodydata, params) => {
-    let url = fullnode_url+path+"?";
-    params = params || {}
-    for(let k in params){
-        url += `${k}=${params[k]}&`
-    }
-    return do_fetch_post(url, bodydata, jsdttyhdr)
-}
-, queryTransaction = async (txhash) => {
-    let url = fullnode_url+"/query/transaction?unit=mei&body=true&&hash=" + txhash
-    return do_fetch_get(url)
-}
-, submitTransaction = async (txbody) => {
-    return proxyFullnodeApiPost(
-        "/submit/transaction", hexToBytes(txbody)
-    )
-}
-, createTransaction = async (txjson) => {
-    return proxyFullnodeApiPost(
-        "/create/transaction", JSON_stringify(txjson), {unit: 'mei', action: true, description: true, signature: true}
-    )
-}
-, checkTransaction = async (txbody, params) => {
-    return proxyFullnodeApiPost(
-        "/util/transaction/check", hexToBytes(txbody), params
-    )
-}
-
-, signTransaction = async (txbody, params) => {
-    return proxyFullnodeApiPost(
-        "/util/transaction/sign", hexToBytes(txbody), params
-    )
-}
-
-, parseTxDesc = tx => {
-    let txdesc = []
-    if(!tx || !tx.description){
-        return []
-    }
-    // parse 1[a-km-zA-HJ-NP-Z0-9]{26,33}
-    let parse = (i, v) => {
-        let li = v.replace(/(\s[0-9\.]+)HAC\s/g, ` <b class="amt">$1</b> HAC `)
-            .replace(/([a-km-zA-HJ-NP-Z1-9]{28,34})/g, ` <a class="addr" href="https://explorer.hacash.org/address/$1" target="_blank" title="$1">$1</a> `)
-        return `<span>${1+i}</span> ${li}`
-    }
-    txdesc.push(parse(0, tx.description)) // main addr
-
-    for(let i in tx.actions){
-        let li = tx.actions[i]
-        txdesc.push(parse(parseInt(i)+1, li.description))
-    }
-    return txdesc
-}
 
 ;
 
@@ -351,7 +426,6 @@ var cti = ctime(yes)
 
 // load show
 _setTimeout(loginSwitchToInit, 10);
-
 
 
 

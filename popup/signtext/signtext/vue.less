@@ -1,0 +1,182 @@
+// Sign Text page styles: reuses the shared html.less base; page-specific layout here (scoped to #sgtxt).
+
+#sgtxt {
+    .header {
+        display: flex;
+        justify-content: space-between;
+        height: auto;
+        background: #ffffff11;
+
+        .lg {
+            max-height: 32px;
+            padding: 6px;
+
+            img {
+                vertical-align: middle;
+                display: inline-block;
+                height: 32px;
+                transform: scale(0.8);
+                filter: drop-shadow(1px 1px 1px #000);
+                border-radius: 10px;
+            }
+        }
+
+        .pttl {
+            padding: 6px;
+            height: 32px;
+            line-height: 32px;
+            text-align: center;
+        }
+
+        .adrs {
+            padding: 6px 0;
+
+            .btn {
+                display: inline-block;
+                padding: 0 8px;
+                line-height: 32px;
+                height: 32px;
+                font-weight: normal;
+                font-size: 14px;
+                color: #999;
+            }
+
+            .icf {
+                height: 24px;
+                padding: 4px 0;
+                display: inline-block;
+                vertical-align: middle;
+            }
+        }
+    }
+
+    .permt .con {
+        margin: 12px 24px;
+
+        .tip b {
+            color: #0cf;
+            display: inline-block;
+        }
+    }
+
+    .tx {
+        margin: 12px;
+        border: 1px solid #fff4;
+        border-radius: 13px;
+        overflow: hidden;
+
+        pre.sigtext {
+            display: block;
+            margin: 0;
+            padding: 10px 12px;
+            font-family: ui-monospace, Consolas, "Courier New", monospace;
+            font-size: 13px;
+            line-height: 19px;
+            color: #e8eef5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            background-image: linear-gradient(to right bottom, #223d36, #0000);
+            max-height: 220px;
+            overflow-y: auto;
+        }
+    }
+
+    .digest {
+        margin: 0 12px;
+
+        .dgttl {
+            font-size: 11px;
+            color: #fff8;
+            margin-bottom: 4px;
+        }
+
+        .dgnote {
+            font-size: 11px;
+            color: #fff6;
+            margin-top: 5px;
+            line-height: 16px;
+        }
+
+        .hexdump {
+            display: block;
+            font-family: ui-monospace, Consolas, "Courier New", monospace;
+            font-size: 11px;
+            line-height: 16px;
+            letter-spacing: 0.2px;
+            color: #aab4bd;
+            word-break: break-all;
+            background: #ffffff0f;
+            border: 1px solid #ffffff1a;
+            border-radius: 6px;
+            padding: 5px 7px;
+        }
+    }
+
+    .txerr {
+        margin: 18px;
+        padding: 7.2px 12px;
+        border-radius: 12px;
+        border: 1px dashed #b00;
+        background: #f001;
+
+        h1,
+        p {
+            font-size: 14px;
+            color: #b00;
+        }
+
+        p {
+            word-break: break-all;
+        }
+    }
+
+    .lding,
+    .success {
+        padding: 70px 0;
+        text-align: center;
+    }
+
+    .success {
+        margin: 24px;
+        padding: 12px;
+        border: 1px solid #2aa515;
+        background-image: linear-gradient(to right bottom, #ffffff00, #2aa515);
+
+        img {
+            transition: all 1s;
+            transform: scale(0);
+
+            &.show {
+                transform: scale(1);
+            }
+        }
+
+        p {
+            margin-top: 12px;
+            color: #2aa515;
+            text-shadow: 1px 1px 1px #0005;
+            font-weight: 700;
+        }
+    }
+
+    .wtip p {
+        font-size: 12px;
+        color: #fabd9999;
+        margin: 12px;
+        padding: 8px 12px;
+    }
+
+    .btns {
+        margin-top: 24px;
+        display: flex;
+        justify-content: space-evenly;
+
+        &>div {
+            width: 45%;
+        }
+
+        button {
+            width: 100%;
+        }
+    }
+}

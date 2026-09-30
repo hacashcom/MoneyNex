@@ -1,11 +1,13 @@
-const msg_create_account_by = 'create_account_by'
 ;
 
 var optkey_check_wallet = "wallet"
+, optkey_chain = "chain"
+, optkey_switch_chain = "switchchain"
 , optkey_connect_account = "connect"
 , optkey_do_transfer = "transfer"
 , optkey_sign_tx = "signtx"
 , optkey_raise_fee = "raisefee"
+, optkey_sign_text = "signtext"
 // , optkey_wallet_info = "wallet_info"
 // , optkey_open_wallet = "open_wallet"
 // , optkey_close_wallet = "close_wallet"
@@ -14,9 +16,11 @@ var optkey_check_wallet = "wallet"
 
 var optkey_list_to_popup = [
     optkey_check_wallet,
+    optkey_chain,
+    optkey_switch_chain,
     optkey_connect_account,
     optkey_do_transfer,
     optkey_sign_tx,
     optkey_raise_fee,
+    optkey_sign_text,
 ];
-

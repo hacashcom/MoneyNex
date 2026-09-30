@@ -400,7 +400,8 @@
             display: none;
         }
         &>div {
-            width: 50%;
+            flex: 1;
+            width: auto;
             text-align: center;
         }
         .item {
@@ -525,6 +526,10 @@
             }
             b {
                 font-weight: bold;
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
             img {
                 margin-right: 5px;
@@ -571,6 +576,20 @@
                 font-size: 12px;
                 font-weight: bold;
             }
+            // 手动刷新状态图标：点击查一次链上状态；请求中旋转
+            .rfx {
+                height: 13px;
+                vertical-align: middle;
+                margin-left: 5px;
+                cursor: pointer;
+                opacity: 0.75;
+                &:hover {
+                    opacity: 1;
+                }
+                &.on {
+                    animation: rfxspin 0.9s linear infinite;
+                }
+            }
         }
         .time {
             display: block;
@@ -580,6 +599,15 @@
             font-style: normal;
             color: #fff4;
             font-size: 12px;
+        }
+        .aser {
+            margin-top: 3px;
+            font-size: 11px;
+            color: #fff6;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 220px;
         }
         .frto {
             height: @hdh;
@@ -657,6 +685,106 @@
         }
     }
 
+    .asts {
+        padding: @pgpd;
+        ul {
+            margin: 0;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            list-style: none;
+            padding: @pgpd;
+            border-bottom: 1px solid #fff1;
+            gap: 8px;
+        }
+        .ainf {
+            min-width: 0;
+            flex: 1;
+            h3 {
+                font-size: 14px;
+                font-weight: normal;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .amt {
+                margin-top: 4px;
+                font-size: 16px;
+                color: #fff;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                word-break: break-all;
+            }
+            .ser {
+                margin-top: 2px;
+                font-size: 12px;
+                color: #fff6;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .metaerr {
+                margin-top: 4px;
+                font-size: 11px;
+                color: orangered;
+            }
+        }
+        .send {
+            flex-shrink: 0;
+            min-width: 36px;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            padding: 0;
+            border-radius: 100px;
+            background: @clblue;
+            box-shadow: none;
+            text-shadow: none;
+            opacity: 0.9;
+            overflow: hidden;
+            img {
+                display: block;
+                height: 18px;
+                margin: 9px auto 0;
+            }
+            &:hover:not(:disabled) {
+                opacity: 1;
+            }
+            &:disabled {
+                opacity: 0.25;
+                cursor: default;
+                pointer-events: none;
+                background: #fff2;
+            }
+        }
+        .aerr {
+            text-align: center;
+            padding: @pgpd*2 @pgpd;
+            p {
+                font-size: 13px;
+                color: #fffa;
+                word-break: break-word;
+            }
+            a {
+                display: inline-block;
+                margin-top: 10px;
+                padding: 5px 12px;
+                font-size: 13px;
+                cursor: pointer;
+                background: #09c4;
+                border-radius: 5px;
+            }
+            a:hover {
+                color: #fff;
+                background: @clblue;
+            }
+        }
+    }
+
     .clct {
         padding: @pgpd;
         .fpt {
@@ -713,3 +841,66 @@
 
 }
 
+// rpc settings modal
+#home .rpcsg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: @bodyw;
+    height: @bodyh;
+    z-index: 99;
+    .rpcsg-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #0008;
+    }
+    .rpcsg-box {
+        position: absolute;
+        top: @pgpd;
+        left: @pgpd;
+        width: @bodyw - @pgpd*2;
+        box-sizing: border-box;
+        background: @bgcol + #080808;
+        box-shadow: 2px 2px 8px #0009;
+        border-radius: 5px;
+        padding: @pgpd;
+        h3 {
+            margin: 0 0 8px;
+            color: #fff;
+        }
+        .tip {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #fffb;
+        }
+        input {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            margin: 10px 0;
+            background: #0006;
+            color: #fff;
+            border: 1px solid #fff3;
+            border-radius: 5px;
+        }
+        .btns {
+            display: flex;
+            gap: 8px;
+            .mid {
+                flex: 1;
+            }
+        }
+    }
+}
+
+
+// Failed 状态旁手动刷新图标的旋转动画
+@keyframes rfxspin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}

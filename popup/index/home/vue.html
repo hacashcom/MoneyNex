@@ -41,6 +41,14 @@
                     <img :src="`${icfp}info.svg`" />
                     <a>Account details</a>
                 </li>
+                <li @click="opchains">
+                    <img :src="`${icfp}network.svg`" />
+                    <a>Networks<i>{{chaintip}}</i></a>
+                </li>
+                <li @click="oprpcset">
+                    <img :src="`${icfp}unfold.svg`" />
+                    <a>RPC node</a>
+                </li>
                 <li @click="dolock">
                     <img :src="`${icfp}lock.svg`" />
                     <a>Lock wallet</a>
@@ -102,20 +110,45 @@
 
     <div class="tabs">
         <div>
-            <div :class="`item ${tabx==1?'active':''}`" @click="swttab(1)"><b>Activity</b></div>
-        </div>
-        <div class="hide">
-            <div :class="`item ${tabx==2?'active':''}`" @click="swttab(2)"><b>---</b></div>
+            <div :class="`item ${activeTab=='assets'?'active':''}`" @click="swttab('assets')"><b>Assets</b></div>
         </div>
         <div>
-            <div :class="`item ${tabx==3?'active':''}`" @click="swttab(3)"><b>Collection</b></div>
+            <div :class="`item ${activeTab=='activity'?'active':''}`" @click="swttab('activity')"><b>Activity</b></div>
+        </div>
+        <div>
+            <div :class="`item ${activeTab=='collection'?'active':''}`" @click="swttab('collection')"><b>Collection</b></div>
+        </div>
+    </div>
+
+    <!-- assets -->
+    <div class="lgw asts" v-if="activeTab=='assets'">
+        <img v-if="assets==null && !assetsError" class="ldf" src="../image/ld/w.gif" />
+        <div v-else-if="assetsError" class="aerr">
+            <p>{{assetsError}}</p>
+            <a @click="retryAssets">Retry</a>
+        </div>
+        <ul v-else-if="assets && assets.length>0">
+            <li v-for="a in assets" :key="a.serial">
+                <div class="ainf">
+                    <h3 :title="a.name">{{a.name}}</h3>
+                    <p class="amt" :title="a.displayAmount">{{a.displayAmount}}</p>
+                    <p class="ser">#{{a.serial}}</p>
+                    <p v-if="!a.metadata" class="metaerr">metadata unavailable</p>
+                </div>
+                <button class="send" :disabled="!a.metadata" :title="'Send ' + a.name" @click="sendAsset(a)">
+                    <img :src="`${icfp}transfer.svg`" />
+                </button>
+            </li>
+        </ul>
+        <div v-else>
+            <p class="end">- You have no assets -</p>
         </div>
     </div>
     
     <!-- transaction -->
-    <div class="lgw txlg" v-if="tabx==1">
+    <div class="lgw txlg" v-if="activeTab=='activity'">
         <ul v-if="trslgs && trslgs.length>0">
-            <li v-for="(v, i) in trslgs" :key="v.hash.substring(0, 16)">
+            <li v-for="(v, i) in trslgs" :key="(v.hash||'') + '-' + i">
                 <div :class="`lgcd i${i} stat${v.stat}`">
                     <div v-if="v.type=='MUL'">
                         <div class="hd"    >
@@ -128,29 +161,30 @@
                         <p class="desc" v-if="v.ufd" v-html="v.desc"></p>
                     </div>
                     <div v-else class="hd">
-                        <div><h1 class="amt">
-                            <img class="lg" :src="`${icfp}${v.type.toLowerCase()}.svg`" />
-                            <b>{{v.asset.replace(/\s\(\S+\)/ig, '')}}</b>
-                        </h1></div>
+                        <div>
+                            <h1 class="amt">
+                                <img class="lg" :src="txicon(v)" />
+                                <b v-if="v.type=='ASSET'">{{assetLogHead(v)}}</b>
+                                <b v-else>{{(v.asset||'').replace(/\s\(\S+\)/ig, '')}}</b>
+                            </h1>
+                            <p v-if="v.type=='ASSET' && v.assetSerial" class="aser">Asset #{{v.assetSerial}}</p>
+                        </div>
                         <div>
                             <div class="frto">
-                                <b class="f">{{v.from.substring(0, 3)}}...</b>
+                                <b class="f">{{(v.from||'').substring(0, 3)}}...</b>
                                 <img :src="`${icfp}right.svg`" />
-                                <b>{{v.to.substring(0, 9)}}...</b>
+                                <b>{{(v.to||'').substring(0, 9)}}...</b>
                             </div>
                         </div>
                     </div>
                     <div class="bd">
                         <div>
-                            <a v-if="v.stat==1" title="Open tx in explorer" class="hxj" @click="optx(v.hash)"><b>Tx: {{v.hash.substring(0,16)}}...</b><img :src="`${icfp}jump.svg`" /></a>
-                            <i class="time" v-else-if="v.stat==0">{{new Date(v.time*1000).toLocaleString()}}</i>
+                            <a v-if="v.stat==1 && v.hash" title="Open tx in explorer" class="hxj" @click="optx(v.hash)"><b>Tx: {{v.hash.substring(0,16)}}...</b><img :src="`${icfp}jump.svg`" /></a>
+                            <i class="time" v-else-if="v.stat==0">{{new Date((v.time||0)*1000).toLocaleString()}}</i>
                             <i class="time" v-else >Transaction failed</i>
                         </div>
                         <div v-if="v.stat!=1">
                             <a @click="cpbody(v.body)" class="abtn">Copy Tx Body</a>
-                        </div>
-                        <div v-if="v.stat==2">
-                            <a @click="v.stat=0; updtxsts([v])" class="abtn">Refresh</a>
                         </div>
                         <div>
                             <div v-if="v.stat==0" class="pdin">
@@ -159,6 +193,8 @@
                             </div>
                             <div v-else-if="v.stat==2" class="fail">
                                 <b>Failed</b>
+                                <img class="rfx" :class="v.rfig ? 'on' : ''" src="../image/ftic/refresh.svg"
+                                    title="Refresh status" @click="refreshtx(v)" />
                             </div>
                             <div v-else class="cfim">
                                 <b>Confirm</b>
@@ -182,19 +218,8 @@
         </div>
     </div>
 
-    <!-- activity -->
-    <div class="lgw actv" v-if="tabx==2">
-        <div class="actvs" v-if="actvlgs && actvlgs.length>0">
-        </div>
-        <img v-if="actvlgs==null" class="ldf" src="../image/ld/w.gif" />
-        <div v-else>
-            <p v-if="actvlgs.length>0" class="end">- END -</p>
-            <p v-else class="end">- You have no activitys -</p>
-        </div>
-    </div>
-
     <!-- collection -->
-    <div class="lgw clct" v-if="tabx==3">
+    <div class="lgw clct" v-if="activeTab=='collection'">
         <p class="fpt">Display assets only after four block confirmations</p>     
         <div class="dias" v-if="dialis && dialis.length>0">
             <div class="hd">
@@ -211,6 +236,21 @@
             <p v-if="dialis.length>0" class="end">- END -</p>
             <p v-else class="end">- You have no collections -</p>
         </div>   
+    </div>
+
+    <!-- rpc settings -->
+    <div class="rpcsg" v-if="rpcset">
+        <div class="rpcsg-bg" @click="rpcset=0"></div>
+        <div class="rpcsg-box">
+            <h3>RPC node</h3>
+            <p class="tip">Fullnode RPC address. Used for balance query and transaction broadcast only — the signing hash is always computed locally from the transaction body. Leave empty to use the default node.</p>
+            <input v-model="rpcuri" placeholder="http://127.0.0.1:8009/fullnode" />
+            <div class="btns">
+                <button class="mid" @click="rpcsave()">Save</button>
+                <button class="mid" @click="rpcsave(1)">Use default</button>
+                <button class="mid" @click="rpcset=0">Cancel</button>
+            </div>
+        </div>
     </div>
 
 
