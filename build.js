@@ -337,9 +337,15 @@ async function buildPageSource(pname, plist, is_release) {
     // console.log(pupjss)
     await mergeFile('js', pupjss, `${ppd}${pname}.js`, is_release?jsminify:null, beforejs, js_rplsfn)
     await mergeFile('html', popups(popup_common[1]).concat(popups(plist_1)), `${ppd}${pname}.html`, is_release?htmlminify:null, null, res=>{
-        return res.replace(
+        let out = res.replace(
             `href=./popup.css`, `href=./${pname}.css`).replace(
             `src=./popup.js`, `src=./${pname}.js`)
+        if(is_release){
+            // dev-only: the hidden <img src="http://127.0.0.1:7890"> pings the
+            // refresh_rebuild watcher; never ship it to end users
+            out = out.replace(/<img[^>]*127\.0\.0\.1:7890[^>]*>/gi, '')
+        }
+        return out
     })
     let pupless = popups(popup_common[1]).concat(vuepuplist(popup_common[0])).concat(vuepuplist(plist[0])).concat(popups(plist_1))
     await mergeFile('less', pupless, `${ppd}${pname}.css`, less2css)
@@ -353,6 +359,13 @@ async function run(is_release) {
     await build(is_release)
 
     if(is_release){
+        // Guard: a release bundle normally carries the production defaults. A
+        // non-default --fullnode-url / --chain-id means a TEST release (private
+        // chain) — print it loudly so it can never ship by accident.
+        if(mnx_cfg.fullnode_url != 'http://wallet.hacash.com/fullnode' || mnx_cfg.chain_id !== 0){
+            console.log(`! TEST RELEASE CONFIG: fullnode_url=${mnx_cfg.fullnode_url} chain_id=${mnx_cfg.chain_id}`)
+            console.log(`! This bundle points at a non-production node. Do not publish it to the Chrome Web Store.`)
+        }
         console.log(`do release...`) 
         release()
         console.log(`ok.`) 
