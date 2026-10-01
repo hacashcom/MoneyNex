@@ -129,7 +129,13 @@ var yes = true
     // console.log(urlquery.tid, urlquery.did, data)
     data = data || {}
     data.did = parseInt(urlquery.did)
-    await chrome.tabs.sendMessage(parseInt(urlquery.tid), data)
+    // The source tab may be closed / lack a content script: sendMessage throws
+    // "Receiving end does not exist" — must tolerate it, or the success flow hangs on this await
+    try{
+        await chrome.tabs.sendMessage(parseInt(urlquery.tid), data)
+    }catch(e){
+        console.warn('returnDataToUserPage: ', e)
+    }
 }
 
 , icfpath = '../image/ftic/'
@@ -177,6 +183,46 @@ document.addEventListener('copy', function(e) {
 var copyToClipboard = (s) => {
     copyToClipboardTextContent = s
     document.execCommand('copy');
+}
+
+
+
+// Common reply protocol for DApp request pages (shared by transfer/signtx/signtext/raisefee/connect):
+// Single-reply contract — reply exactly once whether success/cancel/failure (either the result
+// data or {ret:1, err}), then close the window; a silent cancel would leave the DApp's request
+// hanging forever (callers have their own timeout fallback, but the normal path must cancel visibly).
+// If the page is closed outright (X / Ctrl+W), the beforeunload handler makes a best effort to
+// send a cancel reply; a failed send is harmless.
+// label identifies the page (e.g. 'Transfer request') and goes into the err text of the
+// close-fallback reply.
+var mnx_dapp_reply = (label) => {
+    let answered = no
+    , answerOnce = async (data) => {
+        if(answered){ return }
+        answered = yes
+        try{ await returnDataToUserPage(data) }catch(e){}
+    }
+    , closeWin = () => {
+        try{ window.close() }catch(e){}
+    }
+    , cancelAndClose = (msg) => {
+        answerOnce({ret: 1, err: msg, code: 'user_canceled'}).then(closeWin, closeWin)
+    }
+    try{
+        window.addEventListener('beforeunload', ()=>{
+            if(!answered){
+                try{
+                    returnDataToUserPage({ret: 1, err: label + ' canceled (popup closed)', code: 'user_canceled'})
+                }catch(e){}
+            }
+        })
+    }catch(e){}
+    return {
+        isAnswered: () => answered, // once answered, nop only needs to close the window, no extra cancel
+        answerOnce: answerOnce,
+        closeWin: closeWin,
+        cancelAndClose: cancelAndClose,
+    }
 }
 
 
