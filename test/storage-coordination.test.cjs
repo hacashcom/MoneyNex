@@ -58,7 +58,7 @@ function fixture() {
     return { page, locks, state, entered, release, reads: () => reads, writes: () => writes };
 }
 
-function passwordFixture() {
+function passwordFixture(fault) {
     const f = fixture(), entered = deferred(), release = deferred();
     const sync = {}, session = {}, writes = [];
     let verifierReads = 0;
@@ -72,7 +72,14 @@ function passwordFixture() {
                 }
                 return snapshot;
             },
-            async set(value) { writes.push(name); Object.assign(data, structuredClone(value)); },
+            async set(value) {
+                const stage = Object.hasOwn(value, 'crptpskey') ? 'verifier' : name === 'session' ? 'session' : 'accounts';
+                const hit = fault && !fault.triggered && fault.stage === stage;
+                if(hit) fault.triggered = true;
+                if(hit && fault.when === 'before') throw Error('Injected storage failure');
+                writes.push(name); Object.assign(data, structuredClone(value));
+                if(hit && fault.when === 'after') throw Error('Injected storage failure');
+            },
         };
     }
     function page(overrides = {}) {
@@ -87,6 +94,51 @@ function passwordFixture() {
         return ctx;
     }
     return { page, sync, session, writes, entered, release, md5 };
+}
+
+for(const existing of [false, true]) {
+    for(const stage of existing ? ['session', 'accounts'] : ['verifier', 'session', 'accounts']) {
+        for(const when of ['before', 'after']) {
+            test(`${existing ? 'existing wallet' : 'initial setup'}: ${when} ${stage} write failure permits a consistent same-password retry`, async () => {
+                const fault = { stage, when }, f = passwordFixture(fault);
+                f.release.resolve();
+                const password = 'public-password';
+                const digest = f.md5(password);
+                const preserved = { cryptkey: JSON.stringify({ key: 'public-original', digest }) };
+                if(existing) Object.assign(f.sync, {
+                    accounts: { Original: structuredClone(preserved) }, current_account: 'Original',
+                    crptpskey: f.md5(password + 'salthcxwlt'),
+                });
+                const account = { address: 'A', private_key: 'public-A' };
+                await assert.rejects(f.page().stoSaveAccount(account, password), /Injected storage failure/);
+                assert.equal(fault.triggered, true);
+                assert.equal(Boolean(f.sync.crptpskey), existing || stage !== 'verifier' || when === 'after');
+                assert.equal(Boolean(f.session.password), stage === 'accounts' || (stage === 'session' && when === 'after'));
+                const accountWasWritten = stage === 'accounts' && when === 'after';
+                assert.equal(Boolean(f.sync.accounts?.A), accountWasWritten);
+                assert.equal(f.sync.current_account, existing ? 'Original' : undefined);
+                if(existing) assert.deepEqual(f.sync.accounts.Original, preserved);
+                const savedCipher = f.sync.accounts?.A?.cryptkey;
+                // A new script context with a cleared session models retry input, not browser durability.
+                delete f.session.password;
+                const retry = f.page();
+                if(f.sync.crptpskey) {
+                    const snapshot = structuredClone(f.sync);
+                    assert.equal(await retry.stoSaveAccount({ address: 'Wrong', private_key: 'public-wrong' }, 'different-public-password'), null);
+                    assert.deepEqual(f.sync, snapshot);
+                    assert.equal(f.session.password, undefined);
+                }
+                assert.equal(await retry.stoSaveAccount(account, password), digest);
+                assert.equal(f.session.password.md5, digest);
+                assert.equal(f.sync.crptpskey, f.md5(password + 'salthcxwlt'));
+                assert.equal(JSON.parse(f.sync.accounts.A.cryptkey).digest, digest);
+                if(savedCipher) assert.equal(f.sync.accounts.A.cryptkey, savedCipher);
+                if(existing) assert.deepEqual(f.sync.accounts.Original, preserved);
+                assert.equal(await retry.stoSaveCurrentAccount('A'), true);
+                assert.equal(f.sync.current_account, 'A');
+            });
+        }
+    }
 }
 
 for(const pair of ['account/account', 'password/password', 'account/password']) {
