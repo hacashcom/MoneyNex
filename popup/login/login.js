@@ -217,13 +217,16 @@ var randomString = ctime(yes)+''
         return nil
     })
 }
-, stoUnlockAccount = async (accsv) => {
+, stoUnlockAccount = async function(accsv) {
     let pmd5 = await stoReadPassword()
     if(!pmd5){
         return nil
     }
-    if(!accsv) {
+    // Only an omitted argument selects the current account. A missing explicit
+    // record must not silently select another account (for example after deletion).
+    if(arguments.length === 0) {
         let adr = await stoReadCurrentAccount()
+        if(typeof adr !== 'string' || !adr) { return nil }
         accsv = await stoReadAccount(adr)
     }
     if(!accsv){
