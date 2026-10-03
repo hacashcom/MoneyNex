@@ -322,6 +322,26 @@ function Buffer_from_hex(hex) {
     return out
 }
 const MNX_SECP256K1_N = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141')
+function mnx_random_private_key() {
+    if(!globalThis.crypto || typeof globalThis.crypto.getRandomValues !== 'function') {
+        throw new Error('Secure random generation is unavailable')
+    }
+    const bytes = new Uint8Array(32)
+    try {
+        // Rejection sampling preserves uniformity over valid secp256k1 scalars.
+        // Never fall back to timestamps, mouse input or a persisted seed.
+        for(let attempt = 0; attempt < 128; attempt++) {
+            globalThis.crypto.getRandomValues(bytes)
+            const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+            const scalar = BigInt('0x' + hex)
+            if(scalar > 0n && scalar < MNX_SECP256K1_N) { return hex }
+        }
+        throw new Error('Secure random generation failed to produce a valid key')
+    } finally {
+        // JavaScript strings cannot be reliably erased; clear the owned byte buffer.
+        bytes.fill(0)
+    }
+}
 function mnx_validate_privkey(hex) {
     if(typeof hex !== 'string' || !/^[0-9a-fA-F]{64}$/.test(hex)) {
         throw new Error('Invalid private key: expected 64 hexadecimal characters')
