@@ -10,8 +10,38 @@ const pages = [
     ['transfer/sigtrs/vue.js', 'routePageSigTrs', 'adr'],
     ['raisefee/raisefee/vue.js', 'routePageRaiseFee', 'adr'],
 ];
+for(const outcome of ['refused', 'error', 'success', 'cancelled', 'reopened']) {
+    test(`password dialog: ${outcome} persistence gates approval`, async () => {
+        let methods, finish, approvals = 0;
+        const context = vm.createContext({
+            yes: true, no: false, nil: null, vue_tpl_wpass: '', btncon_confirm: 'Confirm',
+            _setTimeout() {}, _clearTimeout() {}, MD5: () => 'public-digest', salthcxwlt: 'public-salt',
+            stoReadPasskey: async () => 'public-digest',
+            stoSavePassword: () => new Promise((resolve, reject) => {
+                finish = () => outcome === 'error' ? reject(Error('private diagnostics')) : resolve(outcome !== 'refused');
+            }),
+            VueCreateApp(name, template, data, handlers) { methods = handlers; return { ctx: {} }; },
+        });
+        vm.runInContext(fs.readFileSync(path.join(root, 'popup/comp/wpass/vue.js'), 'utf8'), context);
+        const dialog = { ...methods, pswd: 'public-password', err: '', cnsh: true, c1: () => { approvals++; } };
+        const pending = dialog.cok();
+        await new Promise(setImmediate);
+        const before = { approvals, visible: dialog.cnsh };
+        if(outcome === 'cancelled') dialog.hide();
+        if(outcome === 'reopened') dialog.open(() => { approvals++; });
+        finish();
+        await pending;
+        assert.deepEqual(before, { approvals: 0, visible: true });
+        assert.equal(approvals, outcome === 'success' ? 1 : 0);
+        if(outcome === 'refused' || outcome === 'error') {
+            assert.equal(dialog.cnsh, true);
+            assert.equal(dialog.err, 'Wallet unlock failed. Refresh the wallet and try again.');
+        }
+        if(outcome === 'cancelled' || outcome === 'reopened') assert.equal(dialog.err, '');
+    });
+}
 async function load(file, route) {
-    const state = { methods: null, errors: [], refreshes: 0, unmounts: 0, routes: 0 };
+    const state = { methods: null, errors: [], refreshes: 0, unmounts: 0, routes: 0, hides: 0 };
     const context = vm.createContext({
         yes: true, no: false, nil: null, ctime: () => 1000000, minutes: 60,
         $id: () => ({ classList: { add() {} } }), _setTimeout() {}, _setInterval() {},
@@ -21,6 +51,7 @@ async function load(file, route) {
         window: { atob: () => '{"timestamp":1}' }, JSON_parse: JSON.parse,
         addrOmitted: address => address, mnx_dapp_reply: () => ({}),
         showWPerr: message => state.errors.push(message),
+        $display_none: () => { state.hides++; }, MD5: () => 'public-digest',
         VueCreateApp(name, template, data, methods) {
             state.methods = methods;
             return { app: { unmount() { state.unmounts++; } }, ctx: {} };
@@ -37,6 +68,26 @@ async function load(file, route) {
     context.refreshHomeTrsLog = async () => { state.refreshes++; };
     if(route === 'routePageInit') context.routePageMain = async () => { state.routes++; };
     return { context, state };
+}
+for(const outcome of ['refused', 'error', 'success']) {
+    test(`unlock: ${outcome} password persistence gates hiding and navigation`, async () => {
+        const { context, state } = await load('login/init/vue.js', 'routePageInit');
+        context.stoReadPasskey = async () => 'public-digest';
+        let finish;
+        context.stoSavePassword = () => new Promise((resolve, reject) => {
+            finish = () => outcome === 'error' ? reject(Error('private storage diagnostics')) : resolve(outcome === 'success');
+        });
+        const unlocking = state.methods.doulk.call({ ulkpass: 'public-password', acc: null });
+        await new Promise(setImmediate);
+        assert.equal(state.hides, 0);
+        assert.equal(state.routes, 0);
+        finish();
+        await unlocking;
+        assert.equal(state.hides, outcome === 'success' ? 1 : 0);
+        assert.equal(state.routes, outcome === 'success' ? 1 : 0);
+        assert.equal(state.unmounts, outcome === 'success' ? 1 : 0);
+        assert.deepEqual(state.errors, outcome === 'success' ? [] : ['Wallet unlock failed. Refresh the wallet and try again.']);
+    });
 }
 for (const [file, route, field] of pages) {
     for (const outcome of ['refused', 'error', 'success']) {
