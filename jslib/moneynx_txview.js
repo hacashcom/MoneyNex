@@ -77,10 +77,12 @@ var reqFeasibleFee = async (txsz, opts) => {
 }
 , stoCurAccLocalSignTx = async (body, signer, review, origin) => {
     // prepare_signature -> vault sign -> attach_signature (full approval chain, local)
-    let privkey = await stoUnlockAccount()
-    if(!privkey) { return {err:'Account unlocking failed'} }
     try {
         let req = await sdk_tx_prepare_signature(body, signer, { review, origin })
+        // Preparation may await SDK initialization. Check the current lock state
+        // afterwards and avoid retaining a decrypted key across that wait.
+        let privkey = await stoUnlockAccount()
+        if(!privkey) { return {err:'Account unlocking failed'} }
         let proof = mnx_signing_proof(req, privkey)
         let attach = await sdk_tx_attach_signature(body, proof, review, req)
         return { result: attach, request: req }
