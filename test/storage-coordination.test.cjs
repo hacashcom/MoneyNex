@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const source = fs.readFileSync(path.join(__dirname, '../popup/login/login.js'), 'utf8');
+const source = fs.readFileSync(path.join(process.env.MNX_TEST_SOURCE_ROOT || path.join(__dirname, '..'), 'popup/login/login.js'), 'utf8');
 function deferred() {
     let resolve;
     const promise = new Promise(done => { resolve = done; });
@@ -55,8 +55,102 @@ function fixture() {
         context.stoReadPassword = async () => 'public-test-digest';
         return context;
     }
-    return { page, state, entered, release, reads: () => reads, writes: () => writes };
+    return { page, locks, state, entered, release, reads: () => reads, writes: () => writes };
 }
+
+function passwordFixture() {
+    const f = fixture(), entered = deferred(), release = deferred();
+    const sync = {}, session = {}, writes = [];
+    let verifierReads = 0;
+    const md5 = value => require('node:crypto').createHash('md5').update(value).digest('hex');
+    function area(data, name) {
+        return {
+            async get(key) {
+                const snapshot = structuredClone({ [key]: data[key] });
+                if(key === 'crptpskey' && ++verifierReads === 1) {
+                    entered.resolve(); await release.promise;
+                }
+                return snapshot;
+            },
+            async set(value) { writes.push(name); Object.assign(data, structuredClone(value)); },
+        };
+    }
+    function page(overrides = {}) {
+        const ctx = f.page(f.locks, {
+            MD5: md5,
+            AES_encrypt: (key, digest) => JSON.stringify({ key, digest }),
+            chrome_storage_sync: area(sync, 'sync'), chrome_storage_session: area(session, 'session'),
+            ...overrides,
+        });
+        // Reload to restore the actual password reader overridden by the account fixture.
+        vm.runInContext(source, ctx);
+        return ctx;
+    }
+    return { page, sync, session, writes, entered, release, md5 };
+}
+
+for(const pair of ['account/account', 'password/password', 'account/password']) {
+    test(`concurrent initial ${pair} writes accept only one distinct password`, async () => {
+        const f = passwordFixture(), a = f.page(), b = f.page();
+        function start(page, kind, label) {
+            return kind === 'account' ? page.stoSaveAccount({ address: label, private_key: 'public-' + label }, 'public-password-' + label)
+                : page.stoSavePassword('public-password-' + label);
+        }
+        const kinds = pair.split('/');
+        const first = start(a, kinds[0], 'A');
+        await f.entered.promise;
+        const second = start(b, kinds[1], 'B');
+        await new Promise(setImmediate);
+        f.release.resolve();
+        const results = await Promise.all([first, second]);
+        assert.equal(results.filter(Boolean).length, 1);
+        assert.equal(f.sync.crptpskey, f.md5('public-password-Asalthcxwlt'));
+        assert.equal(f.session.password.md5, f.md5('public-password-A'));
+        for(const account of Object.values(f.sync.accounts || {})) {
+            assert.equal(JSON.parse(account.cryptkey).digest, f.session.password.md5);
+        }
+        assert.equal(f.sync.accounts?.B, undefined);
+    });
+}
+
+for(const kind of ['account', 'password']) {
+    test(`expired ${kind} acquisition does not write a verifier or session before the lock`, async () => {
+        const f = passwordFixture(), time = clock(), a = f.page(time), b = f.page(time);
+        f.release.resolve();
+        const entered = deferred(), release = deferred();
+        const held = a.accMutate(async () => { entered.resolve(); await release.promise; });
+        await entered.promise;
+        const waiting = kind === 'account' ? b.stoSaveAccount({ address: 'B', private_key: 'public-B' }, 'public-password-B')
+            : b.stoSavePassword('public-password-B');
+        await new Promise(setImmediate);
+        const before = f.writes.length;
+        time.expire();
+        const result = await waiting;
+        release.resolve();
+        await held;
+        assert.equal(result, null);
+        assert.equal(before, 0);
+        assert.equal(f.writes.length, 0);
+    });
+}
+
+test('matching passwords preserve both concurrent account imports', async () => {
+    const f = passwordFixture(), a = f.page(), b = f.page();
+    const first = a.stoSaveAccount({ address: 'A', private_key: 'public-A' }, 'public-password');
+    await f.entered.promise;
+    const second = b.stoSaveAccount({ address: 'B', private_key: 'public-B' }, 'public-password');
+    f.release.resolve();
+    assert.ok((await Promise.all([first, second])).every(Boolean));
+    assert.deepEqual(Object.keys(f.sync.accounts).sort(), ['A', 'B']);
+});
+
+test('unavailable shared locking prevents password, session and account writes', async () => {
+    const f = passwordFixture(), a = f.page({ navigator: { locks: null } });
+    f.release.resolve();
+    assert.equal(await a.stoSavePassword('public-password'), null);
+    assert.equal(await a.stoSaveAccount({ address: 'A', private_key: 'public-A' }, 'public-password'), null);
+    assert.equal(f.writes.length, 0);
+});
 
 function clock() {
     const timers = new Map();
