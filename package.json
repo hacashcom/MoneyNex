@@ -3,7 +3,7 @@
     "version": "0.3.0",
     "description": "A Bitcoin and Hacash Wallet",
     "scripts": {
-        "test": "node jslib/importkey.test.js && node jslib/assetamt.test.js && node jslib/msglayout.test.js",
+        "test": "node jslib/importkey.test.js && node jslib/assetamt.test.js && node jslib/msglayout.test.js && node --test test/session-expiry.test.cjs",
         "build": "node build.js --release"
     },
     "dependencies": {
