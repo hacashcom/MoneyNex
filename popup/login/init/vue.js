@@ -201,7 +201,7 @@ var routePageInit = async (sc, force) => {
                 return
             }
             adr = acc.address
-            await stoSaveCurrentAccount(adr)
+            if(!(await mnx_select_current_account(adr))) { return }
         }else{
             adr = await stoReadCurrentAccount()
         }
