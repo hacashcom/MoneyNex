@@ -114,14 +114,18 @@ var randomString = ctime(yes)+''
     let ps = await chrome_storage_sync.get(accpsskey)
     return ps[accpsskey]
 }
-// 账户表整表 mutation 串行队列。chrome.storage.sync 的账户表只能整表 get→改→set，
-// 两个扩展页（多窗口/多标签）并发各写各的整表会互相覆盖——后写者整表胜出，
-// 先写者刚导入的账户会被抹掉（丢账户）。所有账户表变更必须经 accMutate 排队执行，
-// 且写后重读校验、失败重试；对不经过本队列的外部写入（如 sync 冲突）只能靠校验兜底。
+// Serialize account-table mutations and selection across extension pages.
+// Other devices and writers that do not acquire this lock remain outside it.
 , ACC_MUTATE_RETRY = 3
 , acc_mutate_queue = Promise.resolve()
 , accMutate = (fn) => {
-    let run = acc_mutate_queue.then(fn)
+    let run = acc_mutate_queue.then(() => {
+        // A page-local queue cannot coordinate separate extension windows.
+        // Refuse writes if the shared lock is unavailable; never silently downgrade.
+        if(typeof navigator === 'undefined' || !navigator.locks ||
+                typeof navigator.locks.request !== 'function') { return nil }
+        return navigator.locks.request('moneynex-account-storage', fn)
+    })
     // 链子吞掉失败继续排队；失败通过返回的 promise 交给调用方处理
     acc_mutate_queue = run.then(() => nil, () => nil)
     return run
@@ -168,9 +172,22 @@ var randomString = ctime(yes)+''
     return addr ? tar[addr] : tar
 }
 , stoSaveCurrentAccount = async (addr) => {
-    let sv = {}
-    sv[acccurkey] = addr
-    await chrome_storage_sync.set(sv)
+    return await accMutate(async () => {
+        if(typeof addr !== 'string' || !addr || !(await stoReadAccount(addr))) { return nil }
+        let sv = {}
+        sv[acccurkey] = addr
+        await chrome_storage_sync.set(sv)
+        return yes
+    })
+}
+, mnx_select_current_account = async (addr) => {
+    try {
+        if(await stoSaveCurrentAccount(addr)) { return yes }
+    } catch(e) {}
+    // A rejected storage write can have an uncertain outcome. Do not update
+    // the page optimistically or display raw storage errors.
+    showWPerr('Account selection failed. Refresh the wallet and try again.')
+    return no
 }
 , stoReadCurrentAccount = async () => {
     let obj = await chrome_storage_sync.get(acccurkey)
