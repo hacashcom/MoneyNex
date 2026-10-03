@@ -78,8 +78,12 @@ var routePageInit = async (sc, force) => {
         },
         async create() {
             let t = this
-            , pks = SHA256(recordRandomString(''))
-            _setTimeout(createaccount, 15, t, pks, true)
+            try {
+                let pks = mnx_random_private_key()
+                _setTimeout(createaccount, 15, t, pks, true, true)
+            } catch(e) {
+                showWPerr('Secure account creation failed. Please retry in a supported browser.')
+            }
         },
         cleanerr(){
             hideWPtip()

@@ -119,3 +119,100 @@ eq(r.kind, 'password', 'empty')
 eq(r.stuff, '', 'empty stuff')
 
 console.log('importkey.test.js ok')
+
+// New-account randomness and legacy import compatibility regressions.
+{
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const { createHash, webcrypto } = require('node:crypto');
+const root = path.join(__dirname, '..');
+const ONE = '0'.repeat(63) + '1';
+const TWO = '0'.repeat(63) + '2';
+const ORDER = 'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141';
+
+function fixture(provider) {
+    const state = { keys: [], errors: [], methods: null };
+    const context = vm.createContext({
+        crypto: provider, yes: true, no: false, nil: null,
+        ctime: () => 1000000, urlquery: {}, vue_tpl_init: '',
+        stoReadCurrentAccount: async () => '', stoReadPassword: async () => ({}),
+        recordRandomString: () => 'fixed-public-mouse-and-clock-fixture',
+        SHA256: value => createHash('sha256').update(value).digest('hex'),
+        _setTimeout: (fn, ms, ...args) => fn(...args),
+        showWPerr: message => state.errors.push(message),
+        VueCreateApp: (name, template, data, methods) => { state.methods = methods; return { app: {} }; },
+    });
+    vm.runInContext(fs.readFileSync(path.join(root, 'jslib/moneynx_sdk_facade.js'), 'utf8'), context);
+    context.mnx_derive_address = async key => { state.keys.push(key); return { private_key: key, address: 'public-fixture' }; };
+    vm.runInContext(fs.readFileSync(path.join(root, 'popup/login/init/vue.js'), 'utf8'), context);
+    return { context, state };
+}
+function sequence(values) {
+    const buffers = [];
+    let calls = 0;
+    return { buffers, get calls() { return calls; }, getRandomValues(bytes) {
+        assert.equal(bytes.length, 32);
+        const value = values[Math.min(calls++, values.length - 1)];
+        bytes.set(Buffer.from(value, 'hex')); buffers.push(bytes); return bytes;
+    } };
+}
+
+test('Create uses fresh CSPRNG samples even with identical legacy entropy', async () => {
+    const rng = sequence([ONE, TWO]);
+    const { context, state } = fixture(rng);
+    await context.routePageInit();
+    await state.methods.create.call({});
+    await state.methods.create.call({});
+    assert.equal(rng.calls, 2);
+    assert.deepEqual(state.keys, [ONE, TWO]);
+    assert.deepEqual(state.errors, []);
+});
+test('Create fails closed without a working CSPRNG', async () => {
+    for (const provider of [undefined, {}, { getRandomValues() { throw Error('unavailable'); } }]) {
+        const { context, state } = fixture(provider);
+        await context.routePageInit();
+        await state.methods.create.call({});
+        assert.equal(state.keys.length, 0);
+        assert.equal(state.errors.length, 1);
+    }
+});
+test('rejects zero and out-of-range samples without modulo reduction', () => {
+    const rng = sequence(['0'.repeat(64), ORDER, 'f'.repeat(64), ONE]);
+    const { context } = fixture(rng);
+    assert.equal(context.mnx_random_private_key(), ONE);
+    assert.equal(rng.calls, 4);
+    assert.ok(rng.buffers.every(bytes => bytes.every(byte => byte === 0)));
+});
+test('accepts the largest valid scalar', () => {
+    const largest = (BigInt('0x' + ORDER) - 1n).toString(16);
+    assert.equal(fixture(sequence([largest])).context.mnx_random_private_key(), largest);
+});
+test('bounds retries and clears the sample buffer on failure', () => {
+    const rng = sequence(['0'.repeat(64)]);
+    assert.throws(() => fixture(rng).context.mnx_random_private_key(), /random|entropy/i);
+    assert.equal(rng.calls, 128);
+    assert.ok(rng.buffers.every(bytes => bytes.every(byte => byte === 0)));
+    let sample;
+    const broken = { getRandomValues(bytes) { sample = bytes; bytes.fill(7); throw Error('RNG failed'); } };
+    assert.throws(() => fixture(broken).context.mnx_random_private_key(), /RNG failed/);
+    assert.ok(sample.every(byte => byte === 0));
+});
+test('works with native Web Crypto without exposing generated keys', () => {
+    const { context } = fixture(webcrypto);
+    const key = context.mnx_random_private_key();
+    assert.equal(context.mnx_validate_privkey(key), key);
+});
+test('raw-key and legacy password imports retain their derivation', async () => {
+    const { context, state } = fixture({ getRandomValues() { throw Error('imports must not use RNG'); } });
+    await context.routePageInit();
+    const target = { importkey: ONE, toifhome: async () => {} };
+    context.mnx_resolve_import_secret = () => ({ kind: 'privkey', stuff: ONE, rawkey: true });
+    state.methods.importpk.call(target);
+    context.mnx_resolve_import_secret = () => ({ kind: 'password', stuff: 'public-test-password', rawkey: false });
+    state.methods.importpk.call(target);
+    assert.deepEqual(state.keys, [ONE, createHash('sha256').update('public-test-password').digest('hex')]);
+});
+}
