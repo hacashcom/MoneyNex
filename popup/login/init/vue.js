@@ -159,7 +159,13 @@ var routePageInit = async (sc, force) => {
                 return showWPerr('Password error')
             }
             // unlock success / update password
-            await stoSavePassword(p)
+            try {
+                if(!(await stoSavePassword(p))) {
+                    return showWPerr('Wallet unlock failed. Refresh the wallet and try again.')
+                }
+            } catch(e) {
+                return showWPerr('Wallet unlock failed. Refresh the wallet and try again.')
+            }
             $display_none(btlginit)
 
             // ok
@@ -244,4 +250,3 @@ var routePageInit = async (sc, force) => {
 
 
 }
-
