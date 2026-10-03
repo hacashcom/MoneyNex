@@ -159,7 +159,13 @@ var routePageInit = async (sc, force) => {
                 return showWPerr('Password error')
             }
             // unlock success / update password
-            await stoSavePassword(p)
+            try {
+                if(!(await stoSavePassword(p))) {
+                    return showWPerr('Wallet unlock failed. Refresh the wallet and try again.')
+                }
+            } catch(e) {
+                return showWPerr('Wallet unlock failed. Refresh the wallet and try again.')
+            }
             $display_none(btlginit)
 
             // ok
@@ -193,15 +199,22 @@ var routePageInit = async (sc, force) => {
     async function initroutetohome(acc, pass) {
         let adr
         if(acc){
-            let saved = await stoSaveAccount(acc, pass)
+            let saved
+            try {
+                saved = await stoSaveAccount(acc, pass)
+            } catch(e) {
+                // A failed write may already have persisted. Do not claim rollback.
+                showWPerr('Account save could not be confirmed. Refresh the wallet before retrying.')
+                return
+            }
             if(!saved){
                 // 会话已锁且没有可用口令：账户未落盘，也绝不把 current_account
                 // 指向一个不存在的记录（否则后续签名会一直解锁失败）
-                showWPerr('Wallet is locked — unlock first, then retry')
+                showWPerr('Account save could not be confirmed. Refresh the wallet before retrying.')
                 return
             }
             adr = acc.address
-            await stoSaveCurrentAccount(adr)
+            if(!(await mnx_select_current_account(adr))) { return }
         }else{
             adr = await stoReadCurrentAccount()
         }
@@ -244,4 +257,3 @@ var routePageInit = async (sc, force) => {
 
 
 }
-

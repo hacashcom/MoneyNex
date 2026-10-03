@@ -1,4 +1,3 @@
-
 var explorer_url = 'https://explorer.hacash.org'
 , fullnode_url = 'http://wallet.hacash.com/fullnode'
 , mnx_chain_id = 0 // Hacash ChainId::MAINNET; test builds override via build.js --chain-id
@@ -77,6 +76,10 @@ var randomString = ctime(yes)+''
 , randomkey = 'randomkey'
 , salthcxwlt = 'salthcxwlt'
 , stoSavePassword = async (passwd) => {
+    return await accMutate(() => mnx_save_password_locked(passwd))
+}
+// Internal helper: callers must already hold the account-storage lock.
+, mnx_save_password_locked = async (passwd) => {
     let pmd5 = MD5(passwd)
     , psk = MD5(passwd+salthcxwlt)
     , sv = {}
@@ -114,34 +117,50 @@ var randomString = ctime(yes)+''
     let ps = await chrome_storage_sync.get(accpsskey)
     return ps[accpsskey]
 }
-// 账户表整表 mutation 串行队列。chrome.storage.sync 的账户表只能整表 get→改→set，
-// 两个扩展页（多窗口/多标签）并发各写各的整表会互相覆盖——后写者整表胜出，
-// 先写者刚导入的账户会被抹掉（丢账户）。所有账户表变更必须经 accMutate 排队执行，
-// 且写后重读校验、失败重试；对不经过本队列的外部写入（如 sync 冲突）只能靠校验兜底。
+// Serialize account-table mutations and selection across extension pages.
+// Other devices and writers that do not acquire this lock remain outside it.
 , ACC_MUTATE_RETRY = 3
-, acc_mutate_queue = Promise.resolve()
-, accMutate = (fn) => {
-    let run = acc_mutate_queue.then(fn)
-    // 链子吞掉失败继续排队；失败通过返回的 promise 交给调用方处理
-    acc_mutate_queue = run.then(() => nil, () => nil)
-    return run
+, ACC_MUTATE_WAIT_MS = 5000
+, accMutate = async (fn) => {
+    // Refuse writes if bounded shared locking is unavailable.
+    if(typeof navigator === 'undefined' || !navigator.locks ||
+            typeof navigator.locks.request !== 'function' ||
+            typeof AbortController !== 'function') { return nil }
+    let controller = new AbortController()
+    , started = no
+    , timer = setTimeout(() => controller.abort(), ACC_MUTATE_WAIT_MS)
+    try {
+        // Queue directly in Web Locks so same-page waiters also have a deadline.
+        return await navigator.locks.request('moneynex-account-storage',
+            { signal: controller.signal }, () => {
+                started = yes
+                clearTimeout(timer)
+                // Never time out or release a lock around an unfinished write.
+                return fn()
+            })
+    } catch(error) {
+        if(!started && controller.signal.aborted) { return nil }
+        throw error
+    } finally {
+        clearTimeout(timer)
+    }
 }
 , stoSaveAccount = async (acc, passwd) => {
-    // await chrome_storage_sync.clear()
-    let pmd5
-    if(passwd) {
-        pmd5 = await stoSavePassword(passwd)
-    }else{
-        pmd5 = await stoReadPassword()
-    }
-    if(!pmd5){
-        // 没有可用口令（会话已锁 / 传入口令与既有钱包口令不符）：
-        // 绝不把私钥用空口令加密落盘；调用方据返回值中止，current_account 不更新。
-        return nil
-    }
-    let cryptkey = AES_encrypt(acc.private_key, pmd5)
     return await accMutate(async () => {
-        for(let i = 0; i < ACC_MUTATE_RETRY; i++){
+        // await chrome_storage_sync.clear()
+        let pmd5
+        if(passwd) {
+            pmd5 = await mnx_save_password_locked(passwd)
+        }else{
+            pmd5 = await stoReadPassword()
+        }
+        if(!pmd5){
+            // 没有可用口令（会话已锁 / 传入口令与既有钱包口令不符）：
+            // 绝不把私钥用空口令加密落盘；调用方据返回值中止，current_account 不更新。
+            return nil
+        }
+        let cryptkey = AES_encrypt(acc.private_key, pmd5)
+            for(let i = 0; i < ACC_MUTATE_RETRY; i++){
             let accs = await stoReadAccount()
             accs = accs || {}
             // 已存在的账户一律保留原 cryptkey：绝不覆盖、绝不重加密。
@@ -168,9 +187,22 @@ var randomString = ctime(yes)+''
     return addr ? tar[addr] : tar
 }
 , stoSaveCurrentAccount = async (addr) => {
-    let sv = {}
-    sv[acccurkey] = addr
-    await chrome_storage_sync.set(sv)
+    return await accMutate(async () => {
+        if(typeof addr !== 'string' || !addr || !(await stoReadAccount(addr))) { return nil }
+        let sv = {}
+        sv[acccurkey] = addr
+        await chrome_storage_sync.set(sv)
+        return yes
+    })
+}
+, mnx_select_current_account = async (addr) => {
+    try {
+        if(await stoSaveCurrentAccount(addr)) { return yes }
+    } catch(e) {}
+    // A rejected storage write can have an uncertain outcome. Do not update
+    // the page optimistically or display raw storage errors.
+    showWPerr('Account selection failed. Refresh the wallet and try again.')
+    return no
 }
 , stoReadCurrentAccount = async () => {
     let obj = await chrome_storage_sync.get(acccurkey)
@@ -426,6 +458,3 @@ var cti = ctime(yes)
 
 // load show
 _setTimeout(loginSwitchToInit, 10);
-
-
-

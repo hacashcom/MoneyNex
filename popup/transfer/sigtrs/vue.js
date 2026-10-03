@@ -232,10 +232,10 @@ var routePageSigTrs = (adr, clbk) => {
         }
         ,async swtcuraddr(adr) {
             let t = this
+            if(!(await mnx_select_current_account(adr))) { return }
             t.adr = adr
             t.sadr = addrOmitted(adr)
             t.adrswct = no
-            await stoSaveCurrentAccount(adr)
             await t.crtrs() // refresh tx
         }
         , async dosign(){

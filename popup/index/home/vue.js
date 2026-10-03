@@ -111,6 +111,7 @@ var refreshHomeTrsLog = nil
         }
         ,async swtcuraddr(adr) {
             let t = this
+            if(!(await mnx_select_current_account(adr))) { return }
             t.addr = adr
             t.sadr = addrOmitted(adr)
             t.activeTab = 'activity' // reset
@@ -121,7 +122,6 @@ var refreshHomeTrsLog = nil
             t.assetsLoaded = no
             t.blsobj = nil
             t.adrswct = no
-            await stoSaveCurrentAccount(adr)
             await t.ldbls() // load balance
             await refreshHomeTrsLog()
         }
