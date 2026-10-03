@@ -127,3 +127,21 @@ for (const outcome of ['refused', 'error', 'success']) {
         assert.equal(state.errors.length, outcome === 'success' ? 0 : 1);
     });
 }
+for(const outcome of ['refused', 'throw-before-write', 'throw-after-write']) {
+    test(`account save: ${outcome} reports uncertainty without selecting or navigating`, async () => {
+        const { context, state } = await load('login/init/vue.js', 'routePageInit');
+        let writes = 0, selections = 0;
+        context.stoSaveAccount = async () => {
+            if(outcome === 'throw-after-write') writes++;
+            if(outcome !== 'refused') throw Error('private storage diagnostics');
+            return null;
+        };
+        context.stoSaveCurrentAccount = async () => { selections++; return true; };
+        await state.methods.toifhome.call({ newmode: true, acc: { address: 'B' } });
+        assert.equal(writes, outcome === 'throw-after-write' ? 1 : 0);
+        assert.equal(selections, 0);
+        assert.equal(state.routes, 0);
+        assert.equal(state.unmounts, 0);
+        assert.deepEqual(state.errors, ['Account save could not be confirmed. Refresh the wallet before retrying.']);
+    });
+}
