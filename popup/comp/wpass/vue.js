@@ -1,4 +1,3 @@
-
 let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
     show: no,
     cnsh: no,
@@ -12,6 +11,7 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
 }, {
     open(okcall, cancelcall){
         let t = this
+        t._passwordAttempt = nil
         // t.okbtn = 'Confirm'
         _clearTimeout(t._ht)
         t.pswd = '' // reset
@@ -24,6 +24,7 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
     },
     hide(){
         let t = this
+        t._passwordAttempt = nil
         t.cnsh = no
         _clearTimeout(t._ht)
         t._ht = _setTimeout(()=>{
@@ -33,26 +34,42 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
     clear(){
         this.err = ''
     },
-    cok(){
+    async cok(){
         let t = this
         , p = t.pswd
+        , attempt = {}
         , dops = async (p)=>{
+            t._passwordAttempt = attempt
+            try {
             let md5 = MD5(p+salthcxwlt)
             , pmd5 = await stoReadPasskey()
+            if(t._passwordAttempt !== attempt) { return }
             if(md5 != pmd5){
                 t.err = "Wrong password"
             }else{
-                // pass check ok !!!
-                t.c1&&t.c1()
+                let saved = await stoSavePassword(p)
+                if(t._passwordAttempt !== attempt) { return }
+                if(!saved) {
+                    t.err = 'Wallet unlock failed. Refresh the wallet and try again.'
+                    return
+                }
+                let callback = t.c1
                 t.hide()
-                await stoSavePassword(p)
+                callback&&callback()
+            }
+            } catch(e) {
+                if(t._passwordAttempt === attempt) {
+                    t.err = 'Wallet unlock failed. Refresh the wallet and try again.'
+                }
+            } finally {
+                if(t._passwordAttempt === attempt) { t._passwordAttempt = nil }
             }
         }
         if(p) {
             if(p.length < 8){
                 t.err = "Use at least 8 characters"
             }else{
-                dops( p ).then()
+                await dops(p)
             }
         }else{
             t.err = "Enter password"
