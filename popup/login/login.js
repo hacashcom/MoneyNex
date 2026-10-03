@@ -98,6 +98,17 @@ var randomString = ctime(yes)+''
 , stoReadPassword = async (ex) => {
     let ps = await chrome_storage_session.get(accpasswd)
     , tar = ps[accpasswd] || {}
+    , now = ctime()
+    // Enforce the existing session lifetime at the shared key-access boundary,
+    // including pages that remain open without rerunning routePageInit.
+    if(!Number.isSafeInteger(now) || !Number.isSafeInteger(tar.time)
+        || tar.time < 0 || tar.time > now || now - tar.time >= 36*60*60
+        || typeof tar.md5 !== 'string' || !/^[a-f0-9]{32}$/i.test(tar.md5)){
+        if(ps[accpasswd] !== undefined){
+            await chrome_storage_session.remove(accpasswd)
+        }
+        return ex ? {} : nil
+    }
     return ex ? tar : tar.md5
 }
 , stoDoLock = async () => {
