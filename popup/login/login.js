@@ -76,6 +76,10 @@ var randomString = ctime(yes)+''
 , randomkey = 'randomkey'
 , salthcxwlt = 'salthcxwlt'
 , stoSavePassword = async (passwd) => {
+    return await accMutate(() => mnx_save_password_locked(passwd))
+}
+// Internal helper: callers must already hold the account-storage lock.
+, mnx_save_password_locked = async (passwd) => {
     let pmd5 = MD5(passwd)
     , psk = MD5(passwd+salthcxwlt)
     , sv = {}
@@ -142,21 +146,21 @@ var randomString = ctime(yes)+''
     }
 }
 , stoSaveAccount = async (acc, passwd) => {
-    // await chrome_storage_sync.clear()
-    let pmd5
-    if(passwd) {
-        pmd5 = await stoSavePassword(passwd)
-    }else{
-        pmd5 = await stoReadPassword()
-    }
-    if(!pmd5){
-        // 没有可用口令（会话已锁 / 传入口令与既有钱包口令不符）：
-        // 绝不把私钥用空口令加密落盘；调用方据返回值中止，current_account 不更新。
-        return nil
-    }
-    let cryptkey = AES_encrypt(acc.private_key, pmd5)
     return await accMutate(async () => {
-        for(let i = 0; i < ACC_MUTATE_RETRY; i++){
+        // await chrome_storage_sync.clear()
+        let pmd5
+        if(passwd) {
+            pmd5 = await mnx_save_password_locked(passwd)
+        }else{
+            pmd5 = await stoReadPassword()
+        }
+        if(!pmd5){
+            // 没有可用口令（会话已锁 / 传入口令与既有钱包口令不符）：
+            // 绝不把私钥用空口令加密落盘；调用方据返回值中止，current_account 不更新。
+            return nil
+        }
+        let cryptkey = AES_encrypt(acc.private_key, pmd5)
+            for(let i = 0; i < ACC_MUTATE_RETRY; i++){
             let accs = await stoReadAccount()
             accs = accs || {}
             // 已存在的账户一律保留原 cryptkey：绝不覆盖、绝不重加密。
