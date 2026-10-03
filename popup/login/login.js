@@ -1,4 +1,3 @@
-
 var explorer_url = 'https://explorer.hacash.org'
 , fullnode_url = 'http://wallet.hacash.com/fullnode'
 , mnx_chain_id = 0 // Hacash ChainId::MAINNET; test builds override via build.js --chain-id
@@ -117,18 +116,30 @@ var randomString = ctime(yes)+''
 // Serialize account-table mutations and selection across extension pages.
 // Other devices and writers that do not acquire this lock remain outside it.
 , ACC_MUTATE_RETRY = 3
-, acc_mutate_queue = Promise.resolve()
-, accMutate = (fn) => {
-    let run = acc_mutate_queue.then(() => {
-        // A page-local queue cannot coordinate separate extension windows.
-        // Refuse writes if the shared lock is unavailable; never silently downgrade.
-        if(typeof navigator === 'undefined' || !navigator.locks ||
-                typeof navigator.locks.request !== 'function') { return nil }
-        return navigator.locks.request('moneynex-account-storage', fn)
-    })
-    // 链子吞掉失败继续排队；失败通过返回的 promise 交给调用方处理
-    acc_mutate_queue = run.then(() => nil, () => nil)
-    return run
+, ACC_MUTATE_WAIT_MS = 5000
+, accMutate = async (fn) => {
+    // Refuse writes if bounded shared locking is unavailable.
+    if(typeof navigator === 'undefined' || !navigator.locks ||
+            typeof navigator.locks.request !== 'function' ||
+            typeof AbortController !== 'function') { return nil }
+    let controller = new AbortController()
+    , started = no
+    , timer = setTimeout(() => controller.abort(), ACC_MUTATE_WAIT_MS)
+    try {
+        // Queue directly in Web Locks so same-page waiters also have a deadline.
+        return await navigator.locks.request('moneynex-account-storage',
+            { signal: controller.signal }, () => {
+                started = yes
+                clearTimeout(timer)
+                // Never time out or release a lock around an unfinished write.
+                return fn()
+            })
+    } catch(error) {
+        if(!started && controller.signal.aborted) { return nil }
+        throw error
+    } finally {
+        clearTimeout(timer)
+    }
 }
 , stoSaveAccount = async (acc, passwd) => {
     // await chrome_storage_sync.clear()
@@ -443,6 +454,3 @@ var cti = ctime(yes)
 
 // load show
 _setTimeout(loginSwitchToInit, 10);
-
-
-
