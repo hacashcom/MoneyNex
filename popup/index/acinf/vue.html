@@ -1,25 +1,32 @@
 
-<div class="header">
-    <div class="bk" @click="back">
-        <img :src="`${icfp}left.svg`" />
+<header class="pchead">
+    <div class="pchead-l">
+        <button class="icbtn" @click="back" title="Back">
+            <i class="icf" style="--ic: url('../image/ftic/left.svg')"></i>
+        </button>
     </div>
-    <h1 class="ptt">Account</h1>
-    <!-- <div class="cvs"></div> -->
-</div>
+    <h1 class="pchead-t">Account details</h1>
+    <div class="pchead-r"></div>
+</header>
 
-<div class="pvky" v-if="privkey">
-    <label>Private key:</label>
-    <textarea>{{privkey}}</textarea>
-    <div>
+<div class="body">
+    <div class="qrcd" v-if="!privkey">
+        <div id="acinfqrcd"></div>
+        <p class="qtip">Scan to send to this address</p>
+    </div>
+
+    <div class="pvky" v-if="privkey">
+        <div class="warn">
+            <p>Never share your private key. Anyone with it can take your assets.</p>
+        </div>
+        <label>Private key</label>
+        <textarea readonly>{{privkey}}</textarea>
         <a class="cp" @click="cppvk">Copy private key</a>
     </div>
-</div>
-<div id="acinfqrcd" v-else></div>
 
-<div class="btns">
-
-    <button class="adr" @click="cpadr"><b>{{myadr}}</b><img :src="`${icfp}copy.svg`" /></button>
-    <button class="blue" v-if="!privkey" @click="sprivk">Show private key</button>
-    <button class="rmv" v-if="!privkey && adrn>1" @click="rmvadr">Remove</button>
-
+    <div class="btns">
+        <button class="adr" @click="cpadr"><b>{{myadr}}</b><i class="icf" style="--ic: url('../image/ftic/copy.svg')"></i></button>
+        <button class="mid blue" v-if="!privkey" @click="sprivk">Show private key</button>
+        <button class="mid rmv" v-if="!privkey && adrn>1" @click="rmvadr">Remove account</button>
+    </div>
 </div>

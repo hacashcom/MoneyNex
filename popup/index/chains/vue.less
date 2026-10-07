@@ -1,41 +1,52 @@
+
+// chains — network list (B3-8, MetaMask Networks style).
 #chains {
     .chlist {
-        padding: 0 @pgpd @pgpd;
-        height: @bodyh - 70px;
-        overflow-y: auto;
+        padding: @sp-3 var(--mn-pad-loose) @sp-4;
+
         li {
             list-style: none;
-            padding: @pgpd;
-            border-bottom: 1px solid #fff1;
-            background: #ffffff05;
-            margin-bottom: @pgpd;
-            border-radius: 5px;
+            padding: @sp-3;
+            background: @bg-card;
+            border: 1px solid @line-2;
+            border-radius: @rd-card;
+            margin-bottom: var(--mn-gap, @sp-2);
+            transition: border-color @tr-fast ease;
+
             &.active {
-                border: 1px solid @clblue;
-                background: #00ccff18;
+                border-color: @brand;
+                background: @brand-faint;
             }
         }
+
         .hd {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: @sp-2;
+
             h2 {
                 display: flex;
                 align-items: center;
                 flex-wrap: wrap;
-                gap: 6px;
-                font-size: 16px;
+                gap: @sp-1;
+                font-size: @fs-16;
+                font-weight: 500;
+                color: @text-1;
+
                 span {
                     font-size: inherit;
                 }
+
                 em {
                     display: inline-block;
                     max-width: 190px;
-                    padding: 1px 5px;
-                    border: 1px solid #00ccff33;
-                    border-radius: 4px;
-                    background: #00ccff12;
-                    color: #9fefff;
-                    font-size: 11px;
+                    padding: 1px 6px;
+                    border: 1px solid rgba(0, 204, 255, 0.3);
+                    border-radius: @rd-input;
+                    background: @brand-faint;
+                    color: @brand;
+                    font-size: @fs-10;
                     font-style: normal;
                     line-height: 16px;
                     overflow: hidden;
@@ -43,43 +54,63 @@
                     white-space: nowrap;
                 }
             }
-            p, b {
-                font-size: 12px;
-                color: #fff8;
+
+            p {
+                margin-top: 2px;
+                font-size: @fs-12;
+                color: @text-3;
             }
+
             b {
-                color: @clblue;
+                font-size: @fs-12;
+                font-weight: 500;
+                color: @brand;
+                flex-shrink: 0;
             }
         }
+
         .rpc {
-            font-size: 12px;
-            color: #fffa;
-            margin-top: 6px;
+            font-size: @fs-12;
+            color: @text-2;
+            margin-top: @sp-1;
             word-break: break-all;
+            font-family: @font-mono;
         }
+
         .btns {
-            margin-top: @pgpd;
+            margin-top: @sp-2;
             text-align: right;
+
             a {
                 display: inline-block;
-                padding: 5px 8px;
-                margin-left: 6px;
-                font-size: 12px;
+                padding: 4px 10px;
+                margin-left: @sp-1;
+                font-size: @fs-12;
                 cursor: pointer;
-                border-radius: 5px;
-                background: #fff1;
+                border-radius: @rd-input;
+                color: @text-2;
+                border: 1px solid @line-1;
+                transition: color @tr-fast ease, border-color @tr-fast ease;
+
                 &:hover {
-                    background: @clblue;
-                    color: #fff;
+                    color: @text-1;
+                    border-color: @text-3;
                 }
+
                 &.red:hover {
-                    background: @clerr;
+                    color: @sem-error;
+                    border-color: @sem-error;
                 }
             }
         }
+
         .add {
             text-align: center;
-            padding: @pgpd 0;
+            padding: @sp-3 0 0;
+
+            button {
+                min-width: 180px;
+            }
         }
     }
 }

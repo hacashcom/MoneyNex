@@ -1,54 +1,75 @@
-<div class="header">
-    <div class="lg">
-        <img src='../image/icos/128.png' />
-    </div>
-    <div class="pttl">Sign Text</div>
-    <div class="adrs">
-        <h1 class="btn" :title="adr">{{adr.substring(0,9)}}...
-            <img class="icf" :src="`${icfp}down.svg`" />
-        </h1>
-    </div>
-</div>
-
-<div class="permt">
-    <div class="con">
-        <p class="tip"><b>{{dmu}}</b> is requesting a text signature. Please review the full text carefully:</p>
-    </div>
-</div>
-
-
-<div v-if="lding" class="lding">
-    <img class="ldf" src="../image/ld/w.gif" />
-</div>
-<div v-else>
-    <div class="tx">
-        <pre class="sigtext">{{text}}</pre>
+<div class="reqpage">
+    <header class="pchead">
+        <div class="pchead-l">
+            <button class="acctchip ast" @click="pgh_open_adr" :title="pgh_adr"><b>{{pgh_sadr}}</b><i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i></button>
+        </div>
+        <div class="pchead-logo"></div>
+                <div class="pchead-r">
+            <button class="icbtn mnburger" @click="pgh_open_net" title="Networks"><i></i><i></i><i></i></button>
+        </div>
+    </header>
+    <!-- account switcher: existing accounts ONLY — no create/import here (home-only) -->
+    <div class="popmenu acctmenu" v-if="adrswct" @click="adrswct=0">
+        <ul>
+            <div class="tt">Switch account:</div>
+            <li v-for="(v, k) in adrmaps"
+                :class="`${k==pgh_adr?'active':''}`"
+                @click="pgh_swt_adr(k)">
+                {{k}}
+            </li>
+        </ul>
     </div>
 
-    <div class="digest">
-        <p class="dgttl">Digest (SHA-256)</p>
-        <div class="hexdump">{{digest || '—'}}</div>
-        <p class="dgnote">The signature is a local ECDSA signature of this digest only. It is never broadcast on-chain, involves no assets, and can never be used as a transaction signature.</p>
-        <p class="dgnote">Signing with account: <span style="word-break:break-all">{{adr}}</span>
-            — if this is not the expected signer, Cancel and switch the account in the wallet first.</p>
+    <!-- burger menu: network switching among existing networks ONLY — no add-network -->
+    <div class="popmenu netsmenu" v-if="netswct" @click="netswct=0">
+        <ul>
+            <div class="tt">Switch network</div>
+            <li v-for="n in pgh_nets"
+                :class="`${n.id==pgh_curcid?'active':''}`"
+                @click="pgh_swt_net(n.id)">
+                {{n.name}}<i v-if="n.id!=0">{{'ID '+n.id}}</i>
+            </li>
+        </ul>
     </div>
 
-    <p v-if="texterr" class="txerr">
-        <h1>Cannot Sign:</h1>
-        <p>{{texterr}}</p>
-    </p>
-</div>
+    <div class="pgtitle">Sign Text</div>
 
+    <div class="reqbody">
+        <div class="sitebar">
+            <span class="sitechip"><b>{{dmu}}</b></span>
+        </div>
 
-<div class="btns" v-if="!end">
-    <div><button @click="nop">Cancel</button></div>
-    <div><button @click="cfim" :class="`blue ${texterr?'ban':''} ${ing?'ing':''}`">Sign Text</button></div>
-</div>
-<div v-else class="success">
-    <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
-    <p>The text has been successfully signed!</p>
-</div>
+        <div v-if="lding" class="ldw"><i class="spinner"></i></div>
+        <div v-else>
+            <div class="tx card">
+                <label class="lbl">Message</label>
+                <pre class="sigtext">{{text}}</pre>
+            </div>
 
-<div class="wtip" v-if="!end">
-    <p>Tips: Beware of websites asking you to sign unclear text. MoneyNex refuses to sign raw 32-byte hashes, and a text signature can never substitute a transaction signature.</p>
+            <div class="digest card">
+                <p class="dgttl">Digest (SHA-256)</p>
+                <div class="hexdump">{{digest || '—'}}</div>
+                <p class="dgnote">The signature is a local ECDSA signature of this digest only. It is never broadcast on-chain, involves no assets, and can never be used as a transaction signature.</p>
+                <p class="dgnote">Signing with account: <span class="maddr">{{adr}}</span> — if this is not the expected signer, Cancel and switch the account in the wallet first.</p>
+            </div>
+
+            <div v-if="texterr" class="txerr">
+                <h1>Cannot sign</h1>
+                <p>{{texterr}}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="reqbtns" v-if="!end">
+        <div><button class="cancel" @click="nop">Cancel</button></div>
+        <div><button class="blue" @click="cfim" :class="`${texterr?'ban':''} ${ing?'ing':''}`">Sign Text</button></div>
+    </div>
+    <div v-else class="success">
+        <i class="icf" :class="ende?'show':''" style="--ic: url('../image/ftic/okg.svg')"></i>
+        <p>Text signed</p>
+    </div>
+
+    <div class="wtip" v-if="!end">
+        <p>Beware of websites asking you to sign unclear text. MoneyNex refuses to sign raw 32-byte hashes, and a text signature can never substitute a transaction signature.</p>
+    </div>
 </div>

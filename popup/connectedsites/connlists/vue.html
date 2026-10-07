@@ -1,0 +1,35 @@
+
+<header class="pchead">
+    <div class="pchead-l">
+        <button class="icbtn" @click="back" title="Back">
+            <i class="icf" style="--ic: url('../image/ftic/left.svg')"></i>
+        </button>
+    </div>
+    <h1 class="pchead-t">Connected sites</h1>
+    <div class="pchead-r"></div>
+</header>
+
+<div class="cs-wrap">
+    <div class="ttl">
+        <p class="sub">Sites allowed to see your address and send signing requests</p>
+    </div>
+
+    <div class="cs-loading" v-if="sites===null">Loading…</div>
+
+    <div class="cs-empty" v-else-if="!sites.length">
+        <p>No connected sites yet.</p>
+        <p class="sub">Sites appear here after you approve a connection.</p>
+    </div>
+
+    <ul class="cs-list" v-else>
+        <li v-for="s in sites">
+            <div class="cs-origin">
+                <div class="cs-host">{{s.host}}</div>
+                <div class="cs-origin-full">{{s.origin}}</div>
+                <div class="cs-meta" v-if="s.connectedAt">Connected {{fmttime(s.connectedAt)}}</div>
+                <div class="cs-meta" v-if="s.legacy">Imported from a previous version</div>
+            </div>
+            <button class="cs-dis" @click="dscn(s)">Disconnect</button>
+        </li>
+    </ul>
+</div>

@@ -56,7 +56,13 @@ var routePageSwitchchain = (adr, clbk) => {
                 return
             }
             if(t.req.id === MAIN_CHAIN_ID && updateConfig) {
-                t.req = chainNormalize(Object.assign({}, default_chain_configs[MAIN_CHAIN_ID], t.req))
+                // Chain 0 is builtin and its endpoints are not dApp-negotiable:
+                // the defaults must WIN over the request, or any site could
+                // silently repoint the wallet's main-chain traffic by passing a
+                // rpc in the switchchain request (found live 2026-10-05: the
+                // suite's switch-back-to-0 carried a foreign rpc and the merge
+                // order below let it replace the configured one).
+                t.req = chainNormalize(Object.assign({}, t.req, default_chain_configs[MAIN_CHAIN_ID]))
             }
             if(!t.exists && t.mode == 'switch') {
                 t.err = 'Chain not configured'

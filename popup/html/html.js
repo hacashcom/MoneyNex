@@ -100,6 +100,13 @@ var yes = true
             appobj[i] = extds[i]
         }
     }
+    // request-page shared header (jslib/moneynx_pghead.js sets the flag when
+    // bundled): account switcher over existing accounts + network switcher
+    // over existing networks; component data/methods win the merge, so pages
+    // with their own switch logic (signtx/sigtrs/home) keep theirs
+    if(window.MNX_PGHEAD && !appobj.mixins){
+        appobj.mixins = [window.MNX_PGHEAD]
+    }
     let app = _Vue.createApp(appobj)
     // , ctx = app.mount('#'+id);
     return app
@@ -238,26 +245,13 @@ var mnx_dapp_reply = (label) => {
 /**
  * Hacash SDK
  */
+// P2-2: the legacy hacash_api_load()/wasm_bindgen('../jslib/hacash_sdk.wasm')
+// boot call is removed (no callers repo-wide; hacash_sdk.wasm was never shipped
+// — this stray fetch was the 404 console error in the M0 baseline). The SDK now
+// loads exclusively via jslib/hacash_sdk.js (wasm inlined, globalThis.hacash_sdk,
+// consumed by jslib/moneynx_sdk_facade.js).
 
 var hacash_api = nil
-const hacash_api_load = async function() {
-    if(hacash_api){
-        return hacash_api
-    }
-    // await wasm_bindgen(parse_hacash_sdk_wasm_code());
-    await wasm_bindgen('../jslib/hacash_sdk.wasm');
-    hacash_api = wasm_bindgen
-    // test
-    // console.log("123456666");
-    // let accs = hacash_api_ptr.create_account_by("123456");
-    // console.log(accs);
-    // let tx1 = hacash_api.general_transfer("1", "123456789", "1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9", "500", "HAC 1:244", "1697200000")
-    // console.log(JSON.parse(tx1))
-    // console.log(hacash_api.hac_to_mei("HAC 1250:240")) 
-    return wasm_bindgen
-}
-
-hacash_api_load().then()
 
 /////////////////////
 

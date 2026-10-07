@@ -55,9 +55,10 @@ let {ctx: wpcfm} = VueCreateApp('wpcfm', vue_tpl_wpcfm, {
     })
 }
 , backup_privkey_open = async ()=>{
-    return (await wpcfm_open(`Back up your private key or you may lose your assets.`, 
-    'Backed up', 
-    'red'))
+    // confirm (not destructive): default brand button; red is reserved for
+    // destructive confirms (Disconnect/Delete network)
+    return (await wpcfm_open(`Back up your private key or you may lose your assets.`,
+    'Backed up'))
 }
 
 // test

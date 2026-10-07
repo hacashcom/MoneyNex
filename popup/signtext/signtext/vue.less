@@ -1,182 +1,109 @@
-// Sign Text page styles: reuses the shared html.less base; page-specific layout here (scoped to #sgtxt).
+// Sign Text page (B3-6): reqpage skeleton from comp.less; page-specific bits here.
+// The copied 210-line header block is gone — .pchead in comp.less is the one
+// definition (U-3).
 
 #sgtxt {
-    .header {
-        display: flex;
-        justify-content: space-between;
-        height: auto;
-        background: #ffffff11;
-
-        .lg {
-            max-height: 32px;
-            padding: 6px;
-
-            img {
-                vertical-align: middle;
-                display: inline-block;
-                height: 32px;
-                transform: scale(0.8);
-                filter: drop-shadow(1px 1px 1px #000);
-                border-radius: 10px;
-            }
-        }
-
-        .pttl {
-            padding: 6px;
-            height: 32px;
-            line-height: 32px;
-            text-align: center;
-        }
-
-        .adrs {
-            padding: 6px 0;
-
-            .btn {
-                display: inline-block;
-                padding: 0 8px;
-                line-height: 32px;
-                height: 32px;
-                font-weight: normal;
-                font-size: 14px;
-                color: #999;
-            }
-
-            .icf {
-                height: 24px;
-                padding: 4px 0;
-                display: inline-block;
-                vertical-align: middle;
-            }
-        }
+    .sigtext {
+        font-family: @font-mono;
+        font-size: @fs-12;
+        line-height: 18px;
+        color: @text-1;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 180px;
+        overflow-y: auto;
+        margin: 0;
     }
 
-    .permt .con {
-        margin: 12px 24px;
-
-        .tip b {
-            color: #0cf;
-            display: inline-block;
-        }
+    .dgttl {
+        font-size: @fs-12;
+        color: @text-2;
+        margin-bottom: @sp-1;
     }
 
-    .tx {
-        margin: 12px;
-        border: 1px solid #fff4;
-        border-radius: 13px;
-        overflow: hidden;
+    .hexdump {
+        font-family: @font-mono;
+        font-size: @fs-12;
+        line-height: 18px;
+        color: @text-1;
+        word-break: break-all;
+    }
 
-        pre.sigtext {
-            display: block;
-            margin: 0;
-            padding: 10px 12px;
-            font-family: ui-monospace, Consolas, "Courier New", monospace;
-            font-size: 13px;
-            line-height: 19px;
-            color: #e8eef5;
-            white-space: pre-wrap;
+    .dgnote {
+        margin-top: @sp-2;
+        font-size: @fs-12;
+        line-height: 18px;
+        color: @text-3;
+
+        .maddr {
+            color: @text-2;
             word-break: break-all;
-            background-image: linear-gradient(to right bottom, #223d36, #0000);
-            max-height: 220px;
-            overflow-y: auto;
-        }
-    }
-
-    .digest {
-        margin: 0 12px;
-
-        .dgttl {
-            font-size: 11px;
-            color: #fff8;
-            margin-bottom: 4px;
-        }
-
-        .dgnote {
-            font-size: 11px;
-            color: #fff6;
-            margin-top: 5px;
-            line-height: 16px;
-        }
-
-        .hexdump {
-            display: block;
-            font-family: ui-monospace, Consolas, "Courier New", monospace;
-            font-size: 11px;
-            line-height: 16px;
-            letter-spacing: 0.2px;
-            color: #aab4bd;
-            word-break: break-all;
-            background: #ffffff0f;
-            border: 1px solid #ffffff1a;
-            border-radius: 6px;
-            padding: 5px 7px;
         }
     }
 
     .txerr {
-        margin: 18px;
-        padding: 7.2px 12px;
-        border-radius: 12px;
-        border: 1px dashed #b00;
-        background: #f001;
+        padding: @sp-3;
+        background: @sem-error-bg;
+        border-radius: @rd-card;
+        margin-bottom: var(--mn-gap, @sp-2);
 
-        h1,
-        p {
-            font-size: 14px;
-            color: #b00;
+        h1 {
+            font-size: @fs-14;
+            font-weight: 500;
+            color: @sem-error;
         }
 
         p {
-            word-break: break-all;
+            margin-top: @sp-1;
+            font-size: @fs-12;
+            line-height: 18px;
+            color: @text-2;
+            word-break: break-word;
         }
     }
 
-    .lding,
-    .success {
-        padding: 70px 0;
-        text-align: center;
+    .ldw {
+        display: flex;
+        justify-content: center;
+        padding: @sp-8 0;
     }
 
     .success {
-        margin: 24px;
-        padding: 12px;
-        border: 1px solid #2aa515;
-        background-image: linear-gradient(to right bottom, #ffffff00, #2aa515);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: @sp-3;
+        padding: @sp-6;
 
-        img {
-            transition: all 1s;
-            transform: scale(0);
+        img, .icf {
+            width: 56px;
+            height: 56px;
+            opacity: 0;
+            transform: scale(0.6);
+            transition: all 0.3s ease;
 
             &.show {
+                opacity: 1;
                 transform: scale(1);
             }
         }
 
         p {
-            margin-top: 12px;
-            color: #2aa515;
-            text-shadow: 1px 1px 1px #0005;
-            font-weight: 700;
+            font-size: @fs-16;
+            color: @text-1;
         }
     }
 
-    .wtip p {
-        font-size: 12px;
-        color: #fabd9999;
-        margin: 12px;
-        padding: 8px 12px;
-    }
+    .wtip {
+        padding: 0 var(--mn-pad-need) @sp-3;
 
-    .btns {
-        margin-top: 24px;
-        display: flex;
-        justify-content: space-evenly;
-
-        &>div {
-            width: 45%;
-        }
-
-        button {
-            width: 100%;
+        p {
+            font-size: @fs-12;
+            line-height: 18px;
+            color: @text-3;
+            text-align: center;
         }
     }
 }

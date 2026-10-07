@@ -1,163 +1,182 @@
 
-#init{
+// init / unlock / onboarding (B3-3 reskin; flow logic in init/vue.js untouched).
+#init {
     display: none;
+
+    // loginSwitchToInit blanket-shows this container on every page load
+    // (login.js $display_block runs after routePageMain mounted home); an empty
+    // #init must not take a 100vh slot above home (M2 scrollbar finding).
+    // When the init vue actually mounts (onboarding / unlock) it has children
+    // and :empty stops matching.
+    &:empty {
+        display: none !important;
+    }
+
     .container {
-        height: @bodyh - (@pgpd*2);
+        height: 100%;
     }
-    button {
-        border-radius: @pgpd*0.5
-    }
-        textarea {
-            word-break: break-word;
-            overflow-wrap: anywhere;
-        }
-    .ttl {
-        h1 {
-            font-size: 26px;
-        }
-        p {
-            font-size: 16px;
-            color: #fff9;
-        }
-    }
+
     .ibox {
         text-align: center;
-        margin: @pgpd*3;
-        margin-bottom: 0;
+        margin: 0 var(--mn-pad-need);
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
-    .pswd {
-        width: 240px;
-        margin: @pgpd auto;
-        input {
-            text-align: center;
-        }
-        button {
-            width: 100%;
-        }
-    }
+
     .lgi {
-        position: relative;
-        perspective: 150px;
-        padding: 50px 0 60px;
-        // background: radial-gradient(#000f,#0000, #0000);
-        img {
-            z-index: 2;
-            position: relative;
-            // filter: drop-shadow(2px 4px 2px #000);
-            transition: all 0.1s;
-            // border-radius: 21%;
-        }
-        .sdn {
-            border-radius: 100%;
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            width: 140px;
-            height: 11px;
-            margin-left: -70px;
-            background: #fff7;
-            filter: blur(10px);
+        img, .icf {
+            height: 100px;
+            border-radius: @rd-card;
         }
     }
+
+    .ttl {
+        margin-bottom: @sp-6;
+
+        h1 {
+            font-size: @fs-28;
+            font-weight: 500;
+            color: @text-1;
+        }
+
+        p {
+            margin-top: @sp-1;
+            font-size: @fs-14;
+            color: @text-2;
+        }
+    }
+
+    // entropy collection
     .itpr {
-        // background-color: #000;
-        width: 74%;
-        margin: 0 auto 30px;
+        width: 100%;
+        max-width: 280px;
+        margin: 0 auto;
+
         .per {
-            height: 20px;
+            height: 4px;
             width: 100%;
-            border-radius: 100px;
-            border: 1px solid #fff4;
+            border-radius: @rd-pill;
+            background: @bg-card;
             overflow: hidden;
+
             b {
                 display: block;
                 width: 1%;
-                border-radius: 100px;
                 height: 100%;
-                background: @clblue;
+                background: @brand;
+                transition: width 120ms linear;
             }
         }
-        p{
-            margin: 10px 0;
-            i {
-                font-size: inherit;
-                font-style: normal;
-                color: @clblue;
-            }
+
+        .pct {
+            margin: @sp-3 0 @sp-1;
+            font-size: @fs-14;
+            color: @text-1;
         }
+
+        .tip {
+            font-size: @fs-14;
+            color: @text-2;
+        }
+    }
+
+    .hint {
+        font-size: @fs-14;
+        line-height: 18px;
+        color: @text-2;
+        margin-bottom: @sp-2;
+    }
+
+    .lb {
+        display: block;
+        text-align: left;
+        font-size: @fs-14;
+        font-weight: 500;
+        color: @text-1;
+        margin: @sp-3 0 @sp-1;
+    }
+
+    // unlock
+    .pswd {
+        width: 100%;
+        max-width: 320px;
+        margin: 0 auto;
+        input {
+            outline: none;
+            text-align: left;
+            margin-bottom: @sp-8;
+        }
+        button {
+            width: 100%;
+        }
+    }
+
+    // create / import segmented tabs
+    .swts {
+        // the ONE segmented-pill definition (comp.less .seg-mixin) — Create /
+        // Import text centered at button size/weight (2026-10-05)
+        .seg-mixin();
+        margin: 0 0 @sp-4;
     }
 
     .page {
+        text-align: left;
+
         button {
             display: block;
             width: 100%;
-            margin: @pgpd auto;
+            margin: @sp-3 auto 0;
         }
+
         textarea {
-            box-shadow: 0 0 3px #000 inset;
-            padding: 10px;
-            background-color: #fff1;
-            border: none;
-        }
-        label {
-            margin: @pgpd*0.5 0 @pgpd 0;
+            font-family: @font-mono;
+            font-size: @fs-12;
         }
     }
 
-    .swts {
-        margin: @pgpd*2 0;
-        display: flex;
-        justify-content: center;
-        .swt {
-            width: 50%;
-            border-bottom: 2px solid #0000;
-            cursor: pointer;
-        }
-        .swt:hover {
-            border-color: #fff4;
-        }
-        .swt.active {
-            background-image: linear-gradient(to bottom, #0000, #09c2);
-            border-color: @clblue;
-        }
-        h1 {
-            padding: 10px 0;
-            width: 100%;
-        }
-
-    }
-
+    // backup step
     .bkup {
-        .adr {
-            margin-top: @pgpd*2;
-            h1 {
-                margin-top: 10px;
-                text-align: left;
-            }
+        text-align: left;
+
+        .adr h1 {
+            margin-top: @sp-1;
+            font-family: @font-mono;
+            font-size: @fs-14;
+            font-weight: normal;
+            color: @text-1;
+            word-break: break-all;
+            text-align: left;
         }
-        .tip {
-            padding: @pgpd 0;
-            color: @clerr;
+
+        textarea {
+            height: 96px;
         }
+
         .btns {
-            margin-top: @pgpd*2;
+            margin-top: @sp-4;
             display: flex;
-            justify-content: space-between;
+            gap: @sp-3;
+
             button {
-                width: 47%;
+                flex: 1;
+                min-width: 0;
             }
         }
     }
 
+    // set password step
     .stps {
-        padding-top: @pgpd*3;
+        text-align: left;
+
         input {
-            margin-top: @pgpd;
+            margin-top: @sp-2;
         }
+
         button {
-            margin-top: @pgpd*2;
+            margin-top: @sp-4;
             width: 100%;
         }
     }
-
 }

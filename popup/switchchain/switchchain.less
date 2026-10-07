@@ -1,66 +1,57 @@
+// switchchain (B3-6): reqpage skeleton from comp.less; this shell previously
+// carried a fifth copy of the old 210-line header block — dissolved into
+// .pchead (comp.less).
 #swchn {
-    .header{
-        display: flex;
-        justify-content: space-between;
-        @hid: 32px;
-        height: auto;
-        background: #ffffff11;
-        .lg {
-            max-height: @hid;
-            padding: @pgpd*0.5;
-            img {
-                height: @hid;
-                transform: scale(0.8);
-                filter: drop-shadow(1px 1px 1px black);
-                border-radius: 10px;
+    .lead {
+        font-size: @fs-14;
+        color: @text-2;
+        text-align: center;
+        margin-bottom: @sp-3;
+    }
+
+    .card {
+        background: @bg-card;
+        border: 1px solid @line-2;
+        border-radius: @rd-card;
+        padding: @sp-2 @sp-3;
+
+        .row {
+            display: grid;
+            grid-template-columns: 72px 1fr;
+            gap: @sp-2;
+            padding: @sp-2 0;
+
+            & + .row {
+                border-top: 1px solid @line-2;
             }
-        }
-        .pttl {
-            padding: @pgpd*0.5;
-            height: @hid;
-            line-height: @hid;
-            text-align: center;
-        }
-        .adrs {
-            padding: @pgpd*0.5;
-            h1 {
-                line-height: @hid;
-                height: @hid;
-                font-weight: normal;
-                font-size: 14px;
-                color: #999;
+
+            label {
+                font-size: @fs-12;
+                color: @text-3;
+                line-height: 18px;
+            }
+
+            p {
+                font-size: @fs-12;
+                line-height: 18px;
+                color: @text-1;
+                word-break: break-word;
+
+                &.mono {
+                    font-family: @font-mono;
+                }
             }
         }
     }
-    .req {
-        padding: @pgpd @pgpd*2;
-        .site {
-            text-align: center;
-            color: @clblue;
-            font-size: 20px;
-            margin: @pgpd 0;
-            word-break: break-all;
-        }
-        table {
-            width: 100%;
-            margin-top: @pgpd;
-            td {
-                font-size: 13px;
-                word-break: break-all;
-            }
-        }
-        .warn {
-            margin-top: @pgpd;
-            color: darkorange;
-            font-size: 12px;
-        }
-    }
-    .btns {
-        margin-top: @pgpd * 2;
-        display: flex;
-        justify-content: space-evenly;
-        button {
-            width: 42%;
-        }
+
+    .warn {
+        margin-top: @sp-2;
+        font-size: @fs-12;
+        line-height: 18px;
+        color: @sem-warn;
+        word-break: break-word;
     }
 }
+
+// bottom buttons adapt via the shared .reqbtns rule (comp.less): horizontal
+// when the three actions fit, wrapped full-width lines when they don't

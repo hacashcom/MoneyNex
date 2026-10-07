@@ -4,27 +4,30 @@ function dealAccountApi() {
 
 
 messageHandler['wallet'] = async function(req, sender, ok){
-    // Origin must come from sender.url; replies and the connect popup must bind to
+    // Origin must come from the sender (senderOriginOf: sender.origin preferred,
+    // sender.url parsing as fallback); replies and the connect popup must bind to
     // sender.tab.id, not the "active tab" (a background/other-window DApp would get
     // its reply delivered to the wrong page).
     // Unauthorized origins go to the connect page (did/tid kept; callback contract
     // unchanged: on approval, connect replies {address} to this wallet request)
-    let origin = ''
-    , tabid = 0
-    try {
-        if(sender && sender.url){
-            origin = new URL(sender.url).origin
-        }
-        if(sender && sender.tab && sender.tab.id){
-            tabid = sender.tab.id
-        }
-    } catch(e){}
+    let origin = senderOriginOf(sender)
+    , tabid = (sender && sender.tab && sender.tab.id) || 0
     if(!origin){
         ok({err: 'unknown request origin'})
         return
     }
     let authorized = await isConnectAuthorized(origin)
     if(!authorized){
+        // §7.2 / 0.3.0 semantics: the unauthorized wallet() must BOTH reject
+        // {err:'need connect first', code:'need_connect'} on the content did channel
+        // (a bare sendResponse is dropped by content — same delivery as the gated
+        // handler in listener.js) AND open the connect page (two coexisting actions,
+        // not either). Content's did callback is idempotent, so the {address} the
+        // connect window answers on this same did after approval cannot double-settle
+        // the already-rejected promise — the DApp re-calls wallet() and succeeds.
+        if(tabid){
+            await sendMessageToTabContent(tabid, req, {err: 'need connect first', code: 'need_connect'})
+        }
         req.dmu = origin
         req.action = optkey_connect_account
         // P3-2: reclaim any stale pending connect window for this origin first
@@ -66,7 +69,7 @@ messageHandler['chain'] = async function(req, sender, ok){
 
 const bg_MAIN_CHAIN_ID = 0
 , bg_mainnet_explorer_url = 'https://explorer.hacash.org'
-, bg_mainnet_fullnode_url = 'http://wallet.hacash.com/fullnode'
+, bg_mainnet_fullnode_url = 'https://wallet.hacash.com/fullnode'
 , bg_chain_configs_key = 'chain_configs'
 , bg_current_chain_id_key = 'current_chain_id'
 , bg_default_chain_configs = {

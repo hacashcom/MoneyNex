@@ -1,5 +1,5 @@
 
-/* 清除通知 */
+/* clear notifications */
 chrome.action.setBadgeText({ text: ''});
 
 

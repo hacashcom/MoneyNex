@@ -1,45 +1,68 @@
 
 
+// wpass — password confirm card (B2 reskin, MetaMask unlock-card pattern).
+// Behavior fields/classes from wpass.js stay untouched.
 .popbox.pass {
-    .bg {
-
-    }
     .box {
-        bottom: 30%;
+        left: var(--mn-pad-loose);
+        right: var(--mn-pad-loose);
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        border-radius: @rd-card;
+        padding: @sp-4;
+        text-align: center;
+
         h1 {
-            font-size: 20px;
-            margin-top: @pgpd;
+            font-size: @fs-18;
+            font-weight: 500;
+            color: @text-1;
+            text-align: left;
+            margin-bottom: @sp-3;
         }
+
         .ipw {
-            width: 92%;
-            margin: @pgpd*3 auto 0;
-        }
-        .err {
-            transition: all .4s;
-            margin: @pgpd 0;
-            opacity: 1;
-            p {
-                // font-size: 14px;
-                line-height: 22px;
-                color: @clerr;
-                text-align: left;
-                .popbox_err_tip_before;
-                
+            width: 100%;
+            margin: 0;
+            text-align: left;
+
+            label {
+                margin-bottom: @sp-1;
             }
+        }
+
+        .err {
+            transition: opacity .25s;
+            margin: @sp-2 0 0;
+            opacity: 1;
+
+            p {
+                line-height: 20px;
+                color: @sem-error;
+                text-align: left;
+                font-size: @fs-12;
+                .popbox_err_tip_before;
+            }
+
             &.hide {
                 opacity: 0;
             }
         }
-        input {
-        }
     }
+
     .btns {
-        margin-top: @pgpd;
+        margin-top: @sp-4;
         display: flex;
-        justify-content: space-between;
+        gap: @sp-3;
+
+        > div {
+            flex: 1;
+            min-width: 0;
+        }
+
         button {
             display: block;
-            width: @bodyw * 0.39;
+            width: 100%;
             margin: 0 !important;
         }
     }

@@ -76,13 +76,30 @@ var routePageSigTrs = (adr, clbk) => {
     if(!txobj.timestamp) {
         txobj.timestamp = tsnow() // timestamp
     }
-    if(txobj.main_address && txobj.main_address!=adr){
-        return alert(`main address ${txobj.main_address} not match wallet current account ${adr}`)
-    }
-    txobj.main_address = adr
     // Single-reply contract (shared helper): reply to the DApp once (success or {err}) then
     // close; a silent cancel/failure would leave the DApp's transfer request hanging forever.
+    // (D3 root cause: this channel used to be created AFTER the main_address validation
+    // below, so the mismatch branch alert()-returned with no reply channel — the DApp's
+    // transfer promise hung forever. Created before the validations, like signtx's, every
+    // contract-level refusal can answerOnce.)
     let {isAnswered, answerOnce, closeWin, cancelAndClose} = mnx_dapp_reply('Transfer request')
+    if(txobj.main_address && txobj.main_address!=adr){
+        // D3/§7.2: main_address mismatch is a terminal refusal — answer the DApp
+        // {ret:1, code:'sign_refused'} (else its promise hangs forever) and keep the
+        // reason rendered in this window until the user closes it (same shape as
+        // raisefee's raisefail: reply once + persistent in-window error). The old
+        // blocking alert() hid behind a native dialog and left the page blank.
+        // textContent, never innerHTML: the mismatching address is dApp-controlled.
+        // #e5544b = @sem-error token value.
+        let maerr = `main address ${txobj.main_address} not match wallet current account ${adr}`
+        answerOnce({ret: 1, err: maerr, code: 'sign_refused'})
+        let madiv = document.createElement('div')
+        madiv.style.cssText = 'padding:24px 16px;color:#e5544b;font-size:14px;line-height:1.5;word-break:break-all'
+        madiv.textContent = maerr
+        document.body.appendChild(madiv)
+        return
+    }
+    txobj.main_address = adr
     // ok
 
     let {app} = VueCreateApp('sgtx', vue_tpl_sigtrs, {
@@ -128,7 +145,7 @@ var routePageSigTrs = (adr, clbk) => {
                 }
             }
             try {
-                // URL 请求的链与当前网络不一致时拒绝（远端语义）
+                // refuse when the chain requested via URL differs from the current network (remote semantics)
                 if(typeof assertUrlRequestChain === 'function'){
                     let reqerr = await assertUrlRequestChain(yes)
                     if(reqerr) {
@@ -138,7 +155,7 @@ var routePageSigTrs = (adr, clbk) => {
                         return
                     }
                 }
-                // 非主链自动附加 ChainAllow action（主链上原样返回，行为不变）
+                // non-main chains get a ChainAllow action appended automatically (main chain returns the body unchanged, behavior identical)
                 if(typeof applyCurrentChainToTxobj === 'function'){
                     let chtx = await applyCurrentChainToTxobj(txobj)
                     if(chtx.err) {
@@ -185,7 +202,7 @@ var routePageSigTrs = (adr, clbk) => {
                 t.lding = no
                 t.txres = rv.review
                 await mnx_msglayout_load()
-                // Asset 金额显示需要链上小数位：先按 review.asset_serials 补齐元数据（失败也不阻断签名）
+                // Asset amount display needs on-chain decimals: warm the metadata from review.asset_serials first (failure never blocks signing)
                 await mnx_asset_meta_ensure(rv.review.asset_serials || [])
                 t.txdesc = parseTxDesc(rv.review)
                 t.layouterr = (mnx_msglayout_state && mnx_msglayout_state.display_err) || ''

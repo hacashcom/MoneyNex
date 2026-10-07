@@ -1,6 +1,6 @@
 
 var explorer_url = 'https://explorer.hacash.org'
-, fullnode_url = 'http://wallet.hacash.com/fullnode'
+, fullnode_url = 'https://wallet.hacash.com/fullnode'
 , mnx_chain_id = 0 // Hacash ChainId::MAINNET; test builds override via build.js --chain-id
 // Runtime RPC config: chrome.storage.local overrides the build-time default node.
 // Used for balance queries and broadcast only; the signing hash is always computed locally from the tx body — the node cannot choose what gets signed.
@@ -29,9 +29,9 @@ var explorer_url = 'https://explorer.hacash.org'
     return fullnode_url
 }
 
-// All Actions 全览页打开方式：内容量大（多 action / json / raw），优先开一个独立的整屏窗口，
-// 而不是挤在扩展弹窗尺寸里。无窗口管理器的环境（CI/沙箱）不会响应 state:'maximized'，
-// 所以显式按屏幕可用尺寸建窗，再补一次 maximize；都不行才降级为普通标签页。
+// How the All Actions review page opens: its content is large (multi-action / json / raw), so prefer a standalone full window,
+// not the extension popup size. Environments without a window manager (CI/sandbox) ignore state:'maximized',
+// so create the window at the screen's available size explicitly, then maximize once more; only if all that fails fall back to a plain tab.
 , mnx_open_actionview = function(key) {
     let url = `popup/actionview.html?key=${key}`
     try {
@@ -114,15 +114,15 @@ var randomString = ctime(yes)+''
     let ps = await chrome_storage_sync.get(accpsskey)
     return ps[accpsskey]
 }
-// 账户表整表 mutation 串行队列。chrome.storage.sync 的账户表只能整表 get→改→set，
-// 两个扩展页（多窗口/多标签）并发各写各的整表会互相覆盖——后写者整表胜出，
-// 先写者刚导入的账户会被抹掉（丢账户）。所有账户表变更必须经 accMutate 排队执行，
-// 且写后重读校验、失败重试；对不经过本队列的外部写入（如 sync 冲突）只能靠校验兜底。
+// Serialize whole-table account mutations. chrome.storage.sync's account table can only be read→modified→written whole,
+// and two extension pages (multi-window/multi-tab) writing concurrently clobber each other — the later write wins whole,
+// erasing the account the earlier write just imported (account loss). Every account-table change must go through the accMutate queue,
+// with post-write re-read verification and retry; external writes bypassing the queue (e.g. sync conflicts) are only caught by that verification.
 , ACC_MUTATE_RETRY = 3
 , acc_mutate_queue = Promise.resolve()
 , accMutate = (fn) => {
     let run = acc_mutate_queue.then(fn)
-    // 链子吞掉失败继续排队；失败通过返回的 promise 交给调用方处理
+    // the chain swallows failures to keep the queue going; failures surface to the caller via the returned promise
     acc_mutate_queue = run.then(() => nil, () => nil)
     return run
 }
@@ -135,8 +135,8 @@ var randomString = ctime(yes)+''
         pmd5 = await stoReadPassword()
     }
     if(!pmd5){
-        // 没有可用口令（会话已锁 / 传入口令与既有钱包口令不符）：
-        // 绝不把私钥用空口令加密落盘；调用方据返回值中止，current_account 不更新。
+        // no usable passphrase (session locked / the given passphrase does not match the existing wallet):
+        // never persist the private key encrypted under an empty passphrase; the caller aborts on the return value and current_account stays untouched.
         return nil
     }
     let cryptkey = AES_encrypt(acc.private_key, pmd5)
@@ -144,8 +144,8 @@ var randomString = ctime(yes)+''
         for(let i = 0; i < ACC_MUTATE_RETRY; i++){
             let accs = await stoReadAccount()
             accs = accs || {}
-            // 已存在的账户一律保留原 cryptkey：绝不覆盖、绝不重加密。
-            //（同口令下重导入本就得到相同密文；保留原值在并发/异常场景下永远更安全）
+            // existing accounts always keep their original cryptkey: never overwrite, never re-encrypt.
+            // (re-importing under the same passphrase yields the same ciphertext anyway; keeping the original is always safer under concurrency/anomalies)
             let existed = !!accs[acc.address]
             if(!existed){
                 accs[acc.address] = { cryptkey: cryptkey }
@@ -153,13 +153,13 @@ var randomString = ctime(yes)+''
             let sv = {}
             sv[accstokey] = accs
             await chrome_storage_sync.set(sv)
-            // 写后校验：重读确认目标账户在表中，且 cryptkey 与本次落盘的值一致
+            // post-write verification: re-read and confirm the target account is in the table with the cryptkey just written
             let chk = await stoReadAccount()
             if(chk && chk[acc.address] && chk[acc.address].cryptkey == accs[acc.address].cryptkey){
                 return pmd5
             }
         }
-        return nil // 重试后仍校验失败：视为未保存，调用方中止
+        return nil // verification still failing after retries: treat as unsaved, caller aborts
     })
 }
 , stoReadAccount = async (addr) => {
@@ -177,9 +177,9 @@ var randomString = ctime(yes)+''
     return obj[acccurkey]
 }
 , stoRemoveAccount = async (addr) => {
-    // 按给定地址删除（绝不读可变的 current_account 来决定删谁）：
-    // 详情页展示的是打开时的地址，其它窗口可能已把 current 切到别的账户，
-    // 按 current 删会删错人。
+    // delete by the given address (never read the mutable current_account to decide what to delete):
+    // the detail page shows the address it opened with; another window may have switched current already,
+    // deleting by current would remove the wrong account.
     return await accMutate(async () => {
         for(let i = 0; i < ACC_MUTATE_RETRY; i++){
             let cur = await stoReadCurrentAccount()
@@ -195,19 +195,19 @@ var randomString = ctime(yes)+''
                     if(k != addr){ next = k; break }
                 }
                 if(!next){
-                    return no // 最后一个账户不可删（保留原拒绝语义）
+                    return no // the last account cannot be deleted (keeps the original refusal semantics)
                 }
             }
             delete accs[addr]
             let sv = {}
             sv[accstokey] = accs
             if(wascur){
-                // 账户表与 current 指针放进同一条 set：删除与其它窗口的换账户/
-                // 导入交错时，指针不会指向已删除的地址
+                // the account table and the current pointer go into one set: if a deletion interleaves with another window's
+                // account switch/import, the pointer can never reference a deleted address
                 sv[acccurkey] = next
             }
             await chrome_storage_sync.set(sv)
-            // 写后校验：地址已删，且（若换了指针）新指针指向的账户仍存在
+            // post-write verification: the address is gone, and (if the pointer moved) the account it now points to still exists
             let chkaccs = await stoReadAccount()
             let chkcur = await stoReadCurrentAccount()
             if(chkaccs && !chkaccs[addr] && (!wascur || (chkcur && chkaccs[chkcur]))){
@@ -227,8 +227,8 @@ var randomString = ctime(yes)+''
         accsv = await stoReadAccount(adr)
     }
     if(!accsv){
-        // 账户记录不存在（current_account 悬空等存储不一致）：统一走"解锁失败"路径，
-        // 而不是在这里抛 TypeError 让调用方（按钮/回调）卡死
+        // the account record is missing (dangling current_account and other storage inconsistencies): take the unified "unlock failed" path,
+        // instead of throwing a TypeError here and deadlocking the caller (button/callback)
         return nil
     }
     return AES_decrypt(accsv.cryptkey, pmd5)
@@ -303,8 +303,8 @@ var getAmtTip = (obj) => {
 , saveTransactionLog = async (tx) => {
     console.log('saveTransactionLog', tx)
     let type = tx.type || 'MUL'
-    // 交易发生时的链上下文（Networks 页切换后，活动列表据此区分来源链；
-    // chain 服务不在 bundle 时静默跳过）
+    // the chain context at transaction time (after switching on the Networks page, the activity list tells source chains apart by it;
+    // skipped silently when the chain service is not bundled)
     let logchain = nil
     try {
         if(typeof stoReadCurrentChain === 'function'){
@@ -329,8 +329,8 @@ var getAmtTip = (obj) => {
             let ast = tx.asset || {}
             let serial = mnx_u64_string(ast.serial)
             let atoms = mnx_u64_string(ast.amount != null ? ast.amount : ast.atoms)
-            // 调用方（如 DApp 请求的 action）可能没带 decimal/name/ticket：
-            // 用签名页/首页共用的链上元数据缓存补齐，否则 Activity 会显示原始 atoms。
+            // the caller (e.g. a DApp request's action) may lack decimal/name/ticket:
+            // fill them from the on-chain metadata cache shared by the signing page/home, or Activity would show raw atoms.
             let meta = (ast.decimal == null || ast.decimal === '') ? mnx_asset_meta_get(serial) : null
             let decimal = (ast.decimal == null || ast.decimal === '') ? (meta ? meta.decimal : null) : ast.decimal
             let name = ast.name || (meta && meta.name) || (serial ? ('Asset #' + serial) : 'Asset')
@@ -370,24 +370,111 @@ var getAmtTip = (obj) => {
 
 /////////
 
-, addrOmitted = a => a.substring(0, 9)+'...'+a.slice(-8)           
+, addrOmitted = a => a.substring(0, 9)+'...'+a.slice(-8)
 
 /////////
 
+// A3 connect authorization store. The 0.3.x connect_domains allowlist (bare hosts,
+// append-only, no listing/revocation: P0-1) is replaced by connect_sites keyed by
+// exact origin:  { "<origin>": { host, connectedAt, accountAtConnect, legacy? } }
+// - fresh grants key by origin ("https://example.com[:port]"); the background
+//   matcher (background/init.js isConnectAuthorized) compares the request origin
+//   exactly, so http/https and ports are distinguished for new grants.
+// - 0.3.x records carried bare hosts (no scheme was ever stored): migration keeps
+//   them 1:1 keyed by that host and flags them legacy; the background matcher
+//   treats a request as authorized when its host equals such a record (same
+//   effective matching as 0.3.x for migrated sites).
+// - two-phase migration (§9 risk table): phase 1 (this change) reads old on first
+//   access and writes new; phase 2 (after the §7.3 upgrade-migration test passes,
+//   M2) deletes the legacy key. Until then connect_domains is never written again.
 , stokey_connect_domains = 'connect_domains'
-, stoAppendConnectDomains = async dmu => {
-    dmu = dmu || 'hacash.com'
-    let dms = await chrome_storage_local.get(stokey_connect_domains)
-    dms = dms[stokey_connect_domains] || []
-    if (dms.indexOf(dmu) == -1) {
-        dms.unshift(dmu)
-        let sto = {}
-        sto[stokey_connect_domains] = dms
-        await chrome_storage_local.set(sto)
-    }
-    return dms
+, stokey_connect_sites = 'connect_sites'
+, connect_mutate_queue = Promise.resolve()
+, connectMutate = (fn) => {
+    // whole-table mutation queue, same as accMutate: connect_sites can only be read→modified→written whole,
+    // and concurrent writers (a management-page disconnect racing a new dApp grant) would let the later write erase the earlier one.
+    let run = connect_mutate_queue.then(fn)
+    connect_mutate_queue = run.then(() => nil, () => nil)
+    return run
 }
-, stoGetConnectDomains = stoAppendConnectDomains
+, stoReadConnectSites = async () => {
+    let obj = await chrome_storage_local.get(stokey_connect_sites)
+    if(obj && obj[stokey_connect_sites]){
+        return obj[stokey_connect_sites]
+    }
+    // First read after upgrade: migrate the 0.3.x bare-host allowlist once.
+    // Read old -> write new; the legacy key is kept until the §7.3 migration
+    // test verifies the new store (phase 2, M2). Before that first write the
+    // background still authorizes straight from the legacy list.
+    let old = await chrome_storage_local.get(stokey_connect_domains)
+    old = (old && old[stokey_connect_domains]) || []
+    let sites = {}
+    for(let i in old){
+        let host = (old[i] || '').trim()
+        if(!host){ continue }
+        sites[host] = {
+            host: host,
+            connectedAt: ctime(),
+            accountAtConnect: nil,
+            legacy: yes,
+        }
+    }
+    let sv = {}
+    sv[stokey_connect_sites] = sites
+    await chrome_storage_local.set(sv)
+    return sites
+}
+// Listing for the connected-sites management page (registered interface, doc/plan.cn.md appendix.3-2):
+// array sorted by connectedAt desc — { origin, host, connectedAt, accountAtConnect, legacy }
+// (origin = storage key; legacy=true for records migrated from 0.3.x bare hosts).
+, stoListConnectSites = async () => {
+    let sites = await stoReadConnectSites()
+    let list = []
+    for(let origin in sites){
+        let s = sites[origin] || {}
+        list.push({
+            origin: origin,
+            host: s.host || origin,
+            connectedAt: s.connectedAt || 0,
+            accountAtConnect: s.accountAtConnect || nil,
+            legacy: !!s.legacy,
+        })
+    }
+    list.sort((a, b) => (b.connectedAt || 0) - (a.connectedAt || 0))
+    return list
+}
+// Grant/revoke API for dApp connects and the management page. origin must be a
+// full http(s) origin — conn/vue.js validates urlquery.dmu before calling; a bare
+// host here is a caller bug and throws (new URL) rather than silently storing a
+// match-everything record.
+, stoAppendConnectSite = async (origin, accaddr) => {
+    let u = new URL(origin)
+    return await connectMutate(async () => {
+        let sites = await stoReadConnectSites()
+        sites[origin] = {
+            host: u.host,
+            connectedAt: ctime(),
+            accountAtConnect: accaddr || nil,
+        }
+        let sv = {}
+        sv[stokey_connect_sites] = sites
+        await chrome_storage_local.set(sv)
+        return await stoListConnectSites()
+    })
+}
+, stoRemoveConnectSite = async (origin) => {
+    return await connectMutate(async () => {
+        let sites = await stoReadConnectSites()
+        if(!(origin in sites)){
+            return nil // unknown site: nothing removed (caller reports)
+        }
+        delete sites[origin]
+        let sv = {}
+        sv[stokey_connect_sites] = sites
+        await chrome_storage_local.set(sv)
+        return await stoListConnectSites()
+    })
+}
 
 /////////
 

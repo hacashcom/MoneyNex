@@ -1,45 +1,72 @@
 
+// swtgas — gas fee selector (B2 reskin: uniform edit cards, single accent).
+// Title colors collapse onto the token system (no darkcyan/orange/hotpink).
 .gasw {
-    .con {
-        padding-top: @pgpd;
-        display: flex;
-        justify-content: space-between;
+    label {
+        margin-bottom: @sp-2;
     }
+
+    .con {
+        padding-top: 0;
+        display: flex;
+        gap: var(--mn-gap, @sp-2);
+
+        > div {
+            flex: 1;
+            min-width: 0;
+        }
+    }
+
     .high {
         display: none;
     }
+
     .item {
-        transition: all 0.2s;
+        transition: border-color @tr-fast ease, background @tr-fast ease;
         cursor: pointer;
-        border-radius: 5px;
-        padding: 4px 6px;
-        max-width: @bodyw*0.3;
-        min-width: @bodyw*0.2;
-        border: 1px solid #fff4;
+        border-radius: @rd-card;
+        padding: @sp-2 @sp-3;
+        border: 1px solid @line-1;
+        background: @bg-input;
         min-height: 66px;
+
         h5 {
-            font-weight: normal;
-            font-style: italic;
-            font-size: 15px;
-            &.n { color: darkcyan; }
-            &.f { color: orange; }
-            &.h { color: hotpink; }
-            &.c { color: deepskyblue; }
+            font-weight: 500;
+            font-style: normal;
+            font-size: @fs-14;
+            color: @text-1;
+
+            &.n, &.f, &.h, &.c {
+                color: @text-1;
+            }
         }
+
         p {
-            margin-top: 10px;
-            font-size: 12px;
+            margin-top: @sp-1;
+            font-size: @fs-12;
             line-height: 18px;
+            color: @text-2;
         }
+
         input {
-            margin-top: 8px;
+            margin-top: @sp-2;
+            height: 32px;
+            line-height: 30px;
+            padding: 0 @sp-2;
+            font-size: @fs-12;
         }
+
+        &:hover {
+            border-color: @text-3;
+        }
+
         &.active {
-            background: #00ccff44;
-            border-color: @clblue;
-            text-shadow: 1px 1px 1px #000;
-            // box-shadow: 2px 2px 6px #0009;
-            // transform: scale(1.05);
+            background: @brand-faint;
+            border-color: @brand;
+
+            h5 {
+                color: @brand;
+            }
         }
     }
 }

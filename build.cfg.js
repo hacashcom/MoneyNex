@@ -31,6 +31,7 @@ module.exports = {
         './jslib/msglayout',
         './jslib/assetamt',
         './jslib/importkey',
+        './jslib/moneynx_pghead',
     ],
     popup_common: [
         [
@@ -40,7 +41,7 @@ module.exports = {
             'comp/swtgas',
             'login/init',
         ],
-        ['html', 'comp'] // add login
+        ['tokens', 'html', 'comp'] // add login; 'tokens' = design tokens wired first (B1; the single build.cfg line owned by workflow B)
     ],
     popup_services: [
         './popup/chain/chain',
@@ -92,6 +93,12 @@ module.exports = {
             ],
             ['actionview']
         ], // full action review (read-only)
+        'connectedsites': [
+            [
+                'connectedsites/connlists'
+            ],
+            ['connectedsites']
+        ], // connected sites management (A3; mount id cnls, doc/plan.cn.md appendix.3-2)
         'switchchain': [
             [
                 'switchchain/switchchain'

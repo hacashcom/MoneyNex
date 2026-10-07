@@ -8,7 +8,7 @@ function divlist(opks) {
 }
 
 function registerHacashApi(key, exec) {
-    // 通过事件绑定执行接口
+    // expose the API via event bindings
     var elm = $clas(hacash_api_div, key)
     elm.onclick = function(e){
         var t = this
@@ -21,7 +21,7 @@ function registerHacashApi(key, exec) {
         }catch(e){
             return null
         }
-        // 执行
+        // execute
         ps.did = parseInt($attr(t, 'did')) || 0
         ps.action = $attr(t, 'class')
         // console.log(ps)
@@ -38,8 +38,10 @@ function registerHacashApi(key, exec) {
 let hacash_api_html = divlist(optkey_list_to_popup)
 , hacash_api_div = $div('div')
 hacash_api_div.id = optkey_id
-$attr(hacash_api_div, 'icon', chrome.runtime.getURL('image/icos/128.png'))
-$attr(hacash_api_div, 'version', '0.1.0')
+$attr(hacash_api_div, 'icon', chrome.runtime.getURL('image/icos/logo.svg'))
+// P2-1: report the real manifest version (was hardcoded '0.1.0' vs manifest 0.4.0);
+// MoneyNex.info.version field name unchanged (I-1)
+$attr(hacash_api_div, 'version', chrome.runtime.getManifest().version)
 $display_none(hacash_api_div)
 $html(hacash_api_div, hacash_api_html)
 $irsd(hacash_api_div)

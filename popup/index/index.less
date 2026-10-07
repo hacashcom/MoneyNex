@@ -1,84 +1,91 @@
 
 
+// index shell: page gateway (hpgw) stack transitions + the simple sub-page
+// header used by dotrs/chains/chainform/acinf (bk = back, ptt = title).
+// Pages migrate to .pchead (comp.less) as B3 proceeds; this keeps the shell
+// neutral in the meantime.
+
 .header {
     position: relative;
-    margin-bottom: @pgpd * 1.5;
-    background: @bgcol + #040404;
-    // height: @headerh;
-    box-shadow: 0 0 20px 1px #000;
-    &>div {
-    }
-
-    .cvs {
-        position: absolute;
-        left: 0;
-        bottom: -20px;
-        width: 100%;
-        height: 20px;
-        background-image: linear-gradient(to right, @bgcol, #0000, #0000, @bgcol);
-    }
-    
+    background: @bg-page;
 }
 
 .hpgw {
 
     .header {
         @ch: 24px;
-        // padding: @pgpd;
         position: relative;
-        height: @ch + @pgpd*2;
+        height: @ch + @sp-4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
         .bk {
             position: absolute;
             top: 0;
             left: 0;
-            padding: @pgpd;
-            background: @bgcol - #010101;
+            padding: @sp-2;
+            display: flex;
+            align-items: center;
             cursor: pointer;
-            img {
+            color: @text-2;
+            border-radius: @rd-pill;
+
+            img, .icf {
+                width: @ch;
                 height: @ch;
             }
+
             &:hover {
-                background: #fff1;
+                color: @text-1;
+                background: @bg-card-hover;
             }
         }
+
         .ptt {
-            width: 100%;
             display: block;
             text-align: center;
-            padding: @pgpd 0;
             height: @ch;
-            color: #fffb;
-            font-weight: normal;
+            font-size: @fs-16;
+            font-weight: 500;
+            color: @text-1;
             line-height: @ch;
         }
     }
 
 }
 
+// Route ghosts must never contribute to #wpage's scrollable area: with
+// #wpage now overflow-y:auto (B1), the old absolute-positioned .hide/.prep
+// transitions stacked one 100vh-tall invisible box per route into the scroll
+// range — giant blank scroll at the bottom of every sub-page and the sign
+// pages rendering "below the fold" (M2 finding). display:none swaps are
+// instant; the 0.5s position transition never survived the scroll container
+// anyway.
 .hpgw {
-    transition: 0.5s all;
     position: relative;
     z-index: 2;
-    width: @bodyw;
-    height: @bodyh;
-    background: @bgcol;
-    &.hide {
-        position: absolute;
-        z-index: 1;
-        opacity: 0;
-        transform: scale(0.80);
-        box-shadow: 0 0 15px #0009;
+    width: 100%;
+    min-height: 100vh;
+    background: @bg-page;
+
+    &.hide,
+    &.prep:not(&.active) {
+        // !important: sub-pages own ID display rules (e.g. #dotrs{display:flex})
+        // outrank this class selector and would keep one ghost in flow.
+        // :not(.active) matters: pushhpgw never removes .prep from the route it
+        // activates (prep active coexist), so plain .prep would hide the CURRENT
+        // page forever.
+        display: none !important;
     }
-    &.prep {
-        position: absolute;
-        z-index: 3;
-        top: 0;
-        left: @bodyw;
-        box-shadow: 0 0 15px #0000;
+
+    // an unmounted route shell (no vue mounted yet) must not claim a 100vh
+    // blank slot in the scroll range (M2 scrollbar finding)
+    &:empty {
+        display: none !important;
     }
+
     &.active {
         z-index: 3;
-        left: 0;
-        box-shadow: 0 0 15px #000;
     }
 }

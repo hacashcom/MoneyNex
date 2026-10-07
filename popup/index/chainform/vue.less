@@ -1,19 +1,35 @@
+
+// chainform — add/edit network form (B3-8).
 #chainform {
     .chnfrm {
-        padding: 0 @pgpd*2;
+        padding: @sp-2 var(--mn-pad-need) 0;
+
         .item {
-            margin-top: @pgpd*1.5;
-        }
-        input:disabled {
-            opacity: 0.45;
+            margin-bottom: @sp-4;
+
+            label {
+                margin-bottom: @sp-1;
+                font-size: @fs-14;
+                font-weight: 500;
+                color: @text-1;
+            }
+
+            input:disabled {
+                opacity: 0.45;
+            }
         }
     }
+
     .btns {
-        margin-top: @pgpd * 2;
+        margin-top: @sp-2;
         display: flex;
-        justify-content: space-evenly;
+        gap: @sp-3;
+        padding: 0 var(--mn-pad-need) @sp-4;
+
         button {
-            width: 42%;
+            flex: 1;
+            min-width: 0;
+
         }
     }
 }

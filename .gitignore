@@ -1,14 +1,21 @@
-
+.zcodeignore
 .claude/
+test/
 
 *-sdk2.md
 
+*.loc/
 *.loc.*
 
 release/
 file/
+*.pem
+*.crx
+*.zip
 # *.min.js
 /content/*.min.*
+content/*.min.*
+popup/*.min.*
 *.min.css
 # */hacash_sdk.*
 */background.js

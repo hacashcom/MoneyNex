@@ -1,28 +1,82 @@
-<div class="header">
-    <div class="lg">
-        <img src='../image/icos/128.png' />
+<div class="reqpage">
+    <header class="pchead">
+        <div class="pchead-l">
+            <button class="acctchip ast" @click="pgh_open_adr" :title="pgh_adr"><b>{{pgh_sadr}}</b><i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i></button>
+        </div>
+        <div class="pchead-logo"></div>
+                <div class="pchead-r">
+            <button class="icbtn mnburger" @click="pgh_open_net" title="Networks"><i></i><i></i><i></i></button>
+        </div>
+    </header>
+    <!-- account switcher: existing accounts ONLY — no create/import here (home-only) -->
+    <div class="popmenu acctmenu" v-if="adrswct" @click="adrswct=0">
+        <ul>
+            <div class="tt">Switch account:</div>
+            <li v-for="(v, k) in adrmaps"
+                :class="`${k==pgh_adr?'active':''}`"
+                @click="pgh_swt_adr(k)">
+                {{k}}
+            </li>
+        </ul>
     </div>
-    <div class="pttl">Switch Network</div>
-    <div class="adrs"><h1>{{sadr}}</h1></div>
-</div>
 
-<div class="req">
-    <p class="site">{{dmu}}</p>
-    <p>{{mode == 'add' ? 'requests adding network:' : 'requests network access:'}}</p>
-    <table>
-        <tr><td>Current</td><td>{{ctip(cur)}}</td></tr>
-        <tr><td>Target</td><td>{{ctip(req)}}</td></tr>
-        <tr><td>ID</td><td>{{req.id}}</td></tr>
-        <tr><td>RPC</td><td>{{req.rpc}}</td></tr>
-        <tr v-if="req.explorer"><td>Explorer</td><td>{{req.explorer}}</td></tr>
-        <tr v-if="req.remark"><td>Remark</td><td>{{req.remark}}</td></tr>
-    </table>
-    <p class="warn" v-if="diff">A saved network with this ID already exists but uses different settings.</p>
-    <p class="warn" v-if="err">{{err}}</p>
-</div>
+    <!-- burger menu: network switching among existing networks ONLY — no add-network -->
+    <div class="popmenu netsmenu" v-if="netswct" @click="netswct=0">
+        <ul>
+            <div class="tt">Switch network</div>
+            <li v-for="n in pgh_nets"
+                :class="`${n.id==pgh_curcid?'active':''}`"
+                @click="pgh_swt_net(n.id)">
+                {{n.name}}<i v-if="n.id!=0">{{'ID '+n.id}}</i>
+            </li>
+        </ul>
+    </div>
 
-<div class="btns">
-    <button @click="nop">Cancel</button>
-    <button v-if="diff && update == 'ask' && mode != 'add'" @click="switchOnly" :class="`${ing?'ing':''}`">Switch Only</button>
-    <button @click="confirm" :class="`blue ${ing?'ing':''}`">{{actionTitle()}}</button>
+    <div class="pgtitle">Network Switch</div>
+
+    <div class="reqbody">
+        <div class="sitebar">
+            <span class="sitechip"><b>{{dmu}}</b></span>
+        </div>
+
+        <p class="lead">{{mode == 'add' ? 'This site wants to add a network:' : 'This site wants to switch network:'}}</p>
+
+        <div class="card">
+            <div class="row">
+                <label>Current</label>
+                <p>{{ctip(cur)}}</p>
+            </div>
+            <div class="row">
+                <label>Target</label>
+                <p>{{ctip(req)}}</p>
+            </div>
+            <div class="row">
+                <label>ID</label>
+                <p>{{req.id}}</p>
+            </div>
+            <div class="row">
+                <label>RPC</label>
+                <p class="mono">{{req.rpc}}</p>
+            </div>
+            <div class="row" v-if="req.explorer">
+                <label>Explorer</label>
+                <p class="mono">{{req.explorer}}</p>
+            </div>
+            <div class="row" v-if="req.remark">
+                <label>Remark</label>
+                <p>{{req.remark}}</p>
+            </div>
+        </div>
+
+        <p class="warn" v-if="diff">A saved network with this ID already exists but uses different settings.</p>
+        <p class="warn" v-if="err">{{err}}</p>
+    </div>
+
+    <div class="reqbtns">
+        <div><button class="cancel" @click="nop">Cancel</button></div>
+        <div v-if="diff && update == 'ask' && mode != 'add'">
+            <button @click="switchOnly" :class="`${ing?'ing':''}`">Switch Only</button>
+        </div>
+        <div><button class="blue" @click="confirm" :class="`${ing?'ing':''}`">{{actionTitle()}}</button></div>
+    </div>
 </div>

@@ -1,144 +1,251 @@
 
+// ============================================================================
+// Shared component base (B2 rewrite): one definition for every visual pattern
+// used by more than one page. Buttons, inputs, labels, tables, the .popbox
+// overlay, and the CSS spinner that replaces the old GIF loaders (U-1/U-3).
+// Legacy class names (.blue/.red/.orange/.mid/.ing/.ban) map onto the new
+// system so not-yet-reworked pages keep working; B3 removes them per page.
+// ============================================================================
+
+// ---- CSS spinner (replaces image/ld/*.gif) ---------------------------------
+.spinner,
+button.ing::before {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid @brand-faint;
+    border-top-color: @brand;
+    border-radius: 50%;
+    animation: mnspin 0.7s linear infinite;
+}
+
+@keyframes mnspin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// centered loader row for pages that used a bare <img class="ldf"> GIF
+.lding,
+.ldw {
+    display: flex;
+    justify-content: center;
+    padding: @sp-8 0;
+
+    .spinner {
+        width: 28px;
+        height: 28px;
+        border-width: 3px;
+    }
+}
+
+// small secondary pill (e.g. the "Details" review shortcut on request pages)
+button.mini {
+    min-width: 0;
+    width: auto;
+    height: 24px;
+    line-height: 24px;
+    padding: 0 10px;
+    font-size: @fs-12;
+    font-weight: normal;
+    color: @text-2;
+    background: @bg-card;
+    border: 1px solid @line-1;
+    box-shadow: none;
+    border-radius: @rd-input;
+
+    &:hover {
+        background: @bg-card-hover;
+        color: @text-1;
+    }
+}
+
+// ---- buttons ---------------------------------------------------------------
 button {
     position: relative;
+    // mm-ref button geometry (mm-send-*.png): 46px pill; label one step bigger
+    // (user decision 2026-10-05)
     min-width: 100px;
-    height: 44px;
+    height: 46px;
     line-height: 44px;
     padding: 0 20px;
-    border: 1px solid #fff2;
-    border-radius: 1000px;
-    background: #fff2;
-    color: @clblue;
-    font-weight: bold;
-    opacity: 0.9;
-    box-shadow: 0 4px 12px #fff4 inset, 0 -4px 12px #0006 inset;
-    text-shadow: 0 0 3px #000a;
-    font-size: 18px;
+    border-radius: @rd-pill;
+    background: @bg-card;
+    border: 1px solid @line-1;
+    color: @text-1;
+    font-weight: 500;
+    font-size: @fs-16;
+    text-align: center;
+    transition: background @tr-fast ease, border-color @tr-fast ease, color @tr-fast ease, opacity @tr-fast ease;
+
+    // primary (legacy `.blue` = primary)
     &.blue {
-        background: @clblue;
-        color: #fff;
+        transition: all 0.25s;
+        background-color: @brand;
+        background: linear-gradient(to right bottom, @brand-left, @brand-right);
+        border-color: @brand;
+        color: @ink-on-brand;
+        font-weight: bold;
+        &:hover {
+            // background: @brand-strong;
+            border-color: @brand-strong;
+            box-shadow: 0 0 @sp-2 #fff4;
+        }
+        &:active {
+            box-shadow: 0 0 @sp-2 #fff2;
+            background: linear-gradient(to right bottom, @brand-right, @brand-right);
+        }
     }
+
+    &.cancel {
+        background: @bg-card-hover;
+        border-color: #000;
+        color: @text-1;
+        &:hover {
+            border-color: @line-2;
+            // background: @bg-card-hover;
+        }
+    }
+
+    // medium size
     &.mid {
-        border-radius: 9px;
-        line-height: 38px;
-        height: 38px;
+        min-width: 84px;
+        height: 44px;
+        line-height: 42px;
+        padding: 0 16px;
+        font-size: @fs-14;
     }
+
     &.red {
-        background: @clerr;
-        color: #fff;
+        background: @sem-error;
+        border-color: @sem-error;
+        color: @text-1;
+        font-weight: bold;
+
+        &:hover {
+            background: @sem-error;
+            border-color: @sem-error;
+        }
     }
+
     &.orange {
-        background: darkorange;
-        color: #fff;
+        background: @sem-warn;
+        border-color: @sem-warn;
+        color: @ink-on-warn;
+        font-weight: bold;
     }
 
     &:hover {
-        cursor: pointer;
-        opacity: 1;
-        border-color: #fff8;
-        text-shadow: 1px 1px 1px #0006;
-    }
-    &:active {
-        box-shadow: none;
-        text-shadow: none;
-    }
-    &.ing{
-        color: transparent;
-        text-shadow: none;
-        box-shadow: none;
-        opacity: 0.6;
-        border-color: transparent;
-        &::before {
-            top: 50%;
-            left: 50%;
-            margin-left: -29px;
-            margin-top: -5px;
-            position: absolute;
-            content: url(../image/ld/w.gif);
-            filter: grayscale(1);
-            opacity: 0.5;
-        }
-    }
-    &.ban {
-        text-shadow: none;
-        cursor: default;
-        opacity: 0.2;
-        box-shadow: none;
+        border-color: @text-3;
     }
 
+    &:active {
+        background: @bg-card-active;
+    }
+
+    // loading state (legacy `.ing`): hide the label, spin instead
+    &.ing {
+        color: transparent;
+        pointer-events: none;
+        opacity: 0.85;
+
+        &::before {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin: -8px 0 0 -8px;
+        }
+    }
+
+    // legacy `.ban` and real disabled share one visual: inert
+    &.ban,
+    &:disabled,
+    &[disabled] {
+        opacity: 0.38;
+        cursor: default;
+        pointer-events: none;
+    }
+}
+
+// ---- inputs ------------------------------------------------------------------
+input, textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    background: @bg-input;
+    border: 1px solid @line-1;
+    border-radius: @rd-input;
+    color: @text-1;
+    transition: border-color @tr-fast ease, background @tr-fast ease;
 }
 
 input {
-    box-sizing: border-box;
-    @h: 34px;
-    display: block;
-    height: @h;
-    line-height: @h;
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    border: none;
-    // background-color: #000;
-    border-bottom: 2px solid #fff6;
-    &:hover {
-        border-color: @clblue;
+    height: 44px;
+    line-height: 42px;
+    padding: 0 @sp-3;
+
+    &::placeholder {
+        color: @text-3;
     }
+
+    &:hover {
+        border-color: @text-3;
+    }
+
     &:focus {
-        // box-shadow: 2px 2px 1px #0008;
-        // padding: 0 @pgpd*0.5;
-        border-color: @clblue;
-        background-image: linear-gradient(to top, #0006, #0000);
+        border-color: @brand;
     }
 }
 
 textarea {
-    @h: 20px;
-    display: block;
-    line-height: @h;
-    min-height: @h*2 + @pgpd;
-    width: 100%;
-    padding: @pgpd*0.5 0;
-    border-bottom: 2px solid #fff6;
-    &:hover {
-        border-color: @clblue;
+    min-height: 64px;
+    padding: @sp-2 @sp-3;
+    line-height: 20px;
+    resize: none; // UA handle broke the fixed-size sheets (§7.4 finding)
+
+    &::placeholder {
+        color: @text-3;
     }
+
+    &:hover {
+        border-color: @text-3;
+    }
+
     &:focus {
-        // box-shadow: 2px 2px 1px #0008;
-        // padding: 0 @pgpd*0.5;
-        border-color: @clblue;
-        background-image: linear-gradient(to top, #0006, #0000);
+        border-color: @brand;
     }
 }
 
 label {
     display: block;
     text-align: left;
-    font-size: 15px;
-    color: #fffb;
+    font-size: @fs-14;
+    color: @text-2;
 }
 
 table {
-    border: 1px solid #fff6;
+    border: 1px solid @line-2;
     border-collapse: collapse;
+
     td, th {
         padding: 2px 5px;
-        border: 1px solid #fff6;
+        border: 1px solid @line-2;
     }
 }
 
-
+// ---- popbox overlay (shared modal/toast/confirm sheet) -----------------------
 .popbox_err_tip_before {
-    &::before{
+    &::before {
         display: inline-block;
         content: "!";
         font-weight: bold;
-        background-color: @clerr;
-        color: #444;
-        border-radius: 100px;
+        background-color: @sem-error;
+        color: @text-1;
+        border-radius: @rd-pill;
         height: 16px;
         width: 16px;
-        margin: 2px 6px 0 0;
-        font-size: 14px;
+        margin: 2px @sp-2 0 0;
+        font-size: @fs-14;
         line-height: 16px;
         text-align: center;
     }
@@ -146,78 +253,679 @@ table {
 
 .popbox {
     z-index: 9;
-    position: absolute;
+    // fixed (viewport-anchored), not absolute: on pages taller than one screen (login backup/password steps)
+    // absolute + height:100% covers only the first document screen, pushing the bottom confirm sheet out of the viewport
+    // (the §7.4 final-23 root cause). .popmenu is also a fixed overlay, keeping the convention consistent.
+    position: fixed;
     top: 0;
-    left: 0;
-    width: @bodyw;
-    height: @bodyh;
-    overflow: hidden;
+    bottom: 0;
+    // horizontal bounds = the content card's column (--mn-card-inset is 0 at
+    // ≤800px viewports, then half the leftover space), so toasts, modals and
+    // the bottom confirmation sheet hug the card the way they hug the window
+    // at the 400px floor — never spill across a wide tab
+    left: var(--mn-card-inset);
+    right: var(--mn-card-inset);
+    height: 100%;
+
     .bg {
         width: 100%;
         height: 100%;
-        background: #0004;
+        background: @scrim-bg;
+        backdrop-filter: blur(@scrim-blur);
+        -webkit-backdrop-filter: blur(@scrim-blur);
     }
+
     .bg.dark {
-        background: #000b;
+        background: rgba(0, 0, 0, 0.88);
     }
+
     .con {
         .popbox_err_tip_before;
-        transition: all 0.4s ease-in-out;
+        transition: all 0.25s ease-in-out;
         position: absolute;
         z-index: 2;
-        left: 50%;
-        margin-left: 0px - (@bodyw / 2) + @pgpd;
-        top: @pgpd;
-        width: @bodyw - (@pgpd * 4);
-        display: block;
-        color: @clerr;
-        display: block;
+        left: var(--mn-pad-loose);
+        right: var(--mn-pad-loose);
+        top: @sp-3;
+        color: @text-1;
         text-align: center;
-        padding: @pgpd;
-        background: #444;
-        border-radius: 5px;
-        box-shadow: 6px 6px 12px #0008;
+        padding: @sp-3;
+        .glass-mixin();
+        border: 1px solid @line-1;
+        border-radius: @rd-card;
         line-height: 20px;
         opacity: 1;
+        word-break: break-word;
     }
+
     .con.box {
         top: auto;
-        bottom: @pgpd;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-radius: @rd-card @rd-card 0 0;
+        border-bottom: none;
+        padding: @sp-4 var(--mn-pad-need) calc(@sp-4 + env(safe-area-inset-bottom, 0px));
+
         button {
             display: block;
             width: 100%;
-            // box-shadow: none;
+
             &.ok {
-                margin: @pgpd 0;
+                margin: @sp-3 0;
             }
         }
+
         p.red {
-            color: @clerr;
+            color: @sem-error;
         }
+
         p.orange {
-            color: darkorange;
+            color: @sem-warn;
         }
     }
+
     .con.box::before {
         display: none;
         content: '';
     }
+
     .con.hide {
         top: -80px;
         opacity: 0;
         color: transparent;
     }
+
     .con.box.hide {
         top: auto;
         bottom: -80px;
-        
     }
 
     &.hide {
         display: none;
+
         .bg {
             display: none;
         }
     }
 }
 
+// wptip is a TRANSIENT toast, not a modal: its popbox bg (a 72% black scrim)
+// dimmed the whole page for every validation hint (audit 2026-10-05, dotrs
+// invalid-amount shot) and swallowed clicks while it showed. Kill the scrim
+// for this instance only — confirm sheets (wpcfm/wpass) keep theirs.
+#wptip .popbox .bg {
+    display: none;
+}
+
+// ============================================================================
+// pchead — the one shared page-header implementation (B2; replaces the four
+// copied ~210-line header style blocks, U-3). Markup contract used by page
+// templates:
+//
+//   <header class="pchead">
+//     <div class="pchead-l"><button class="icbtn"><img src=... /></button></div>
+//     <div class="pchead-t">Sign Transaction</div>
+//     <div class="pchead-r"><span class="acctchip">1MzNY1oA3...</span></div>
+//   </header>
+//
+// dApp request pages additionally render the site bar:
+//   <div class="sitechip"><img src=... /><b>host.name</b></div>
+// ============================================================================
+
+// mm-ref hamburger — three bare bars; public since the request-page headers
+// share the home header now (user decision 2026-10-06)
+.mnburger {
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+
+    i {
+        display: block;
+        width: 18px;
+        height: 2px;
+        border-radius: 1px;
+        background: @text-1;
+    }
+}
+
+.icbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
+    border: none; // bare icon button — the global button border read as a circle
+    border-radius: @rd-pill;
+    color: @text-2;
+    transition: background @tr-fast ease, color @tr-fast ease;
+
+    img, svg, .icf {
+        width: 22px;
+        height: 22px;
+        color: inherit;
+    }
+
+    &:hover {
+        background: @bg-card-hover;
+        color: @text-1;
+    }
+}
+
+.pchead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: @sp-1;
+    min-height: 54px;
+    // header chrome uses the NECESSARY (non-zero) pad: at the 400px floor the
+    // compressible pad bottoms out at 0 and the account chip sat flush on the
+    // window edge / clipped its round cap (§7.4 finding, raisefee/switchchain)
+    padding: @sp-1 var(--mn-pad-need);
+    border-bottom: 1px solid @line-2;
+
+    .pchead-l,
+    .pchead-r {
+        display: flex;
+        align-items: center;
+        gap: @sp-1;
+        flex: 1 1 0;
+        min-width: 0;
+        .acctchip {
+            max-width: 110px; // long mono addresses must clip, not push the title
+        }
+    }
+
+    .pchead-r {
+        justify-content: flex-end;
+    }
+
+    .pchead-t {
+        flex: 0 1 auto;
+        text-align: center;
+        font-size: @fs-18;
+        font-weight: 500;
+        color: @text-1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // header logo back — CENTERED slot (user decision 2026-10-06): both side
+    // groups are flex:1 1 0, so a middle auto-sized item sits geometrically
+    // dead-center without absolute positioning. The variant is picked by
+    // viewport width, height fixed 50px, hidden below 400px.
+    .pchead-logo {
+        flex: 0 0 auto;
+        height: 25px;
+        background: center / contain no-repeat;
+    }
+}
+
+.pchead .pchead-logo {
+    display: none; // <400px: no logo (too little header room)
+
+    @media (min-width: 400px) {
+        display: block;
+        width: 25px; // logo.svg 150/150 @ 50px high
+        height: 25px;
+        background-image: url('../image/icos/logo.svg');
+    }
+
+    @media (min-width: 600px) {
+        width: 100px; // logo-h.svg 600/150 @ 50px high
+        height: 25px;
+        background-image: url('../image/icos/logo-h.svg');
+    }
+
+    @media (min-width: 800px) {
+        width: 100px; // logo-d.svg 330/150 @ 100px high
+        height: 50px;
+        background-image: url('../image/icos/logo-d.svg');
+    }
+}
+
+// THE one card definition (user decision 2026-10-05: all card styles are
+// defined once here — translucent white surface, hairline border, shared radius)
+// glass — the ONE frosted-glass surface (user request 2026-10-06): confirm
+// sheets (wpcfm/wpass), toasts and dropdown menus share a single definition
+.glass-mixin() {
+    background: @glass-bg;
+    backdrop-filter: blur(@glass-blur) saturate(140%);
+    -webkit-backdrop-filter: blur(@glass-blur) saturate(140%);
+    box-shadow: @shadow-pop;
+}
+
+.card {
+    background: @bg-card;
+    border: 1px solid @line-2;
+    border-radius: @rd-card;
+    padding: @sp-3;
+    margin-bottom: var(--mn-gap, @sp-2);
+}
+
+// page title rendered in CONTENT (request pages share the home header, so
+// their title lives below it — one definition, one step bigger: 2026-10-05)
+.pgtitle {
+    text-align: center;
+    font-size: @fs-18;
+    font-weight: 500;
+    color: @text-1;
+    padding: @sp-3 var(--mn-pad-loose) @sp-1;
+}
+
+// dApp origin chip: the site bar on request pages (replaces scattered dmu text)
+.sitechip {
+    display: inline-flex;
+    align-items: center;
+    gap: @sp-2;
+    max-width: 100%;
+    padding: 6px @sp-3;
+    background: @bg-card;
+    border: 1px solid @line-1;
+    border-radius: @rd-pill;
+    font-size: @fs-14;
+    font-weight: bold;
+    color: @text-1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    img, .icf {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+    }
+
+    b {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: bold;
+    }
+}
+
+// ghost icon button: no chrome at rest, tinted on hover (home "Copy address")
+.ghbtn {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    border: none;
+    // small hand-rolled control: must NOT inherit the 46px button geometry —
+    // the global rule's line-height alone inflated the line box (review 2026-10-06)
+    line-height: 1.2;
+    gap: @sp-1;
+    padding: 3px @sp-2;
+    background: transparent;
+    border-radius: @rd-pill;
+    color: @text-2;
+    cursor: pointer;
+    transition: background @tr-fast ease, color @tr-fast ease;
+
+    &:hover {
+        background: @bg-card-hover;
+        color: @text-1;
+    }
+
+    .icf, img {
+        width: 16px;
+        height: 16px;
+    }
+
+    b {
+        font-weight: normal;
+        font-family: @font-mono;
+        font-size: @fs-12;
+    }
+}
+
+// truncated account/address chip
+.acctchip {
+    display: inline-flex;
+    align-items: center;
+    gap: @sp-1;
+    max-width: 100%;
+    padding: 4px @sp-2;
+    background: @bg-card;
+    border: 1px solid @line-1;
+    border-radius: @rd-pill;
+    font-size: @fs-12;
+    font-family: @font-mono;
+    color: @text-2;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color @tr-fast ease, color @tr-fast ease;
+
+    &:hover {
+        border-color: @brand;
+        color: @text-1;
+    }
+
+    // pill-shaped trigger variant (account switcher on request pages): the
+    // switcher moved to the header LEFT (user decision 2026-10-05, mm-ref) and
+    // reads as plain text + chevron like home's — no pill chrome
+    &.ast {
+        min-width: 0;
+        height: 32px;
+        background: transparent;
+        border-color: transparent;
+        padding: 0 @sp-2;
+        font-size: @fs-14;
+        color: @text-1;
+
+        &:hover {
+            background: @bg-card-hover;
+        }
+
+        b {
+            font-weight: 500;
+        }
+
+        .icf {
+            width: 12px;
+            height: 12px;
+            color: @text-2;
+        }
+    }
+}
+
+// ============================================================================
+// seg — the ONE segmented pill control (mm-style): a pill well holding equal
+// centered segments; the active one gets the raised card tint. Applied via
+// .seg-mixin() from page styles (login Create/Import, dotrs HAC/HACD).
+// ============================================================================
+.seg-mixin(@seg-h: 40px) {
+    display: flex;
+    background: @bg-input;
+    border: 1px solid @line-1;
+    border-radius: @rd-pill;
+    padding: 3px;
+
+    > * {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: @seg-h;
+        border-radius: @rd-pill;
+        // same size/weight as buttons (user decision 2026-10-05)
+        font-size: @fs-18;
+        font-weight: 500;
+        color: @text-2;
+        cursor: pointer;
+        transition: background @tr-fast ease, color @tr-fast ease;
+        text-align: center;
+
+        h1, a {
+            font-size: inherit;
+            font-weight: inherit;
+            color: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .icf {
+            width: 16px;
+            height: 16px;
+        }
+
+        &:hover {
+            color: @text-1;
+        }
+
+        &.active {
+            text-shadow: 1px 1px 1px #000;
+            color: @brand;
+            background: linear-gradient(to right bottom, 
+                fade(@brand-left, 18%), fade(@brand-left, 8%));
+        }
+    }
+}
+
+// ============================================================================
+// popmenu — shared dropdown menu pattern (full-screen scrim + anchored card).
+// Used by the home options/account menus and request-page account switchers.
+// Modifier .acctmenu renders the mono address-list variant.
+// ============================================================================
+
+.popmenu {
+    user-select: none;
+    z-index: 20;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    // bound the scrim (and the anchored menu card inside it) to the content
+    // card's column: the ⋮ menu opens at the card's right edge, not at the
+    // browser window's top-right corner (user decision 2026-10-05)
+    left: var(--mn-card-inset);
+    right: var(--mn-card-inset);
+    background: @scrim-bg;
+    backdrop-filter: blur(@scrim-blur);
+    -webkit-backdrop-filter: blur(@scrim-blur);
+
+    ul {
+        .glass-mixin();
+        display: block;
+        position: absolute;
+        top: @sp-2;
+        right: @sp-2;
+        width: 264px;
+        .glass-mixin();
+        border: 1px solid @line-1;
+        border-radius: @rd-card;
+        overflow: hidden;
+        padding: @sp-1 0;
+    }
+
+    .tt {
+        padding: @sp-2 @sp-3;
+        text-align: left;
+        font-size: @fs-12;
+        color: @text-2;
+    }
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: @sp-3;
+        padding: 10px @sp-3;
+        list-style: none;
+        font-size: @fs-14;
+        color: @text-1;
+        cursor: pointer;
+        transition: background @tr-fast ease;
+
+        a {
+            color: inherit;
+            text-decoration: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            i {
+                display: block;
+                font-size: @fs-12;
+                font-style: normal;
+                color: @text-3;
+            }
+        }
+
+        img, .icf {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        &:hover {
+            background: @bg-card-hover;
+        }
+
+        &.f {
+            border-top: none;
+        }
+
+        &.danger {
+            color: @sem-error;
+        }
+
+        &.active {
+            color: @brand;
+        }
+    }
+
+    // network switcher menu ONLY: the inline "ID n" tag pins right (the row
+    // name stays left). This must NOT live on the generic li — the option
+    // menu's leading icons are `i` too and an auto margin here right-aligned
+    // every menu row (found live 2026-10-06)
+    &.netsmenu li i {
+        display: block;
+        margin-left: auto;
+        font-size: @fs-10;
+        font-style: normal;
+        color: @text-3;
+    }
+
+    // account-list variant: opened from the top-LEFT switcher (mm-ref), so
+    // the card anchors to the same corner instead of the right edge
+    &.acctmenu ul {
+        // top falls through to the base rule (@sp-2): the switch account card
+        // sits level with the right options menu (user review 2026-10-06), and
+        // the insets mirror each other — 8px off the card's left edge here,
+        // 8px off its right edge for the options menu
+        .glass-mixin();
+        left: @sp-2;
+        right: auto;
+    }
+
+    &.acctmenu li {
+        position: relative;
+        display: block;
+        padding-left: 30px;
+        font-family: @font-mono;
+        font-size: @fs-12;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &.active {
+            color: @brand;
+
+            &::before {
+                content: '';
+                position: absolute;
+                left: 14px;
+                top: 50%;
+                margin-top: -4px;
+                width: 7px;
+                height: 7px;
+                background: @brand;
+                border-radius: @rd-pill;
+            }
+        }
+    }
+
+    .add {
+        border-top: 1px solid @line-2;
+        padding: @sp-2;
+
+        button {
+            display: block;
+            width: 100%;
+            height: auto;
+            min-height: 38px;
+            line-height: 20px;
+            padding: @sp-2 @sp-3;
+            font-size: @fs-14;
+            white-space: normal;
+            background: @bg-input;
+            border: 1px solid @line-1;
+
+            &:hover {
+                border-color: @brand;
+            }
+        }
+    }
+}
+
+// request-page skeleton shared by dApp request pages (formalized for
+// transfer/signtx in B3-5): header + scrollable body + fixed action bar.
+.reqpage {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+
+    .reqbody {
+        flex: 1;
+        padding: @sp-3 var(--mn-pad-need);
+        overflow-y: auto;
+        .card {
+            border: none;
+            border-radius: 0;
+        }
+    }
+    .sitebar {
+        display: flex;
+        justify-content: center;
+        margin-bottom: @sp-3;
+    }
+
+    .reqbtns {
+        // adaptive row (user rule 2026-10-06, all button-row pages): buttons
+        // share one line when the row fits, wrap and stretch full-width line
+        // by line when it doesn't — no fixed stacking, any viewport width
+        display: flex;
+        flex-wrap: wrap;
+        gap: @sp-2 @sp-3;
+        padding: @sp-3 var(--mn-pad-need) @sp-4;
+
+        > div {
+            // basis 0 equalises the columns; min-width:max-content feeds the
+            // LABEL width to the wrap decision (buttons carry width:100%, so
+            // an auto basis would read as one-per-line forever)
+            flex: 1 1 0;
+            min-width: max-content;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+
+        }
+    }
+}
+
+// ============================================================================
+// icf — monochrome icon via CSS mask (B3-10). All image/ftic/*.svg use
+// fill="currentColor"; rendering them through a mask colored by `color` makes
+// every icon themeable from tokens. Usage in templates:
+//   <i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i>
+//   <i class="icf" :style="{'--ic': `url(${txicon(v)})`}"></i>
+// Size with width/height in the surrounding context rules.
+// ============================================================================
+
+.icf {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background-color: currentColor;
+    -webkit-mask: var(--ic) center / contain no-repeat;
+    mask: var(--ic) center / contain no-repeat;
+}
+
+// semantic icon contexts (small-area, desaturated — see exemption list)
+.success .icf {
+    color: @sem-ok;
+}
+
+.fail .icf,
+.txerr .icf {
+    color: @sem-error;
+}

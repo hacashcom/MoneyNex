@@ -100,18 +100,18 @@ eq(ctx.mnx_asset_log_amount('123456', 2, 'USD Coin'), '1234.56 USD Coin', 'log a
 eq(ctx.mnx_u64_string('9007199254740993'), '9007199254740993', 'u64 string')
 eq(ctx.mnx_u64_string(1001), '1001', 'u64 number small')
 
-// asset metadata cache + display text（签名页/全览页/Activity 共用口径）
+// asset metadata cache + display text (shared by the signing/review/Activity pages)
 eq(ctx.mnx_asset_meta_norm({ decimal: 6, name: 'HUSD', ticket: 'HUSD' }).decimal, 6, 'meta norm decimal')
 eq(ctx.mnx_asset_meta_norm({ metadata: false, decimal: 6 }), null, 'meta norm metadata:false')
 eq(ctx.mnx_asset_meta_norm({ decimal: 17 }), null, 'meta norm decimal > 16 rejected')
 eq(ctx.mnx_asset_meta_norm({ decimal: '6', name: ' X ' }).name, 'X', 'meta norm trims name')
 eq(ctx.mnx_asset_meta_norm(null), null, 'meta norm null')
-// 未预热缓存：显示原始 atoms 且 known=false（绝不猜小数位）
+// cache not warmed: raw atoms with known=false (never guess decimals)
 let unknown = ctx.mnx_asset_amount_text('5000000', '5')
 eq(unknown.text, '5000000', 'unknown meta -> raw atoms')
 eq(unknown.known, false, 'unknown meta flag')
 eq(unknown.unit, '', 'unknown meta unit empty')
-// 预热后：按链上 decimal 换算，单位取 ticket
+// after warm-up: converted via the on-chain decimal, unit from ticket
 ctx.mnx_asset_meta_mem = { '5': { decimal: 6, name: 'HUSD', ticket: 'HUSD' } }
 let known = ctx.mnx_asset_amount_text('5000000', '5')
 eq(known.text, '5', 'known meta applies decimal')

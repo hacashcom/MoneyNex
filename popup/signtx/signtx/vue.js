@@ -5,8 +5,8 @@ var routePageSignTx = (adr, clbk) => {
     if(!txbody){
         return alert('tx body must give!')
     }
-    // URL 参数永远是字符串，"false" 是 truthy：只有显式 true/1 才自动广播，
-    // 缺省与 false 一律只签名不提交（DApp 拿到签名结果自行决定何时广播）。
+    // URL params are always strings and "false" is truthy: only explicit true/1 auto-broadcasts,
+    // default and false both sign without submitting (the DApp receives the signature and decides when to broadcast).
     let asv = String(urlquery.autosubmit == null ? '' : urlquery.autosubmit).trim().toLowerCase()
     , autosubmit = (asv == 'true' || asv == '1')
     let sa = 'sign_addr'
@@ -54,11 +54,16 @@ var routePageSignTx = (adr, clbk) => {
                 t.txsgck = {}
                 t.txdesc = []
                 t.layouterr = ''
+                // Terminal refusal must reach the DApp (single-reply contract, same
+                // as the ChainAllow branch below): a banned Sign button would
+                // otherwise leave the DApp's promise hanging forever. The window
+                // stays open showing the reason; Cancel then only closes.
+                await answerOnce({ret: 1, err: rv.err, code: 'sign_refused'})
                 return
             }
             let review = rv.review
             t.txres = review
-            // body 内 ChainAllow 必须允许当前网络，否则直接拒绝并回告 DApp（远端语义）
+            // the body's ChainAllow must allow the current network, otherwise refuse outright and answer the DApp (remote semantics)
             if(typeof assertCheckedBodyChain === 'function'){
                 let cherr = await assertCheckedBodyChain(review, yes)
                 if(cherr) {
@@ -73,7 +78,7 @@ var routePageSignTx = (adr, clbk) => {
                 }
             }
             await mnx_msglayout_load()
-            // Asset 金额显示需要链上小数位：先按 review.asset_serials 补齐元数据（失败也不阻断签名）
+            // Asset amount display needs on-chain decimals: warm the metadata from review.asset_serials first (failure never blocks signing)
             await mnx_asset_meta_ensure(review.asset_serials || [])
             t.txdesc = parseTxDesc(review)
             await mnx_txdesc_attach_code(review, t.txdesc)

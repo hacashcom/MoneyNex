@@ -1,129 +1,107 @@
 
-#dotrs{
-
-.form {
-    padding: 0 @pgpd*2;
-    .ipw {
-        padding-top: @pgpd*2;
-    }
-    .diary {
-        // font-size: 15px;
-    }
-    .cis {
-        display: flex;
-        margin: @pgpd*0.5 0;
-        // border-radius: 12px;
-        overflow: hidden;
-        @h: 20px;
-        a {
-            position: relative;
-            display: block;
-            background: #fff2;
-            padding: 3px 10px;
-            height: @h;
-            line-height: @h;
-            cursor: pointer;
-        }
-        .it {
-            img {
-                display: none;
-                top: 3px;
-                left: 10px;
-                height: @h;
-                position: absolute;
-            }
-            &.f a{
-                border-radius: 5px 0 0 5px;
-            }
-            &.e a{
-                border-radius: 0 5px 5px 0;
-            }
-        }
-        .it.active {
-            img {
-                display: block;
-            }
-            a {
-                padding-left: 36px;
-                background-image: linear-gradient(to right, #0000, @clblue, #0000);
-                cursor: default;
-            }
-            &.f a{
-                background-image: linear-gradient(to right, @clblue, #0000);
-            }
-            &.e a{
-                background-image: linear-gradient(to right, #0000, @clblue);
-            }
-        }
-    }
-    .ainfo {
-        padding: @pgpd*0.5 0 @pgpd;
-        h3 {
-            font-size: 16px;
-            font-weight: normal;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            i {
-                font-style: normal;
-                font-size: 13px;
-                color: #fff8;
-                margin-left: 4px;
-            }
-        }
-        p {
-            margin-top: 4px;
-            font-size: 13px;
-            color: #fff8;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    }
-    .amtw {
-        position: relative;
-        input {
-            padding-right: 52px;
-        }
-        .max {
-            position: absolute;
-            right: 0;
-            top: 0;
-            height: 34px;
-            line-height: 34px;
-            padding: 0 8px;
-            color: @clblue;
-            cursor: pointer;
-            font-size: 13px;
-            &:hover {
-                text-decoration: underline;
-            }
-        }
-    }
-}
-
-.pmtip {
-    text-align: right;
-    color: #fff6;
-    font-size: 14px;
-    margin-bottom: 10px;
-    &.net {
-        text-align: left;
-        margin-bottom: 0;
-        b {
-            color: @clblue;
-            font-size: 14px;
-        }
-    }
-}
-
-.btns {
+// dotrs / Send form (B3-2): card form on token system.
+#dotrs {
     display: flex;
-    justify-content: space-evenly;
-    button {
-        width: 42%;
+    flex-direction: column;
+    min-height: 100%;
+
+    .form {
+        flex: 1;
+        padding: @sp-2 var(--mn-pad-need) 0;
+
+        .ipw {
+            margin-bottom: @sp-4;
+
+            label {
+                margin-bottom: @sp-1;
+                font-size: @fs-14;
+                font-weight: 500;
+                color: @text-1;
+            }
+        }
+
+        .diary {
+            font-family: @font-mono;
+            font-size: @fs-12;
+        }
+
+        // HAC / HACD selector
+        .cis {
+            // the ONE segmented-pill definition (comp.less .seg-mixin) —
+            // HAC/HACD are two halves of a single control, not two buttons
+            .seg-mixin();
+            margin: @sp-1 0 @sp-2;
+        }
+
+        // asset info card (ASSET transfer)
+        .ainfo {
+            margin: @sp-1 0 @sp-2;
+            padding: @sp-3;
+            background: @bg-card;
+            border: 1px solid @line-2;
+            border-radius: @rd-card;
+
+            h3 {
+                font-size: @fs-14;
+                font-weight: 500;
+                color: @text-1;
+
+                i {
+                    font-style: normal;
+                    color: @text-3;
+                    font-size: @fs-12;
+                }
+            }
+
+            p {
+                margin-top: 2px;
+                font-size: @fs-12;
+                color: @text-2;
+            }
+        }
+
+        .amtw {
+            position: relative;
+
+            input {
+                padding-right: 52px;
+            }
+
+            .max {
+                position: absolute;
+                right: @sp-2;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: @fs-12;
+                font-weight: 500;
+                color: @brand;
+                cursor: pointer;
+                padding: 2px 6px;
+                border-radius: @rd-input;
+
+                &:hover {
+                    background: @brand-faint;
+                }
+            }
+        }
+
+        .pmtip {
+            font-size: @fs-12;
+            color: @text-3;
+            text-align: right;
+            font-family: @font-mono;
+        }
     }
-}
 
+    .btns {
+        display: flex;
+        gap: @sp-3;
+        padding: @sp-3 var(--mn-pad-need) @sp-4;
 
+        button {
+            flex: 1;
+            min-width: 0;
+
+        }
+    }
 }

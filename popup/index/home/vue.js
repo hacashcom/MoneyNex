@@ -25,7 +25,7 @@ var refreshHomeTrsLog = nil
         /* home */
         blsctx: ['HAC', 'HACD'],
         blsobj: nil, // {HAC, HACD, BTC, SAT}
-        activeTab: 'activity', // assets | activity | collection
+        activeTab: 'assets', // assets | activity | collection (display initial; appendix.3-9)
         /* assets */
         assets: nil, // null=loading, []=empty
         assetsError: '',
@@ -57,8 +57,8 @@ var refreshHomeTrsLog = nil
                     decimal: a.decimal,
                     name: a.name,
                     ticket: a.ticket,
-                    // dotrs 转账页以 asset.metadata 作为"元数据可用"判据（decimal 来自链上
-                    // asset_meta），这里必须随对象一起传，否则一律报 Asset metadata unavailable。
+                    // the dotrs transfer page treats asset.metadata as the "metadata available" test (decimal comes
+                    // from on-chain asset_meta); it must travel with the object or every amount reports Asset metadata unavailable.
                     metadata: a.metadata,
                 }
             }, ()=>{
@@ -113,7 +113,7 @@ var refreshHomeTrsLog = nil
             let t = this
             t.addr = adr
             t.sadr = addrOmitted(adr)
-            t.activeTab = 'activity' // reset
+            t.activeTab = 'assets' // reset to the default tab (2026-10-05)
             t.clcted = no // refresh
             t.dialis = nil
             t.assets = nil
@@ -144,7 +144,7 @@ var refreshHomeTrsLog = nil
             }
             let rskcf = prompt ("Please type 'I ACKNOWLEDGE THE RISK' in the box below and click Confirm to delete all data, including private keys.", '')
             if(!rskcf){
-                return // prompt 取消（null）：用户反悔，不动任何数据
+                return // prompt canceled (null): the user backed out, touch nothing
             }
             if('IACKNOWLEDGETHERISK'!=rskcf.replace(/\s+/ig, '')){
                 return
@@ -174,11 +174,17 @@ var refreshHomeTrsLog = nil
         ,chainRpc(){
             return ((this.chain && this.chain.rpc) || '').replace(/^https?:\/\//i, '')
         }
-        // Networks 管理页（chains/chainform 组件随 moneynex 页构建）
+        // Networks management page (the chains/chainform components ship with the moneynex page)
         , opchains(){
             routePageChains(()=>{
                 pushhpgw('chains')
             })
+        }
+        // Connected sites management page (A3, appendix.3-2/3-4): standalone page popup/connectedsites.html,
+        // listing connect_sites grants with per-site disconnect. The ⋮ menu item itself belongs to the vue.html template
+        // (B drafted it, A wired the event); before B's styling the page is reachable directly by URL.
+        , opconnlists(){
+            this.opurl('popup/connectedsites.html')
         }
         // load balance (HAC/HACD and Assets are applied independently)
         ,async ldbls() {
@@ -207,7 +213,7 @@ var refreshHomeTrsLog = nil
             }else{
                 t.assetsError = ''
                 t.assets = ast.list
-                // 同一份 asset metadata 缓存供签名页/全览页使用（decimal/name/ticket 不可变）
+                // the same asset metadata cache serves the signing/review pages (decimal/name/ticket are immutable)
                 mnx_asset_meta_put_list(ast.list).catch(()=>{})
             }
             t.assetsLoaded = yes
@@ -286,9 +292,9 @@ var refreshHomeTrsLog = nil
             if(!updtrs.length) {
                 return
             }
-            // 并发查询（单笔等待会随 pending 数量线性变慢），
-            // 网络层失败（do_fetch_get 返回 {ret:1,err}）必须跳过：
-            // 绝不能把一次网络抖动当成"链上查无此交易"而永久标成失败。
+            // concurrent queries (waiting on each one would slow linearly with the pending count),
+            // network-level failures (do_fetch_get returns {ret:1,err}) must be skipped:
+            // one network hiccup must never be read as "not found on chain" and permanently marked failed.
             let curid = 0
             try {
                 if(typeof getCurrentChain === 'function'){
@@ -296,7 +302,7 @@ var refreshHomeTrsLog = nil
                 }
             } catch(e) {}
             let results = await Promise.all(updtrs.map(async (li) => {
-                // 其它链上发生的交易不在此链的节点上查询：保持其原状态
+                // transactions on other chains are not queried on this chain's node: keep their status
                 if(curid && (parseInt(li.chain_id || 0) || 0) !== curid){
                     return { hash: li.hash, res: { skipped: true } }
                 }
@@ -304,12 +310,12 @@ var refreshHomeTrsLog = nil
                 return { hash: li.hash, res: res }
             }))
             let updtsome = no
-            , sts = {} // hash -> 新状态，稍后按 hash 合并
+            , sts = {} // hash -> new status, merged by hash afterwards
             ;
             for(let i in results){
                 let { hash, res } = results[i]
                 if(res.err || res.ret){
-                    continue // 查询本身失败：本轮跳过，状态保持 pending（用户也可在失败项上手动刷新）
+                    continue // the query itself failed: skip this round, status stays pending (failed items can be refreshed manually)
                 }
                 if(parseInt(res.confirm) >= 0){
                     sts[hash] = 1 // ok
@@ -319,7 +325,7 @@ var refreshHomeTrsLog = nil
                     updtsome = yes
                 }
             }
-            // 同步内存展示对象（updtrs 的项与 t.trslgs 同引用），UI 立即反馈
+            // sync the in-memory display objects (updtrs items share references with t.trslgs) for immediate UI feedback
             for(let i in updtrs){
                 let st = sts[updtrs[i].hash]
                 if(st != nil) {
@@ -327,8 +333,8 @@ var refreshHomeTrsLog = nil
                 }
             }
             if(updtsome) {
-                // 写回前重读 storage，只按 hash 合并状态：转账页（dotrs）可能刚插入新记录，
-                // 直接整数组写回旧的内存 homeTrsDatas 会把它覆盖掉（读-改-写竞态）。
+                // re-read storage before writing back and merge by hash only: the transfer page (dotrs) may have just inserted records,
+                // and writing the whole stale in-memory homeTrsDatas array back would overwrite them (read-modify-write race).
                 let logs = await readTransactionLogs()
                 for(let i in logs){
                     let st = sts[logs[i].hash]
@@ -340,9 +346,9 @@ var refreshHomeTrsLog = nil
                 homeTrsDatas = logs
             }
         }
-        // 手动刷新一笔被标为失败的交易（活动列表 Failed 旁的刷新图标）：
-        // 查一次、如实更新状态——上链则转成功、回到内存池则转 pending（交给自动刷新跟进）、
-        // 仍查不到则保持失败，可继续手动刷新；网络失败只提示、不动状态。
+        // manually refresh a transaction marked failed (the refresh icon next to Failed in the activity list):
+        // query once and update the status faithfully — mined becomes success, back in the mempool becomes pending (auto-refresh takes over),
+        // still missing stays failed and can be refreshed again; network errors only notify and never touch status.
         , async refreshtx(li) {
             if(li.rfig){
                 return
@@ -356,7 +362,7 @@ var refreshHomeTrsLog = nil
                 }
                 let st = parseInt(res.confirm) >= 0 ? 1 : (res.pending ? 0 : 2)
                 li.stat = st
-                // 写回前重读 storage，只按 hash 合并状态（与 updtxsts 相同的竞态保护）
+                // re-read storage before writing back, merge by hash only (same race protection as updtxsts)
                 let logs = await readTransactionLogs()
                 for(let i in logs){
                     if(logs[i].hash == li.hash){ logs[i].stat = st }
@@ -394,7 +400,7 @@ var refreshHomeTrsLog = nil
         } catch(e) {}
         clbk && clbk()
         // load transaction
-        await t.swttab('activity')
+        await t.swttab('assets') // display initial tab (appendix.3-9); tx log still loads via refreshAll
         // refresh trs log
         refreshHomeTrsLog = async (reload) => {
             await rfhtl(t, reload)
@@ -420,8 +426,8 @@ var refreshHomeTrsLog = nil
         if(reload) {
             t.activeTab = 'activity' // switch to trs log card
         }
-        // 每次都重读 storage：转账页（dotrs）可能刚写入新记录，
-        // 复用旧的内存数组会让后续整数组写回把它覆盖掉（W52）。
+        // re-read storage every time: the transfer page (dotrs) may have just written new records,
+        // reusing the stale in-memory array would let a later whole-array write overwrite them (W52).
         homeTrsDatas = await readTransactionLogs()
         // homeTrsDatas[0].stat = 0
         let curtrs = []

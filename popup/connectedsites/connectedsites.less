@@ -1,0 +1,91 @@
+// Connected sites management page (B3-4): A shipped the plain skeleton; this is
+// the token-system pass. A's class names are kept — layout-only restyle.
+// The page renders inside the popup with the shared header handling back nav,
+// so the list here owns the scrollable body.
+
+.cs-wrap {
+    padding: @sp-3 var(--mn-pad-loose) @sp-4;
+
+    .ttl {
+        h1 {
+            margin: 0 0 4px;
+            font-size: 29px;
+            font-weight: 500;
+            color: @text-1;
+        }
+
+        .sub {
+            margin: 0 0 @sp-3;
+            font-size: @fs-12;
+            line-height: 18px;
+            color: @text-3;
+        }
+    }
+
+    ul.cs-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+
+        li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: @sp-3;
+            background: @bg-card;
+            border: 1px solid @line-2;
+            border-radius: @rd-card;
+            padding: @sp-3;
+            margin-bottom: @sp-2;
+
+            .cs-host {
+                font-weight: 500;
+                font-size: @fs-14;
+                color: @text-1;
+            }
+
+            .cs-origin-full {
+                font-size: @fs-10;
+                color: @text-3;
+                word-break: break-all;
+            }
+
+            .cs-meta {
+                font-size: @fs-10;
+                color: @text-3;
+                margin-top: 2px;
+            }
+
+            .cs-dis {
+                white-space: nowrap;
+                flex: none;
+                min-width: 0;
+                height: 32px;
+                line-height: 32px;
+                padding: 0 @sp-3;
+                font-size: @fs-12;
+                font-weight: normal;
+                color: @sem-error;
+                background: transparent;
+                border: 1px solid @line-1;
+
+                &:hover {
+                    border-color: @sem-error;
+                    background: @sem-error-bg;
+                }
+            }
+        }
+    }
+
+    .cs-empty,
+    .cs-loading {
+        text-align: center;
+        padding: @sp-8 0;
+        font-size: @fs-12;
+        color: @text-3;
+
+        .sub {
+            margin: @sp-1 0 0;
+        }
+    }
+}

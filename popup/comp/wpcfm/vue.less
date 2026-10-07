@@ -1,8 +1,34 @@
+
+// wpcfm — bottom confirm sheet (B2 reskin). Behavior classes/fields from
+// wpcfm.js (show/cnsh/tip/okbtn/col) stay untouched; the template gains a
+// .btnrow wrapper so Confirm/Cancel sit side by side (MetaMask pattern).
 .popbox {
     p.tip.cfmt {
         text-align: center;
+        font-size: @fs-14;
+        line-height: 22px;
+        color: @text-1;
+        margin-bottom: @sp-2;
+
         table {
             margin: auto;
+        }
+    }
+
+    .con.box .btnrow {
+        // adaptive like .reqbtns (comp.less): one row when it fits
+        display: flex;
+        flex-wrap: wrap;
+        gap: @sp-2 @sp-3;
+
+        button {
+            // basis 0 (not auto): the global .con.box button width:100% would
+            // otherwise become the flex basis and stack the pair forever
+            flex: 1 1 0;
+            min-width: max-content;
+            // the stacked-sheet era gave .ok a 12px vertical margin; in the flex
+            // row it pushed "Backed up" 12px below "Cancel" (review shot 02)
+            margin: 0;
         }
     }
 }

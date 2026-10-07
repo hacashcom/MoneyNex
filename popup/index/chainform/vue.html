@@ -1,9 +1,12 @@
-<div class="header">
-    <div class="bk" @click="back">
-        <img :src="`${icfp}left.svg`" />
+<header class="pchead">
+    <div class="pchead-l">
+        <button class="icbtn" @click="back" title="Back">
+            <i class="icf" style="--ic: url('../image/ftic/left.svg')"></i>
+        </button>
     </div>
-    <h1 class="ptt">{{isedit?'Edit Network':'Add Network'}}</h1>
-</div>
+    <h1 class="pchead-t">{{isedit?'Edit Network':'Add Network'}}</h1>
+    <div class="pchead-r"></div>
+</header>
 
 <div class="chnfrm">
     <div class="item">
@@ -29,6 +32,6 @@
 </div>
 
 <div class="btns">
-    <button @click="back">Cancel</button>
+    <button class="cancel" @click="back">Cancel</button>
     <button class="blue" @click="save">Save</button>
 </div>

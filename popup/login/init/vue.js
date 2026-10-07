@@ -195,8 +195,8 @@ var routePageInit = async (sc, force) => {
         if(acc){
             let saved = await stoSaveAccount(acc, pass)
             if(!saved){
-                // 会话已锁且没有可用口令：账户未落盘，也绝不把 current_account
-                // 指向一个不存在的记录（否则后续签名会一直解锁失败）
+                // session locked with no usable passphrase: the account is not persisted, and current_account must
+                // never point at a nonexistent record (or every later signature would fail to unlock)
                 showWPerr('Wallet is locked — unlock first, then retry')
                 return
             }
@@ -220,8 +220,8 @@ var routePageInit = async (sc, force) => {
     
     function createaccount(t, stuff, iscreatenew, rawkey) {
         t.crting = yes
-        // SDK: privkey 默认 = SHA256(口令)（与旧 wasm create_account_by 派生一致）；
-        // rawkey=true 表示 stuff 已是 64-hex 私钥（直接导入，或由助记词 BIP39 seed 得到）。
+        // SDK: privkey defaults to SHA256(passphrase) (same derivation as the old wasm create_account_by);
+        // rawkey=true means stuff is already a 64-hex private key (imported directly, or derived from a BIP39 mnemonic seed).
         let keyhex = rawkey ? stuff : SHA256(stuff)
         mnx_derive_address(keyhex).then(res => {
             t.crting = false

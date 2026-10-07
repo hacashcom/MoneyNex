@@ -117,6 +117,14 @@ var routePageSignText = (adr, clbk) => {
         clbk && clbk()
         await t.loadtext()
         await t.checktext()
+        // Refusal (raw 32B hash / bad length) is a terminal answer: reply {err}
+        // immediately, or the DApp's promise hangs forever while the window just
+        // sits on the error (sdk.md: "refused with an error"). The window stays
+        // open so the user can read the reason; Cancel then only closes it
+        // (nop's isAnswered guard prevents a second reply).
+        if(t.texterr){
+            await answerOnce({ret: 1, err: t.texterr, code: 'sign_refused'})
+        }
         t.lding = no
     });
 

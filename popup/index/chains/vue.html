@@ -1,15 +1,18 @@
-<div class="header">
-    <div class="bk" @click="back">
-        <img :src="`${icfp}left.svg`" />
+<header class="pchead">
+    <div class="pchead-l">
+        <button class="icbtn" @click="back" title="Back">
+            <i class="icf" style="--ic: url('../image/ftic/left.svg')"></i>
+        </button>
     </div>
-    <h1 class="ptt">Networks</h1>
-</div>
+    <h1 class="pchead-t">Networks</h1>
+    <div class="pchead-r"></div>
+</header>
 
 <div class="chlist">
     <ul>
         <li v-for="(c, id) in chains" :class="`${curid==c.id?'active':''}`">
             <div class="hd">
-                <div>
+                <div class="l">
                     <h2>
                         <span>{{cname(c)}}</span>
                         <em v-if="cremark(c)">{{cremark(c)}}</em>
@@ -27,6 +30,6 @@
         </li>
     </ul>
     <div class="add">
-        <button class="mid blue" @click="add">Add Network</button>
+        <button class="blue" @click="add">Add Network</button>
     </div>
 </div>

@@ -1,10 +1,12 @@
-<div class="header">
-    <div class="bk" @click="back">
-        <img :src="`${icfp}left.svg`" />
+<header class="pchead">
+    <div class="pchead-l">
+        <button class="icbtn" @click="back" title="Back">
+            <i class="icf" style="--ic: url('../image/ftic/left.svg')"></i>
+        </button>
     </div>
-    <h1 class="ptt">Send</h1>
-    <!-- <div class="cvs"></div> -->
-</div>
+    <h1 class="pchead-t">Send</h1>
+    <div class="pchead-r"></div>
+</header>
 
 <div class="form">
     <div class="ipw">
@@ -27,15 +29,15 @@
     </div>
 
     <div class="ipw" v-else>
-        <label>Select asset</label>
-        <div class="cis">
+        <label>Asset</label>
+        <div class="cis segswt">
             <div :class="`it f ${transferType=='HAC'?'active':''}`" @click="swtcis(1)">
-                <a><img :src="`${icfp}hac.svg`" />HAC</a></div>
+                <a><i class="icf" style="--ic: url('../image/ftic/hac.svg')"></i>HAC</a></div>
             <div :class="`it e ${transferType=='HACD'?'active':''}`" @click="swtcis(2)">
-                <a><img :src="`${icfp}hacd.svg`" />HACD</a></div>
+                <a><i class="icf" style="--ic: url('../image/ftic/hacd.svg')"></i>HACD</a></div>
         </div>
-        <input v-if="transferType=='HAC'" v-model="amthac" placeholder="Enter HAC amount (e.g., 0.1, 10, 1:247, 1:249)" />
-        <textarea class="diary" v-if="transferType=='HACD'" v-model="nmshacd" placeholder="Enter HACD names separated by commas, like 'AAABBB,HYYMMN'(Max 200)"></textarea>
+        <input v-if="transferType=='HAC'" v-model="amthac" placeholder="Enter HAC amount (e.g., 0.1, 10, 1:247)" />
+        <textarea class="diary" v-if="transferType=='HACD'" v-model="nmshacd" placeholder="HACD names, comma separated (max 200)"></textarea>
     </div>
 
     <div class="ipw" id="gasw">
@@ -48,6 +50,6 @@
 </div>
 
 <div class="btns">
-    <button @click="back">Cancel</button>
-    <button @click="dotrs" :class="`blue ${ing?'ing':''}`">Transfer</button>
+    <button class="cancel" @click="back">Cancel</button>
+    <button class="blue" @click="dotrs" :class="`${ing?'ing':''}`">Transfer</button>
 </div>

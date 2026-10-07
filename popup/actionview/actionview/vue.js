@@ -2,7 +2,7 @@
 // Read-only "full action review" page: shows all SDK Review fields (no VM execution, no re-fetching/modifying the tx)
 // Data passed from the signtx/transfer popup via chrome.storage.session (key = review_binding)
 
-// 地址渲染：Hacash 可读地址给 explorer 链接，其它原样转义（全部经 mnx_esc_html）
+// address rendering: readable Hacash addresses get an explorer link, anything else is escaped as-is (all through mnx_esc_html)
 function mnx_actv_addr_html(a) {
     let esc = mnx_esc_html
     let s = a == null ? '' : String(a)
@@ -13,7 +13,7 @@ function mnx_actv_addr_html(a) {
     return `<span class="avaddr">${esc(s)}</span>`
 }
 
-// 单个 action -> 卡片块（div）。depth 用 CSS 缩进，不再用 &nbsp; 拼版。
+// one action -> a card block (div). depth indents via CSS, no more &nbsp; padding.
 function mnx_actv_render_action(act, depth, prints, layoutCtx) {
     // Action json content (HACD names, engraved content, etc.) is attacker-controlled; must escape before embedding in HTML
     let esc = mnx_esc_html
@@ -21,7 +21,7 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
     let cls = 'avact' + (depth > 0 ? ' avd' + Math.min(depth, 4) : '')
     let name = mnx_is_tx_message_action(act) ? 'Message' : (act.name || ('kind '+act.kind))
     let head = `<span class="avpath">[${esc(act.path)}]</span><b class="avname">${esc(name)}</b>`
-    // 载荷字节数并入标题（虚线框内只留字段）
+    // payload byte count folds into the title (the dashed box keeps fields only)
     if(mnx_is_tx_message_action(act)){ head += `<span class="avbytes">· ${mnx_msg_bytes_text(act)}</span>` }
     head += `<span class="avtag">${esc(act.scope)}</span>`
     if(act.auditability && act.auditability != 'full'){ head += `<span class="avtag warn">audit:${esc(act.auditability)}</span>` }
@@ -54,7 +54,7 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
             amt = `<b class="amt">${esc(names.length || p.count)}</b> HACD <span class="avsub">(${esc(names.join(', '))})</span>`
         }
         else if(p.type == 'asset'){
-            // 与签名页同一口径：小数位来自链上 AssetSmelt（本页 load() 已预热缓存）
+            // same source as the signing page: decimals from on-chain AssetSmelt (this page's load() warmed the cache)
             let a = mnx_asset_amount_text(p.atoms, p.serial)
             amt = `<b class="amt">${esc(a.text)}</b>${a.unit ? ' ' + esc(a.unit) : ''}`
             amt += `<span class="avtag">Asset #${esc(p.serial)}</span>`
@@ -71,8 +71,8 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
         if(depth === 0 && layoutCtx && layoutCtx.byArrayIndex){
             layout = layoutCtx.byArrayIndex[layoutCtx.arrayIndex]
         }
-        // 不套 avrow/avk：左边不再留 'message' 标签，虚线框与卡片左边对齐；
-        // table 布局让 label/值 两列在各字段间对齐
+        // no avrow/avk wrapper: no 'message' label on the left, and the dashed box aligns with the card edge;
+        // the table layout keeps the label/value columns aligned across fields
         out.push(`<div class="avmsg">${mnx_msglayout_block_html(act, layout, 'table')}</div>`)
     }
 
@@ -89,7 +89,7 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
         out.push(`<div class="avrow"><span class="avk">note</span><span class="avv">${esc(act.audit_notes[i])}</span></div>`)
     }
 
-    // canonical json / raw bytes 默认折叠：审核页要保真但不必一屏全是字节流
+    // canonical json / raw bytes collapsed by default: the review page stays faithful without a screen full of bytes
     let pretty = ''
     try { pretty = JSON.stringify(JSON_parse(act.json), null, 2) } catch(e){ pretty = act.json }
     out.push(`<details class="avdet"><summary>canonical json</summary><pre class="avpre">${esc(pretty)}</pre></details>`)
@@ -111,7 +111,7 @@ var routePageActionView = (adr, clbk) => {
         end: no,
         err: nil,
         txs: nil,   // review
-        meta: '',   // 顶部交易摘要（key/value 网格）
+        meta: '',   // top transaction summary (key/value grid)
         lines: [],
         bind: '',
         signers: {},
@@ -138,28 +138,66 @@ var routePageActionView = (adr, clbk) => {
             try{
                 window.addEventListener('pagehide', ()=>{ chrome_storage_session.remove(key) })
             }catch(e){}
+            // maximize the window when canonical json / raw expands (user directive 2026-10-06): at window-open
+            // login.js already tried state:'maximized', but environments without a window manager (CI/sandbox)
+            // ignore it — reassert when the wide JSON expands. toggle does not bubble, so a capturing listener
+            // catches the <details class="avdet"> generated dynamically inside v-html. Fails silently — a pure
+            // viewing enhancement that never affects any pass/fail outcome.
+            try{
+                document.addEventListener('toggle', (ev) => {
+                    let el = ev.target
+                    if(el && el.tagName === 'DETAILS' && el.open && el.classList.contains('avdet')){
+                        try{
+                            let upd = chrome.windows.update(chrome.windows.WINDOW_ID_CURRENT, { state: 'maximized' })
+                            if(upd && upd.catch){ upd.catch(()=>{}) }
+                        }catch(e){}
+                    }
+                }, true)
+            }catch(e){}
             t.txs = review
             t.bind = review.review_binding || ''
-            // Asset 金额显示需要链上小数位：先按 review.asset_serials 补齐元数据（失败也不阻断查看）
+            // Asset amount display needs on-chain decimals: warm the metadata from review.asset_serials first (failure never blocks the review)
             await mnx_asset_meta_ensure(review.asset_serials || [])
-            // 顶部摘要：key/value 网格（长 hash 用等宽字体换行，不再挤成一行）
+            // top summary: key/value grid (long hashes wrap in monospace instead of squeezing onto one line)
             let esc = mnx_esc_html
             let mrow = (k, v, mono) => `<div class="avmrow"><span class="avk">${esc(k)}</span><span class="avv${mono ? ' avmono' : ''}">${v}</span></div>`
             let meta = []
-            meta.push(mrow('Main', `<span class="avmono">${esc(review.main)}</span>`))
-            meta.push(mrow('Type', `Type-${esc(review.tx_type)} <span class="avsub">· fee</span> <b class="amt">${esc(mnx_fin_to_decimal(review.fee))}</b> HAC <span class="avsub">· timestamp</span> ${esc(review.timestamp)}`))
+            // Human-readable labels/timestamps (§7.4 finding): raw snake_case keys
+            // and unix seconds read as debug output to users.
+            let tsfmt = (ts) => {
+                let n = Number(ts)
+                if (!isFinite(n) || n <= 0) return esc(ts)
+                if (n < 1e12) n *= 1000
+                let d = new Date(n)
+                return esc(d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC')
+            }
+            let yesno = (v) => (v === true || v === 'true') ? 'yes' : ((v === false || v === 'false') ? 'no' : esc(v))
+            meta.push(mrow('Main account', `<span class="avmono">${esc(review.main)}</span>`))
+            meta.push(mrow('Type & fee', `Type-${esc(review.tx_type)} <span class="avsub">· fee</span> <b class="amt">${esc(mnx_fin_to_decimal(review.fee))}</b> HAC <span class="avsub">· created</span> ${tsfmt(review.timestamp)}`))
             if(review.valid_height_range){
-                meta.push(mrow('Height window', `<b>${esc(review.valid_height_range.start)} - ${esc(review.valid_height_range.end)}</b>${review._strict_note ? ` <span class="avtag err">not verified (${esc(review._strict_note)})</span>` : ''}`))
+                meta.push(mrow('Valid block range', `<b>${esc(review.valid_height_range.start)} - ${esc(review.valid_height_range.end)}</b>${review._strict_note ? ` <span class="avtag err">not verified (${esc(review._strict_note)})</span>` : ''}`))
             }
             if(review.chain_ids_allowed && review.chain_ids_allowed.length){
-                meta.push(mrow('Chain ids allowed', `<b>${esc(review.chain_ids_allowed.join(', '))}</b>`))
+                meta.push(mrow('Networks allowed', `<b>${esc(review.chain_ids_allowed.join(', '))}</b>`))
             }
-            meta.push(mrow('auditability / signability', `${esc(review.auditability)} · ${esc(review.signability)} · protocol_valid ${esc(review.protocol_valid)} · requires_user_confirmation ${esc(review.requires_user_confirmation)}`))
-            meta.push(mrow('tx_hash', esc(review.tx_hash), true))
-            meta.push(mrow('hash_with_fee', esc(review.hash_with_fee), true))
-            meta.push(mrow('unsigned_body_hash', esc(review.unsigned_body_hash), true))
-            meta.push(mrow('review_binding', esc(review.review_binding), true))
-            meta.push(mrow('codec_profile_hash', esc(review.codec_profile_hash), true))
+            // §7.4: self-referential echoes like 'signable: signable' read as debug output. The enum domains come from
+            // the fullnode's sdk/src/audit.rs (full|structured|branching|opaque) and
+            // inspect.rs (signability is currently always 'signable'); unknown values pass through as-is, never invented.
+            let audmap = {
+                full: 'full — every field is readable',
+                structured: 'structured — complex actions are readable field-by-field',
+                branching: 'branching — the outcome depends on chain state',
+                opaque: 'opaque — part of the payload cannot be read',
+            }
+            let aud = audmap[review.auditability] || 'coverage: ' + esc(review.auditability)
+            let pv = (review.protocol_valid === true || review.protocol_valid === 'true')
+            let uc = (review.requires_user_confirmation === true || review.requires_user_confirmation === 'true')
+            meta.push(mrow('Review status', `Audit coverage: ${aud} · Ready to sign: <b>${review.signability === 'signable' ? 'yes' : esc(review.signability)}</b> · Protocol checks: ${pv ? 'pass' : 'failed'} · Extra confirmation: ${uc ? 'required' : 'not required'}`))
+            meta.push(mrow('Transaction hash', esc(review.tx_hash), true))
+            meta.push(mrow('Hash with fee', esc(review.hash_with_fee), true))
+            meta.push(mrow('Unsigned body hash', esc(review.unsigned_body_hash), true))
+            if(review.review_binding){ meta.push(mrow('Review binding', esc(review.review_binding), true)) }
+            meta.push(mrow('Codec profile hash', esc(review.codec_profile_hash), true))
             t.meta = meta.join('')
             let acts = Array.isArray(review.actions) ? review.actions : Object.values(review.actions || {})
             let present = Array.isArray(review.present_signers) ? review.present_signers : []
@@ -181,7 +219,7 @@ var routePageActionView = (adr, clbk) => {
                     prints[p] = `<pre class="codeprint err">decompile failed: ${mnx_esc_html(mnx_err_message(e))}</pre>`
                 }
             }
-            // 动作列表
+            // action list
             let lines = []
             let tables = mnx_msglayout_normalize(data.msgparse || data.msglayouts || null)
             let bind = mnx_msglayout_bind(acts, tables)

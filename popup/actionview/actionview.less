@@ -1,5 +1,6 @@
-// actionview（All Actions 全览页）：全浏览器窗口布局 + 卡片式排版
-// 该页内容量大（多 action / json / raw），不再沿用 400x600 的扩展弹窗尺寸。
+// actionview (All Actions review page): full-browser-window layout + card typography
+// its content is large (multi-action / json / raw), so the 400x600 extension popup size no longer applies.
+// B3-7: tokenized (class-name contract unchanged — the av* series is emitted by jslib/msglayout.js).
 
 #wpage {
     width: auto;
@@ -13,201 +14,337 @@
 #actv {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 28px 88px;
+    padding: 0 28px @sp-4;
 
-    .header {
+    .avhead {
         position: sticky;
         top: 0;
         z-index: 5;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        height: 60px;
         margin: 0 -24px;
         padding: 0 24px;
-        background: @bgcol;
-        border-bottom: 1px solid #fff2;
-        .lg img { width: 30px; height: 30px; border-radius: 8px; }
-        .pttl { font-size: 18px; font-weight: 800; }
-        .adrs {
-            margin-left: auto;
-            h1 { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; font-weight: 400; color: #fff8; }
+        background: @bg-page;
+        max-width: none;
+        min-height: 60px;
+    }
+
+    .layouterr {
+        color: @sem-error;
+        font-size: @fs-12;
+        margin: @sp-3 0;
+        word-break: break-word;
+    }
+
+    .txerr {
+        margin-top: @sp-6;
+
+        h1 {
+            color: @sem-error;
+            font-size: @fs-16;
+            font-weight: 500;
+        }
+
+        p {
+            margin-top: @sp-2;
+            word-break: break-word;
         }
     }
 
-    .layouterr { color: @clerr; font-size: 13px; margin: 12px 0; word-break: break-word; }
-    .txerr {
-        margin-top: 24px;
-        h1 { color: @clerr; font-size: 16px; }
-        p { margin-top: 8px; word-break: break-word; }
+    /* ---------- top transaction summary ---------- */
+    // review entries are FLAT rows (user review 2026-10-06: no card wrap) —
+    // the dashed row separators carry the grouping
+    .avmeta {
+        margin-top: @sp-4;
+        padding: @sp-1 0;
     }
 
-    /* ---------- 顶部交易摘要 ---------- */
-    .avmeta {
-        margin-top: 16px;
-        padding: 6px 16px;
-        background: #0004;
-        border: 1px solid #fff1;
-        border-radius: 12px;
-    }
     .avmrow {
         display: grid;
         grid-template-columns: 190px 1fr;
-        gap: 12px;
+        gap: @sp-3;
         padding: 7px 0;
-        border-bottom: 1px dashed #fff1;
-        &:last-child { border-bottom: none; }
+        border-bottom: 1px dashed @line-2;
+
+        &:last-child {
+            border-bottom: none;
+        }
     }
 
-    .avk { color: #fff7; font-size: 12px; line-height: 20px; }
-    .avv { font-size: 14px; line-height: 20px; word-break: break-word; }
-    .avsub { color: #fff7; font-size: 12px; }
-    .avmono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; }
-    .amt { color: @clblue; }
+    .avk {
+        color: @text-3;
+        font-size: @fs-12;
+        line-height: 20px;
+    }
 
-    /* ---------- action 卡片 ---------- */
-    .avacts { margin-top: 18px; }
-    .avline { display: block; }
+    .avv {
+        font-size: @fs-14;
+        line-height: 20px;
+        word-break: break-word;
+    }
+
+    .avsub {
+        color: @text-3;
+        font-size: @fs-12;
+    }
+
+    .avmono {
+        font-family: @font-mono;
+        font-size: @fs-12;
+        word-break: break-all;
+    }
+
+    .amt {
+        color: @brand;
+    }
+
+    /* ---------- action card ---------- */
+    .avacts {
+        margin-top: @sp-4;
+    }
+
+    .avline {
+        display: block;
+    }
+
     .avact {
-        margin: 12px 0;
-        padding: 12px 16px;
-        background: #0003;
-        border: 1px solid #fff1;
-        border-left: 3px solid @clblue;
-        border-radius: 10px;
+        margin: @sp-3 0;
+        padding: @sp-1 0 @sp-1 @sp-3;
+        // no card box: only the nesting bar encodes the action tree depth
+        border-left: 2px solid @brand;
     }
-    .avd1 { margin-left: 22px; border-left-color: #7fd0e0; }
-    .avd2 { margin-left: 44px; border-left-color: #9fc9a0; }
-    .avd3 { margin-left: 66px; border-left-color: #c9b98f; }
-    .avd4 { margin-left: 88px; border-left-color: #b9a2c9; }
+
+    .avd1 {
+        margin-left: 22px;
+        border-left-color: @text-2;
+    }
+
+    .avd2 {
+        margin-left: 44px;
+        border-left-color: @sem-ok;
+    }
+
+    .avd3 {
+        margin-left: 66px;
+        border-left-color: @sem-warn;
+    }
+
+    .avd4 {
+        margin-left: 88px;
+        border-left-color: @text-3;
+    }
 
     .avhd {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 8px;
-        padding-bottom: 8px;
-        border-bottom: 1px dashed #fff1;
-        .avpath { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: #fff7; }
-        .avname { font-size: 15px; font-weight: 800; }
+        gap: @sp-2;
+        padding-bottom: @sp-2;
+        border-bottom: 1px dashed @line-2;
+
+        .avpath {
+            font-family: @font-mono;
+            font-size: @fs-12;
+            color: @text-3;
+        }
+
+        .avname {
+            font-size: @fs-14;
+            font-weight: 500;
+            color: @text-1;
+        }
     }
+
     .avtag {
-        padding: 1px 8px;
-        font-size: 11px;
+        padding: 1px @sp-2;
+        font-size: @fs-10;
         line-height: 18px;
-        color: #cfeeff;
-        background: #00ccff22;
-        border: 1px solid #00ccff55;
-        border-radius: 999px;
+        color: @brand;
+        background: @brand-faint;
+        border: 1px solid rgba(0, 204, 255, 0.35);
+        border-radius: @rd-pill;
         white-space: nowrap;
-        &.warn { color: #ffd79a; background: #ffa50022; border-color: #ffa50055; }
-        &.err { color: #ffb4b4; background: #ff000022; border-color: #ff000055; }
+
+        &.warn {
+            color: @sem-warn;
+            background: rgba(201, 134, 45, 0.12);
+            border-color: rgba(201, 134, 45, 0.4);
+        }
+
+        &.err {
+            // the error tag carries a full sentence (e.g. why the height window went unverified); nowrap would stretch it into
+            // one unbreakable strip and push out a full-width horizontal scrollbar (the §7.4 final-15 overflow source)
+            white-space: normal;
+            overflow-wrap: anywhere;
+
+            color: @sem-error;
+            background: @sem-error-bg;
+            border-color: rgba(229, 84, 75, 0.4);
+        }
     }
 
     .avrow {
         display: grid;
         grid-template-columns: 92px 1fr;
-        gap: 10px;
-        margin-top: 8px;
-        .avk { text-align: right; }
-    }
-    .avarrow { margin: 0 6px; color: #fff6; }
-    .avaddr {
-        font-family: ui-monospace, Menlo, Consolas, monospace;
-        font-size: 12px;
-        color: #8ec8c8;
-        word-break: break-all;
-        text-decoration: none;
-        &[href]:hover { text-decoration: underline; }
+        gap: @sp-2;
+        margin-top: @sp-2;
+
+        .avk {
+            text-align: right;
+        }
     }
 
-    /* ---------- canonical json / raw（默认折叠） ---------- */
+    .avarrow {
+        margin: 0 @sp-1;
+        color: @text-3;
+    }
+
+    .avaddr {
+        font-family: @font-mono;
+        font-size: @fs-12;
+        color: @text-2;
+        word-break: break-all;
+        text-decoration: none;
+
+        &[href]:hover {
+            color: @brand;
+            text-decoration: underline;
+        }
+    }
+
+    /* ---------- canonical json / raw (collapsed by default) ---------- */
     .avdet {
-        margin-top: 10px;
+        margin-top: @sp-2;
+
         summary {
             cursor: pointer;
             user-select: none;
-            font-size: 12px;
-            color: #fff8;
+            font-size: @fs-12;
+            color: @text-2;
             list-style: none;
-            &::-webkit-details-marker { display: none; }
-            &::before { content: '▸ '; }
+
+            &::-webkit-details-marker {
+                display: none;
+            }
+
+            &::before {
+                content: '▸ ';
+            }
+
+            &:hover {
+                color: @text-1;
+            }
         }
-        &[open] summary::before { content: '▾ '; }
+
+        &[open] summary::before {
+            content: '▾ ';
+        }
     }
+
     .avpre {
-        margin-top: 6px;
-        padding: 10px 12px;
+        margin-top: @sp-1;
+        padding: 10px @sp-3;
         max-height: 340px;
         overflow: auto;
-        background: #0005;
-        border: 1px solid #fff1;
-        border-radius: 8px;
-        font-family: ui-monospace, Menlo, Consolas, monospace;
-        font-size: 12px;
+        background: @bg-input;
+        border: 1px solid @line-2;
+        border-radius: @rd-input;
+        font-family: @font-mono;
+        font-size: @fs-12;
         line-height: 1.55;
         white-space: pre-wrap;
         word-break: break-all;
     }
+
     .avcode {
-        margin-top: 10px;
+        margin-top: @sp-2;
+
         .avpre {
             white-space: pre;
             word-break: normal;
             max-height: 480px;
         }
-        .codeprint.err { color: #ffb4b4; }
+
+        .codeprint.err {
+            color: @sem-error;
+        }
     }
 
-    /* ---------- 签名状态 ---------- */
+    /* ---------- signing status ---------- */
     .sgck {
-        margin-top: 22px;
-        padding: 12px 16px;
-        background: #0003;
-        border: 1px solid #fff1;
-        border-radius: 10px;
-        h5 { font-size: 12px; color: #fff8; margin-bottom: 6px; }
+        margin-top: @sp-6;
+        padding: @sp-2 0;
+
+        h5 {
+            font-size: @fs-12;
+            font-weight: 500;
+            color: @text-2;
+            margin-bottom: @sp-1;
+        }
+
         p {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 10px;
-            padding: 4px 0;
-            b { font-size: 12px; color: #fff8; }
-            b.yes { color: @clok; }
-            b.no { color: #fff8; }
+            gap: @sp-2;
+            padding: @sp-1 0;
+
+            b {
+                font-size: @fs-12;
+                font-weight: 500;
+                color: @text-3;
+            }
+
+            b.yes {
+                color: @sem-ok;
+            }
         }
     }
 
-    /* ---------- 底部按钮 ---------- */
+    /* ---------- footer buttons ---------- */
     .btns {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        padding: 12px 24px;
-        background: linear-gradient(#2f2f2f00, @bgcol 60%);
+        // in-flow at the document end (user review 2026-10-06: no floating bar)
+        position: static;
+        padding: @sp-3 0 0;
         display: flex;
         justify-content: flex-end;
+
         button {
             min-width: 140px;
-            height: 38px;
-            cursor: pointer;
-            font-size: 14px;
-            color: #fff;
-            background: #ffffff1a;
-            border: 1px solid #fff3;
-            border-radius: 999px;
-            &:hover { background: #ffffff2a; }
         }
     }
 }
 
 @media (max-width: 760px) {
     #actv {
-        padding: 0 14px 88px;
-        .avmrow, .avrow { grid-template-columns: 1fr; gap: 2px; }
-        .avrow .avk { text-align: left; }
-        .header { margin: 0 -14px; padding: 0 14px; }
+        padding: 0 14px @sp-4;
+
+        .avmrow, .avrow {
+            grid-template-columns: 1fr;
+            gap: 2px;
+        }
+
+        .avrow .avk {
+            text-align: left;
+        }
+
+        .avhead {
+            margin: 0 -14px;
+            padding: 0 14px;
+        }
+    }
+}
+
+// shared minimal header (logoless, address left; title renders as .pgtitle
+// below — comp.less, 2026-10-05)
+.header {
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding: @sp-2 var(--mn-pad-need);
+    border-bottom: 1px solid @line-2;
+
+    .adrs h1 {
+        font-size: @fs-14;
+        font-weight: 500;
+        color: @text-1;
     }
 }

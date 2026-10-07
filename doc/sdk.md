@@ -3,6 +3,8 @@ MoneyNex Open Platform SDK Interface Documentation
 
 > This document is a third-party access development guide and SDK interface description for the Hacash ecosystem wallet MoneyNex, which is intended for developers of trading platforms, mining services, or other tools in the Hacash ecosystem
 
+> Applies to wallet version **0.4.0**. Everything described here is backward compatible with 0.3.x; the 0.4.0 additions (explicit rejection codes, connected-sites management) are incremental — see [Request lifecycle: cancel and error semantics](#request-lifecycle-cancel-and-error-semantics) and the [0.4.0 release notes](release-notes-0.4.0.md).
+
 Through the open interface of the MoneyNex wallet, functions such as obtaining the user's address, initiating a transfer, signing a transaction or inscribed HACD can be achieved, and the corresponding data can be returned, bringing users a more convenient and secure product experience.
 
 Make sure you have the latest version of MoneyNex installed in the latest version of chrome, especially because some experimental APIs may require the latest version from Github to support them. Let's get started!
@@ -57,11 +59,13 @@ setTimeout(function(){
 
 window.MoneyNex object is available, which means that the wallet SDK is available.
 
+Once the SDK is ready, `MoneyNex.info` carries the wallet information `{ icon, name, version }`. `version` is read from the extension manifest at runtime — it is **`0.4.0`** in the current release (source: `content/content.js` sets it via `chrome.runtime.getManifest().version`; `content/hacash_api.js` exposes it as `MoneyNex.info`). Read it at runtime when you need to gate version-specific behavior.
+
 ### SDK API List
 
 The SDK interface of the wallet is almost always registered in the form of an asynchronous callback of `MoneyNex.api_name(params, function(data){})`. Here's a list of available APIs:
 
-1. `wallet` obtains the current primary address of the user's wallet, and returns an Error if it is not authorized
+1. `wallet` obtains the current primary address of the user's wallet; if the site is not authorized yet, the request is rejected with `{err:'need connect first', code:'need_connect'}` (and the wallet opens the connect window automatically)
 2. `connect` initiates authorization to connect to the wallet, and returns the user's wallet information after success
 3. `transfer` initiates various transactions and signs broadcasts, returning transaction information
 4. `signtx` signs a built transaction body and optionally broadcasts it
@@ -87,6 +91,8 @@ MoneyNex.wallet({}, acc => {
 })
 ```
 
+If the site's origin is not authorized, the request is rejected with `{err: 'need connect first', code: 'need_connect'}` — and, at the same time, the wallet opens the connect approval window for the user. After the user approves, re-issue the `wallet` call and it returns `{address}`.
+
 ### Initiate authorization connection
 
 ```js
@@ -96,7 +102,31 @@ MoneyNex.connect({}, acc => {
 })
 ```
 
-Call the connect interface, the wallet will open an authorization page connected to the wallet, and when the user completes the authorization, the wallet will notify the success through a callback. If the user cancels or does not click Confirm Authorization, the callback function will not be called.
+Call the connect interface, the wallet will open an authorization window connected to the wallet, and when the user completes the authorization, the wallet will notify the success through a callback. If the user cancels the request (Cancel button, or closing the confirmation window without confirming), the request is **rejected with `{ret:1, code:'user_canceled'}`** — the promise rejects and the callback receives that object. This is an explicit rejection rather than a lost callback: dApps written against the earlier wording ("the callback is not called on cancel") keep working unchanged, they simply additionally observe a rejection they may ignore.
+
+Users can revoke an authorization at any time from the wallet's "Connected sites" management page; after a revoke, the next `connect`/`wallet` call opens the authorization window again. Since 0.4.0 authorizations are recorded per origin (scheme, host and port); authorizations created by 0.3.x are migrated and keep working for their host.
+
+### Request lifecycle: cancel and error semantics
+
+Every SDK request gets **exactly one reply**, whether it succeeds, is canceled, or fails. The reply is delivered on the request's `did` channel: the callback receives it as its first argument, and the returned Promise **rejects** with the same object when it carries an `err` field. A `did` is settled by the first reply only — late or duplicate replies (e.g. a fallback cancel racing a normal resolve) are dropped by the page side, so dApps never see two answers for one request.
+
+The common rejection codes and how a dApp should handle them:
+
+| code | triggered when | typical reply shape | suggested dApp handling |
+| --- | --- | --- | --- |
+| `user_canceled` | the user pressed Cancel on the request window, or closed the window without confirming (X / Ctrl+W) | page cancel: `{ret:1, err:'User canceled the ... request', code:'user_canceled'}`; window closed without confirming: `{ret:1, err:'... canceled (popup closed)', code:'user_canceled'}` | a normal, expected rejection: abort the flow quietly or show a neutral "canceled" hint; do not retry automatically |
+| `sign_refused` | the wallet refuses to sign for a policy reason: transfer `main_address` does not match the current account; `signtx` body fails the local review (signer/format rules); `signtext` text looks like a raw 32-byte hash or violates the length rule (8–4096 chars); `raisefee` target tx missing, or its fee is paid by another account | `{ret:1, err:'<human readable reason>', code:'sign_refused'}` | surface `err` to the user and let them correct the input; re-initiate only after something actually changed |
+| `need_connect` | a gated API (`wallet`, `transfer`, `signtx`, `signtext`, `raisefee`, `switchchain`) is called while the site's origin is not authorized | `{err:'need connect first', code:'need_connect'}` | the wallet opens the connect approval window together with this rejection; after the user approves, re-issue the original request |
+| `submit_failed` | signing succeeded, but broadcasting the signed transaction to the chain failed (`transfer`; `signtx` with `autosubmit`; `raisefee` submit) | `{ret:1, err:'Signed, but chain submission failed: ...', code:'submit_failed', txbody, body}` (`txbody`/`body` present for transfer/signtx only) | the signed body is in your hands: retry broadcasting it yourself or build a fresh request; do not assume the transaction reached the chain |
+
+Additional semantics worth knowing:
+
+- **Request window form.** Request pages open as a standalone 400×620 notification window (fallback: a regular tab next to the requesting tab when window creation fails). Replies are bound to the requesting tab either way, so the dApp-side integration is unaffected.
+- **Closing the window without confirming still answers.** Two independent fallbacks deliver the cancel: the page's `beforeunload` handler makes a best-effort reply during teardown, and the wallet background additionally watches `chrome.windows.onRemoved` / `chrome.tabs.onRemoved` and sends the authoritative `{did, ret:1, err:'Request canceled (popup closed)', code:'user_canceled'}`; the pending-request registry behind this fallback persists in `chrome.storage.session`, so the cancel still fires even when the MV3 service worker is restarted between the request and the close. Because duplicate replies are dropped, dApps can treat cancel handling as optional — code written against the old "cancel is silent" wording keeps working.
+- **Chain-mismatch refusals carry no `code`.** When a transfer/signtx `chain_id` does not match the wallet's current network, or a mainnet body contains a ChainAllow action (or a non-mainnet body lacks the required one), the reply is `{ret:1, err, current_chain_id?, request_chain_id?}` without a `code` field — the `err` text and the network fields identify the case.
+- **Local signing failure.** If the signing step itself fails inside the wallet (e.g. the account could not be unlocked), the reply is `{ret:1, err, code:'sign_failed'}`; resolve the wallet-side problem and re-initiate.
+
+Implementation references (MoneyNexNew repository): single-reply helper `mnx_dapp_reply` in `popup/html/html.js`; per-page cancel/refusal paths in `popup/connect/conn/vue.js`, `popup/transfer/sigtrs/vue.js`, `popup/signtx/signtx/vue.js`, `popup/signtext/signtext/vue.js`, `popup/raisefee/raisefee/vue.js`; notification-window open, tab fallback and the close listeners in `background/init.js` (`openRequestPopupWindow`, `registerPendingReqReply`/`firePendingCancel` backed by `chrome.storage.session`, `chrome.windows.onRemoved`, `chrome.tabs.onRemoved`); connect gate and `need_connect` in `background/listener.js` and `background/account.js`; page-side message bridge, single-settle `did` table and Promise in `content/hacash_api.js`.
 
 ### Query chain status
 
@@ -404,11 +434,13 @@ MoneyNex.signtext({
 })
 ```
 
-Security rules enforced by the wallet (the request is refused with an error and nothing is signed):
+Security rules enforced by the wallet (the request is refused with an error — `{ret:1, err, code:"sign_refused"}` is delivered to the page and nothing is signed):
 
 - The text must be 8 to 4096 characters long.
 - Text that looks like a **raw 32-byte hash** (64 hex chars with optional `0x`/whitespace, or a 43-char base64/base64url payload) is always refused — never use `signtext` to ask the user to endorse a hash; use `signtx` for transactions.
 - The full text is displayed to the user verbatim in a dedicated review page before signing.
+
+A refusal keeps the review window open showing the reason; nothing is signed and the dApp receives `{ret:1, err, code:"sign_refused"}`. If the local signing step itself fails (for example the account could not be unlocked), the reply is `{ret:1, err, code:"sign_failed"}` instead — resolve the wallet-side problem and re-initiate the request.
 
 ### Raise Tx Fee
 

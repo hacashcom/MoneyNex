@@ -88,8 +88,9 @@ var MNX_MSG_KIND_MESSAGE = 1025
     return s
 }
 
-// 合法 UTF-8 且不含控制字符才当文本显示；不合法/有控制字符返回 null
-// （调用方退回十六进制源数据，绝不把坏字节渲染成文本——magic 这类字段可被任意载荷占用）
+// Render as text only when it is valid UTF-8 without control characters; otherwise
+// return null (the caller falls back to the hexadecimal source data — bad bytes are
+// never rendered as text; fields like magic can carry arbitrary payload)
 , mnx_utf8_text = function(u8) {
     if(typeof TextDecoder === 'undefined'){ return null }
     let s
@@ -223,11 +224,12 @@ var MNX_MSG_KIND_MESSAGE = 1025
         return { text: '0x' + mnx_bytes_to_hex(slice), cls: 'evm' }
     }
     if(fid === 'u8' || fid === 'u16be' || fid === 'u32be' || fid === 'u64be'){
-        // 主值十进制；十六进制作为灰色源数据（src）另列，不再塞进主值括号里
+        // main value in decimal; the hexadecimal goes into a separate gray source-data (src)
+// row instead of being stuffed into the main value's parentheses
         return { text: mnx_read_uint_be(slice), cls: 'uint', src: '0x' + mnx_bytes_to_hex(slice) }
     }
     if(fid === 'magic4'){
-        // 合法 UTF-8 才显示引号文本；**无论是否合法**都附灰色 0x 源数据
+        // quoted text only for valid UTF-8; the gray 0x source data is attached **whether or not** it is valid
         let txt = mnx_utf8_text(slice)
         return {
             text: txt == null ? '' : '"' + txt + '"',
@@ -236,7 +238,7 @@ var MNX_MSG_KIND_MESSAGE = 1025
         }
     }
     if(fid === 'hex4' || fid === 'hex'){
-        // 本身就是 HEX 的值：白色等宽显示，不加灰色源数据（它自己就是源数据）
+        // values that are HEX already: shown in white monospace, no gray source data (they ARE the source)
         return { text: '0x' + mnx_bytes_to_hex(slice), cls: 'hex', hex: true }
     }
     if(fid === 'hacd_name'){
@@ -466,19 +468,20 @@ var MNX_MSG_KIND_MESSAGE = 1025
     return { bytes: bytes, hex: mnx_bytes_to_hex(bytes) }
 }
 
-// 字段渲染。mode：
-//   'table'  — All Actions 全览页：两列对齐（左列 label+注记，右列值+灰色源数据）
-//   'inline' — 签名页：紧凑单行、全部左对齐（省弹窗宽度，不做固定列宽）
-// 全零的 HEX 值字段整行省略（如 HBR1 的 extra8 在非 HACD 资产时必须为 0，不该留下噪音行）。
+// Field rendering. mode:
+//   'table'  — All Actions review page: two aligned columns (label+note left, value+gray source right)
+//   'inline' — signing page: compact single rows, all left-aligned (saves popup width, no fixed columns)
+// All-zero HEX fields drop the whole row (e.g. HBR1's extra8 must be 0 for non-HACD assets;
+// keeping it would leave a noise row).
 , mnx_msglayout_fields_html = function(fields, mode) {
     let table = mode === 'table'
     let html = ''
     for(let i = 0; i < fields.length; i++){
         let f = fields[i]
-        if(f.hex && /^0*$/.test(f.rawhex)){ continue } // 全零 HEX 值：整行省略
+        if(f.hex && /^0*$/.test(f.rawhex)){ continue } // all-zero HEX value: drop the whole row
         let note = f.note ? `<i class="untrust">${mnx_esc_html(f.note)}</i> ` : ''
-        // 用 code 而不是 span：签名页有 `#sgtx .tx li > span` 的行号徽标样式，
-        // 早期写法 `li span` 会把任意 span 压成 16x16 方块（文字竖排重叠）
+        // use code, not span: the signing page styles `#sgtx .tx li > span` as line-number badges;
+        // the old `li span` selector squashed any span into a 16x16 block (text stacked vertically)
         let src = f.src ? `<code class="hexsrc">${mnx_esc_html(f.src)}</code>` : ''
         let val = f.hex
             ? mnx_hex_plain(f.rawhex, 'hexplain')
@@ -492,9 +495,10 @@ var MNX_MSG_KIND_MESSAGE = 1025
     return html
 }
 
-// 单行 0x HEX，**无背景框**：cls='hexplain' = 白色值（本身就是 HEX 的字段）
-// / 'hexgray' = 灰色源数据（magic、u8..u64 的十六进制源、以及整条载荷原文）。
-// 过长时截断并注册，点击开全文（MV3 CSP 禁内联事件，故用事件委托）。
+// single-line 0x HEX, **no background box**: cls='hexplain' = white value (fields that are
+// HEX already) / 'hexgray' = gray source data (magic, the u8..u64 hex sources, and the whole
+// payload text). Overlong values truncate and register for click-to-expand (event delegation,
+// since MV3 CSP forbids inline handlers).
 , mnx_hex_plain = function(rawhex, cls) {
     rawhex = String(rawhex || '').toLowerCase().replace(/[^0-9a-f]/g, '')
     if(!rawhex){ return '' }
@@ -543,13 +547,14 @@ var MNX_MSG_KIND_MESSAGE = 1025
         let parsed = mnx_msglayout_parse(got.bytes, layout)
         if(parsed.ok){ body = mnx_msglayout_fields_html(parsed.fields, mode) }
     }
-    // 虚线框内**只放字段**；载荷字节数上提到 action 标题（mnx_msg_bytes_text），
-    // 源 HEX 移到框外、无背景框（那永远是链上原文，不属于解析结果）。
+    // the dashed box holds **fields only**; the payload byte count moves up into the action
+    // title (mnx_msg_bytes_text) and the source HEX moves outside the box with no background
+    // (it is always the on-chain original, not part of the parsed result).
     let box = body ? `<div class="msgf ${mode === 'table' ? 'table' : 'inline'}">${body}</div>` : ''
     return box + mnx_hex_plain(raw, 'hexgray')
 }
 
-// 载荷字节数文案（拼进 action 标题，不再占用虚线框内的一行）
+// payload byte-count text (concatenated into the action title instead of a dashed-box row)
 , mnx_msg_bytes_text = function(act) {
     let got = mnx_action_message_bytes(act)
     return (got.bytes ? got.bytes.length : 0) + ' bytes'
@@ -569,8 +574,8 @@ var MNX_MSG_KIND_MESSAGE = 1025
         if(typeof urlquery !== 'undefined' && urlquery.mlkey && typeof chrome_storage_session !== 'undefined'){
             let obj = await chrome_storage_session.get(urlquery.mlkey)
             extra = obj[urlquery.mlkey] || null
-            // 用后即删：ml_<tid>_<did> 只服务本次请求，数据已读进内存
-            //（openactv 另存 actv_ 键），不要留到浏览器会话结束
+            // delete after use: ml_<tid>_<did> serves only this request (data is already in
+            // memory; openactv keeps its own actv_ key) — do not leave it until the session ends
             await chrome_storage_session.remove(urlquery.mlkey)
         }
     } catch(e) {}

@@ -1,59 +1,72 @@
-<div class="header">
-    <div class="lg">
-        <img src='../image/icos/128.png' />
+<div class="reqpage">
+    <header class="pchead">
+        <div class="pchead-l">
+            <button class="acctchip ast" @click="pgh_open_adr" :title="pgh_adr"><b>{{pgh_sadr}}</b><i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i></button>
+        </div>
+        <div class="pchead-logo"></div>
+                <div class="pchead-r">
+            <button class="icbtn mnburger" @click="pgh_open_net" title="Networks"><i></i><i></i><i></i></button>
+        </div>
+    </header>
+    <!-- account switcher: existing accounts ONLY — no create/import here (home-only) -->
+    <div class="popmenu acctmenu" v-if="adrswct" @click="adrswct=0">
+        <ul>
+            <div class="tt">Switch account:</div>
+            <li v-for="(v, k) in adrmaps"
+                :class="`${k==pgh_adr?'active':''}`"
+                @click="pgh_swt_adr(k)">
+                {{k}}
+            </li>
+        </ul>
     </div>
-    <div class="pttl">Increase Tx Fee</div>
-    <div class="adrs">
-        <h1 class="btn" @click="openadrswct">{{adr.substring(0,9)}}...
-            <img class="icf" :src="`${icfp}down.svg`" />
-        </h1>
-        <div class="menu" v-if="adrswct" @click="adrswct=0">
-            <ul>
-                <img class="close" :src="`${icfp}delete.svg`" @click="adrswct=0" />
-                <div class="tt">Switch account</div>
-                <li v-for="(v, k) in adrmaps" 
-                    :class="`${k==adr?'active':''}`"
-                    @click="swtcuraddr(k)">
-                    {{k}}
-                </li>
-            </ul>
+
+    <!-- burger menu: network switching among existing networks ONLY — no add-network -->
+    <div class="popmenu netsmenu" v-if="netswct" @click="netswct=0">
+        <ul>
+            <div class="tt">Switch network</div>
+            <li v-for="n in pgh_nets"
+                :class="`${n.id==pgh_curcid?'active':''}`"
+                @click="pgh_swt_net(n.id)">
+                {{n.name}}<i v-if="n.id!=0">{{'ID '+n.id}}</i>
+            </li>
+        </ul>
+    </div>
+
+    <div class="pgtitle">Increase Tx Fee</div>
+
+    <div class="reqbody">
+        <div class="card net">
+            <div class="item">
+                <label>Network</label>
+                <p>{{chaintip}}</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="item">
+                <label>Tx Hash</label>
+                <input class="mono" v-model="hash" readonly placeholder="Tx hash" />
+            </div>
+            <div class="item">
+                <label>New fee (HAC)</label>
+                <input v-model="fee" placeholder="e.g. 1:245 or 0.0012" />
+            </div>
+            <div class="item err" v-if="err">
+                <p>{{err}}</p>
+            </div>
         </div>
     </div>
-</div>
 
-
-<div class="ipt">
-    <div class="item net">
-        <label>Network</label>
-        <p>{{chaintip}}</p>
+    <div class="reqbtns" v-if="!end">
+        <div><button class="cancel" @click="nop">Cancel</button></div>
+        <div><button class="blue" @click="cfim" :class="`${err?'ban':''} ${ing?'ing':''}`">Increase Fee</button></div>
+    </div>
+    <div v-else class="success">
+        <i class="icf" :class="ende?'show':''" style="--ic: url('../image/ftic/okg.svg')"></i>
+        <p>Tx fee increased</p>
     </div>
 
-    <div class="item">
-        <label>Tx Hash</label>
-        <textarea v-model="hash" placeholder="Tx hash"></textarea>
-    </div>
-    <div class="item">
-        <label>Fee</label>
-        <input v-model="fee" placeholder="New fee, e.g. 1:245 or 0.0012" />
-    </div>
-    <div class="item err" v-if="err">
-        <p>{{err}}</p>
-    </div>
-</div>
-
-
-<div class="btns" v-if="!end">  
-    <div><button @click="nop">Cancel</button></div>
-    <div><button @click="cfim" :class="`blue ${err?'ban':''} ${ing?'ing':''}`">Increase Fee</button></div>
-</div>
-<div v-else class="success">
-    <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
-    <p>Tx fee increased</p>
-</div>
-
-
-<div class="permt">
-    <div class="con">
-        <p class="tip">Raise a pending tx fee or HACD bid.</p>
+    <div class="wtip">
+        <p>Raises the fee of a pending transaction or HACD bid.</p>
     </div>
 </div>

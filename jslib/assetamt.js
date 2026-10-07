@@ -187,10 +187,12 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
 }
 
 // ---------- asset metadata cache (serial -> {decimal, name, ticket}) ----------
-// 为什么在钱包层而不是 SDK：SDK 是离线/无状态的事实提供者，它只能给出 review.asset_serials
-// 与原始 atoms；decimal/name/ticket 是链上 AssetSmelt（需要链状态），只能由钱包查。
-// 已发行资产的 decimal/name/ticket 不可变（只有 supply 会变，展示不需要），所以缓存不过期；
-// 只缓存成功结果，查不到不写，下次重试。atoms 全程保持字符串（Fold64 可超 2^53）。
+// Why this lives in the wallet and not the SDK: the SDK is an offline/stateless fact
+// provider that only sees review.asset_serials and raw atoms; decimal/name/ticket come
+// from on-chain AssetSmelt (needs chain state), so only the wallet can query them.
+// An issued asset's decimal/name/ticket are immutable (only supply changes, which the
+// display never uses), so the cache never expires; only successful lookups are cached,
+// misses retry next time. atoms stay strings throughout (Fold64 can exceed 2^53).
 , mnx_asset_meta_storage_key = 'asset_meta_cache'
 , mnx_asset_meta_mem = null
 , mnx_asset_meta_norm = function(raw) {
@@ -221,7 +223,7 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
     mnx_asset_meta_mem = mem
     return mem
 }
-// 同步读取（渲染函数用）：必须先 await mnx_asset_meta_ensure(serials)
+// Synchronous read (for render functions): await mnx_asset_meta_ensure(serials) first
 , mnx_asset_meta_get = function(serial) {
     if(!mnx_asset_meta_mem){ return null }
     let s = mnx_u64_string(serial)
@@ -235,7 +237,8 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
         await chrome.storage.local.set(sv)
     } catch(e) {}
 }
-// 批量补齐：内存 -> storage -> fullnode /query/asset?serial=N（地址无关，签名方不持有该资产也能查）
+// Batch fill: memory -> storage -> fullnode /query/asset?serial=N (address-independent;
+// queryable even when the signer does not hold the asset)
 , mnx_asset_meta_ensure = async function(serials) {
     let want = []
     for(let i in (serials || [])){
@@ -246,7 +249,7 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
     let mem = await mnx_asset_meta_load()
     let miss = want.filter(s => !mem[s])
     if(miss.length){
-        mem = await mnx_asset_meta_load(true) // 其它页面可能刚写入，先重读一次存储
+        mem = await mnx_asset_meta_load(true) // other pages may have just written; re-read storage first
         miss = want.filter(s => !mem[s])
     }
     if(!miss.length){ return mem }
@@ -262,7 +265,8 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
     if(changed){ await mnx_asset_meta_save(mem) }
     return mem
 }
-// 首页 /query/balance?assets=true&asset_meta=true 的结果并入同一份缓存，签名页就不用再发请求
+// The home page's /query/balance?assets=true&asset_meta=true result merges into the same
+// cache, so signing pages need no extra request
 , mnx_asset_meta_put_list = async function(list) {
     let mem = await mnx_asset_meta_load()
     let changed = false
@@ -275,7 +279,7 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
     if(changed){ await mnx_asset_meta_save(mem) }
     return mem
 }
-// 渲染用文本：元数据未知时返回原始 atoms 并标记 known=false —— 绝不猜小数位
+// Display text: unknown metadata returns raw atoms with known=false — never guess decimals
 , mnx_asset_amount_text = function(atoms, serial) {
     let raw = atoms == null ? '' : String(atoms).trim()
     let meta = mnx_asset_meta_get(serial)

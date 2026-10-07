@@ -1,67 +1,79 @@
-<div class="header">
-    <div class="lg">
-        <img src='../image/icos/128.png' />
-    </div>
-    <div class="pttl">Sign Transaction</div>
-    <div class="adrs">
-        <h1 class="btn" @click="openadrswct">{{adr.substring(0,9)}}...
-            <img class="icf" :src="`${icfp}down.svg`" />
-        </h1>
-        <div class="menu" v-if="adrswct" @click="adrswct=0">
-            <ul>
-                <img class="close" :src="`${icfp}delete.svg`" @click="adrswct=0" />
-                <div class="tt">Switch account</div>
-                <li v-for="(v, k) in adrmaps" 
-                    :class="`${k==adr?'active':''}`"
-                    @click="swtcuraddr(k)">
-                    {{k}}
-                </li>
-            </ul>
+<div class="reqpage">
+    <header class="pchead">
+        <div class="pchead-l">
+            <button class="acctchip ast" @click="openadrswct" :title="adr">
+                <b>{{(adr||'').substring(0,9)}}...</b>
+                <i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i>
+            </button>
         </div>
-    </div>
-</div>
-
-<div class="permt">
-    <div class="con">
-        <p class="tip"><b>{{dmu}}</b> create a new transaction and request your signature, please check the transaction actions:</p>
-    </div>
-</div>
-
-
-<div v-if="lding" class="lding">
-    <img class="ldf" src="../image/ld/w.gif" />
-</div>
-<div v-else>
-    <div class="tx" v-if="txdesc && txdesc.length">
+        <div class="pchead-logo"></div>
+                <div class="pchead-r">
+            <button class="icbtn mnburger" @click="pgh_open_net" title="Networks"><i></i><i></i><i></i></button>
+        </div>
+    </header>
+    <!-- burger menu: network switching among existing networks ONLY — no add-network -->
+    <div class="popmenu netsmenu" v-if="netswct" @click="netswct=0">
         <ul>
-            <li v-for="(v, i) in txdesc" :class="'l'+i" v-html="v"></li>
+            <div class="tt">Switch network</div>
+            <li v-for="n in pgh_nets"
+                :class="`${n.id==pgh_curcid?'active':''}`"
+                @click="pgh_swt_net(n.id)">
+                {{n.name}}<i v-if="n.id!=0">{{'ID '+n.id}}</i>
+            </li>
         </ul>
     </div>
-    <p v-if="layouterr" class="layouterr">{{layouterr}}</p>
 
-    <div v-if="txerr" class="txerr">
-        <h1>Tx validation failed:</h1>
-        <p>{{txerr}}</p>
+    <div class="pgtitle">Transfer</div>
+
+    <!-- account switcher -->
+    <div class="popmenu acctmenu" v-if="adrswct" @click="adrswct=0">
+        <ul>
+            <div class="tt">Switch account:</div>
+            <li v-for="(v, k) in adrmaps"
+                :class="`${k==adr?'active':''}`"
+                @click="swtcuraddr(k)">
+                {{k}}
+            </li>
+        </ul>
+    </div>
+
+    <div class="reqbody">
+        <div class="sitebar">
+            <span class="sitechip"><b>{{dmu}}</b></span>
+        </div>
+
+        <div v-if="lding" class="ldw"><i class="spinner"></i></div>
+        <div v-else>
+            <div class="tx card" v-if="txdesc && txdesc.length">
+                <label class="lbl">Transaction actions</label>
+                <ul class="txd">
+                    <li v-for="(v, i) in txdesc" :class="'l'+i" v-html="v"></li>
+                </ul>
+            </div>
+            <p v-if="layouterr" class="layouterr">{{layouterr}}</p>
+
+            <div v-if="txerr" class="txerr">
+                <h1>Tx validation failed</h1>
+                <p>{{txerr}}</p>
+            </div>
+        </div>
+
+        <div v-show="!txerr&&!end" class="gas card" id="gasw">
+            <swtgas ref="swtgas" />
+        </div>
+    </div>
+
+    <div class="reqbtns" v-if="!end">
+        <div><button class="cancel" @click="nop">Cancel</button></div>
+        <div v-if="txres && txres.auditability && txres.auditability!='full'"><button class="mid" @click="openactv">All Actions</button></div>
+        <div><button @click="cfim" :class="`blue ${txerr?'ban':''} ${ing?'ing':''}`">Commit Tx</button></div>
+    </div>
+    <div v-else class="success">
+        <i class="icf" :class="ende?'show':''" style="--ic: url('../image/ftic/okg.svg')"></i>
+        <p>The transaction has been successfully signed and submitted to the blockchain for confirmation</p>
+    </div>
+
+    <div class="wtip" v-if="!end">
+        <p>Transactions are initiated by third-party services. Check every action before committing.</p>
     </div>
 </div>
-
-<div v-show="!txerr&&!end" class="gas" id="gasw">
-    <swtgas ref="swtgas" />
-</div>
-
-
-<div class="btns" v-if="!end">  
-    <div><button @click="nop">Cancel</button></div>
-    <div v-if="txres && txres.auditability && txres.auditability!='full'"><button class="blue" @click="openactv">All Actions</button></div>
-    <div><button @click="cfim" :class="`blue ${txerr?'ban':''} ${ing?'ing':''}`">Commit Tx</button></div>
-</div>
-<div v-else class="success">
-    <div><img :class="`${ende?'show':''}`" :src="`${icfp}okg.svg`" /></div>
-    <p>The transaction has been successfully signed and submitted to the blockchain for confirmation</p>
-</div>
-
-<div class="wtip" v-if="!end"   >
-    <p>Tips: Transactions are initiated by third-party services, please pay attention to the safety of funds and carefully check the content of the transaction</p>
-</div>
-
-

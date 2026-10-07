@@ -21,9 +21,11 @@ const build_config = require('./build.cfg')
 , popup_services = build_config.popup_services
 , page_defs = build_config.page_defs
 
-// MoneyNex SDK build-time config (default public gateway / mainnet chain_id=0)
+// MoneyNex SDK build-time config (default public gateway / mainnet chain_id=0).
+// https is mandatory: the Chrome Web Store rejects manifests declaring http://
+// hosts (found in the 0.4.0 review), and the wallet fetches this node directly.
 var mnx_cfg = {
-    fullnode_url: 'http://wallet.hacash.com/fullnode',
+    fullnode_url: 'https://wallet.hacash.com/fullnode',
     fullnode_host: null,
     chain_id: 0, // ChainId::MAINNET
 }
@@ -48,6 +50,16 @@ for(let i in pavs) {
 
 // Inject RPC config at build time: override login.js defaults fullnode_url / mnx_chain_id
 var js_rplsfn = (fcon) => {
+    // D1 root-cause fix: --fullnode-url must override the BUILD-TIME DEFAULT NODE at
+    // every definition site — the login.js fallback (priority 3 in
+    // mnx_get_fullnode_url), the builtin chain-0 rpc in popup/chain/chain.js and in
+    // background/account.js. Appending a shadowed global was not enough: the builtin
+    // chain-0 config (hardcoded mainnet rpc) always exists, gets persisted to
+    // chain_configs on first read, and wins at priority 2 — verified on a fresh
+    // profile: an injected build still fetched wallet.hacash.com (finding D1 of the
+    // M2 regression). A plain replace is an identity no-op for production builds
+    // (no flag given → mnx_cfg.fullnode_url IS this same literal).
+    fcon = fcon.split('https://wallet.hacash.com/fullnode').join(mnx_cfg.fullnode_url)
     fcon += `\n;fullnode_url = ${JSON.stringify(mnx_cfg.fullnode_url)};\n`
     if(mnx_cfg.chain_id !== 0){
         fcon += `\n;mnx_chain_id = ${mnx_cfg.chain_id};\n`
@@ -127,8 +139,11 @@ function jsminify(con) {
     // console.log(con)
     let res = uglifyjs.minify(con, uglifyjsconfig);
     if(res.error) {
-        console.log(res.errpr)
-        process.exit(0)
+        // res.errpr was a typo printing "undefined" + exit(0) — a failed build
+        // looked successful and stale artifacts got deployed (found live
+        // 2026-10-06). Fail LOUDLY with the real error and a failing code.
+        console.error('[jsminify] ' + (res.error.message || res.error) + ' @line ' + (res.error.line||'?') + ':' + (res.error.col||'?'))
+        process.exit(1)
     }
     return res.code
 }
@@ -216,39 +231,26 @@ function release() {
         }
         fs.writeFileSync(bd+'manifest.json', JSON.stringify(mf, null, 2))
     }
-}
-
-function cleanPageOutputs(dir) {
-    if(!fs.existsSync(dir)) return
-    let keep = {}
-    for(let k in page_defs) {
-        keep[`${k}.html`] = true
-        keep[`${k}.css`] = true
-        keep[`${k}.js`] = true
-    }
-    for(let f of fs.readdirSync(dir)) {
-        if(!/\.(html|css|js)$/.test(f)) continue
-        if(!keep[f]) {
-            try{ fs.unlinkSync(path.join(dir, f)) }catch(e){}
+    // CWS compliance guards on the shipped manifest copy. Both harden against
+    // real review outcomes: the 0.4.0 submission was rejected for declaring an
+    // insecure http:// host, and test/sandbox manifests carry localhost
+    // host_permissions that must never reach a store package. Stripping runs on
+    // the release copy only; the source manifest stays the single truth.
+    let rmf = JSON.parse(fs.readFileSync(bd+'manifest.json','utf8'))
+    let rhosts = rmf.host_permissions || []
+    let clean = rhosts.filter(h => {
+        if(/^https?:\/\/(127\.|localhost|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\])/.test(h)){
+            console.log(`! release manifest: stripped local/test host_permissions entry: ${h}`)
+            return false
         }
-    }
-}
-
-// Remove stale generated page outputs not in page_defs (remote's addition; keeps
-// legacy bundles like popup/sign.* from shipping by accident)
-function cleanPageOutputs(dir) {
-    if(!fs.existsSync(dir)) return
-    let keep = {}
-    for(let k in page_defs) {
-        keep[`${k}.html`] = true
-        keep[`${k}.css`] = true
-        keep[`${k}.js`] = true
-    }
-    for(let f of fs.readdirSync(dir)) {
-        if(!/\.(html|css|js)$/.test(f)) continue
-        if(!keep[f]) {
-            try{ fs.unlinkSync(path.join(dir, f)) }catch(e){}
+        if(h.indexOf('http://') == 0){
+            console.log(`! release manifest: INSECURE http:// host remains (CWS rejection reason, must move to https): ${h}`)
         }
+        return true
+    })
+    if(clean.length != rhosts.length){
+        rmf.host_permissions = clean
+        fs.writeFileSync(bd+'manifest.json', JSON.stringify(rmf, null, 2))
     }
 }
 
@@ -310,8 +312,9 @@ async function build(is_release) {
     cleanPageOutputs(ppd)
     for(let k in page_defs){
         let v = page_defs[k]
-        // buildPageSource 是 async：不 await 的话 release() 会在页面产物写完前就开始 copy，
-        // 导致 release/ 里偶尔残留上一轮内容（改了源码但产物没变，需重跑一次才好）。
+        // buildPageSource is async: without awaiting it, release() starts copying
+        // before the page outputs are written, leaving stale content in release/
+        // (source changed but artifacts did not until a second run).
         await buildPageSource(k, v, is_release)
     }
 
@@ -362,7 +365,7 @@ async function run(is_release) {
         // Guard: a release bundle normally carries the production defaults. A
         // non-default --fullnode-url / --chain-id means a TEST release (private
         // chain) — print it loudly so it can never ship by accident.
-        if(mnx_cfg.fullnode_url != 'http://wallet.hacash.com/fullnode' || mnx_cfg.chain_id !== 0){
+        if(mnx_cfg.fullnode_url != 'https://wallet.hacash.com/fullnode' || mnx_cfg.chain_id !== 0){
             console.log(`! TEST RELEASE CONFIG: fullnode_url=${mnx_cfg.fullnode_url} chain_id=${mnx_cfg.chain_id}`)
             console.log(`! This bundle points at a non-production node. Do not publish it to the Chrome Web Store.`)
         }

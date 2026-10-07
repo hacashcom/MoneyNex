@@ -1,11 +1,38 @@
 
+// wptip — toast/notice (B2 reskin). Behavior classes (.popbox/.con/.blue/.hide)
+// are driven by wptip.js and stay untouched.
+#wptip {
+    // NO scrim on this toast, for any variant: the error path kept a
+    // full-screen overlay that blocked every click and outlived a
+    // successful unlock — the page froze (user report 2026-10-06)
+    .bg {
+        display: none;
+    }
+
+    // the popbox CONTAINER is a fixed full-page box — without this it still
+    // intercepts every click even with the .bg hidden; only the notice itself
+    // (con) stays clickable (click-to-dismiss)
+    .popbox {
+        pointer-events: none;
+    }
+
+    .popbox .con {
+        pointer-events: auto;
+        cursor: pointer;
+    }
+}
+
 .popbox.blue {
     .bg {
         background: none;
     }
+
     .con {
-        color: @clblue;
-        &::before{
+        color: @brand;
+        background: @bg-card;
+        border-color: @line-1;
+        box-shadow: @shadow-pop;
+        &::before {
             display: none !important;
         }
     }

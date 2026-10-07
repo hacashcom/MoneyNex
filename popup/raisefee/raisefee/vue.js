@@ -9,6 +9,14 @@ var routePageRaiseFee = (adr, clbk) => {
     // Single-reply contract (shared helper): reply to the DApp once (success or {err}) then close;
     // a silent cancel would leave the DApp's raisefee request hanging forever.
     let {isAnswered, answerOnce, closeWin, cancelAndClose} = mnx_dapp_reply('Raise fee request')
+    // Terminal failure must reach the DApp (single-reply contract): show the reason
+    // in the window AND answer {ret:1, err, code} once, or the DApp's raisefee
+    // promise hangs forever while the window just sits on the error (found as a
+    // real gap in A5 phase-2: node "tx already exists" left the DApp hanging).
+    let raisefail = (err, code) => {
+        if(!isAnswered()){ answerOnce({ret: 1, err, code}) }
+        return showWPerr(err)
+    }
     // ok
     let {app} = VueCreateApp('rsfe', vue_tpl_raisefee, {
         icfp: icfpath,
@@ -35,14 +43,14 @@ var routePageRaiseFee = (adr, clbk) => {
         , async doraise() {
             let t = this
             if(!t.hash){
-                return showWPerr('Please enter the tx hash.')
+                return raisefail('Please enter the tx hash.', 'sign_refused')
             }
             if(!t.fee){
-                return showWPerr('Please enter the tx fee.')
+                return raisefail('Please enter the tx fee.', 'sign_refused')
             }
             if(t.ing) return
             t.ing = yes;
-            // URL 请求的链与当前网络不一致时拒绝（远端语义）
+            // refuse when the chain requested via URL differs from the current network (remote semantics)
             if(typeof assertUrlRequestChain === 'function'){
                 let reqerr = await assertUrlRequestChain(yes)
                 if(reqerr) {
@@ -57,13 +65,13 @@ var routePageRaiseFee = (adr, clbk) => {
             console.log(res)
             if(!res || !res.pending) {
                 t.ing = no;
-                return showWPerr('Error: Tx not find in tx pool')
+                return raisefail('Error: Tx not find in tx pool', 'sign_refused')
             }
             try {
-                // 1) hash 绑定（防换交易）：请求加费的是 t.hash 这笔交易，节点返回的 body
-                //    必须本地重算出同一个 tx hash。RPC 可被替换/劫持（默认网关甚至是 http），
-                //    body 与请求 hash 无绑定时，用户以为在给 A 交易加费，
-                //    实际可能把签名交给任意一笔交易。
+                // 1) hash binding (anti-substitution): the fee raise targets the transaction t.hash; the body the node returns
+                //    must re-hash locally to that same tx hash. An RPC can be swapped/hijacked (the default gateway was even http),
+                //    without binding the body to the requested hash, the user thinks they are raising the fee for transaction A
+                //    while actually handing their signature to an arbitrary transaction.
                 let orig = await sdk_tx_inspect_report(res.body)
                 if(!orig || !orig.tx_hash || String(orig.tx_hash).toLowerCase() != String(t.hash).toLowerCase()){
                     throw new Error('Refetched tx body does not match the requested hash — refusing to sign')
@@ -72,10 +80,10 @@ var routePageRaiseFee = (adr, clbk) => {
                 // (tx.encode has an unsigned_body_hash integrity gate; changing the fee requires recomputing via tx.build)
                 let txjson = await sdk_tx_decode(res.body)
                 if(txjson.main && txjson.main != t.adr){
-                    // 加费必须由原交易的手续费支付方（main）签名支付；换过账户时提前给明确提示，
-                    // 而不是等到 prepare_signature 报 SDK 签名者错误
+                    // the fee must be signed by the original transaction's fee payer (main); when the account has switched, say so up front
+                    // instead of waiting for prepare_signature to fail with an SDK signer error
                     t.ing = no
-                    return showWPerr('This tx fee is paid by ' + txjson.main + ' — switch to that account first')
+                    return raisefail('This tx fee is paid by ' + txjson.main + ' — switch to that account first', 'sign_refused')
                 }
                 let specs = mnx_txjson_to_spec(txjson)
                 let built = await sdk_tx_build({
@@ -90,10 +98,10 @@ var routePageRaiseFee = (adr, clbk) => {
                 let rv = await mnx_local_review(built.body, t.adr)
                 if(rv.err){
                     t.ing = no;
-                    return showWPerr('Check Tx Error: '+rv.err)
+                    return raisefail('Check Tx Error: '+rv.err, 'sign_refused')
                 }
                 let review = rv.review
-                // body 内 ChainAllow 必须允许当前网络（远端语义）
+                // the body's ChainAllow must allow the current network (remote semantics)
                 if(typeof assertCheckedBodyChain === 'function'){
                     let cherr = await assertCheckedBodyChain(review, yes)
                     if(cherr) {
@@ -103,9 +111,9 @@ var routePageRaiseFee = (adr, clbk) => {
                         return showWPerr(cherr.err)
                     }
                 }
-                // 2) 重显完整 actions 二次确认：加费页此前只展示 hash/fee，用户看不到要签什么。
-                //    本地 review 渲染出全部动作（parseTxDesc 内部对 action 内容做了转义），
-                //    用户确认的必须是"这笔交易的这些动作"。
+                // 2) re-show the full actions for a second confirmation: the fee page used to show only hash/fee, hiding what is being signed.
+                //    the local review renders every action (parseTxDesc escapes action content internally),
+                //    and what the user confirms must be "these actions of this transaction".
                 await mnx_msglayout_load()
                 let desc = parseTxDesc(review).join('<br/>')
                 let actok = await wpcfm_open(
@@ -122,7 +130,7 @@ var routePageRaiseFee = (adr, clbk) => {
                 let signerr = sv.err
                 if(signerr) {
                     t.ing = no;
-                    return showWPerr('Sign Error: '+signerr)
+                    return raisefail('Sign Error: '+signerr, 'sign_failed')
                 }
                 let sigp = sv.result
                 // submit
@@ -131,7 +139,7 @@ var routePageRaiseFee = (adr, clbk) => {
                 let submiterr = subp.err || subp.error
                 if(submiterr) {
                     t.ing = no;
-                    return showWPerr('Error: '+submiterr)
+                    return raisefail('Error: '+submiterr, 'submit_failed')
                 }
                 // success return (DApp callback compatibility)
                 sigp.submit = true;
@@ -141,7 +149,7 @@ var routePageRaiseFee = (adr, clbk) => {
                 _setTimeout(_=>t.ende=1, 150)
             } catch(e) {
                 t.ing = no;
-                return showWPerr('Error: '+mnx_err_message(e))
+                return raisefail('Error: '+mnx_err_message(e), 'sign_refused')
             }
         }
         , async cfim() {

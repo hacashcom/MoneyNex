@@ -1,55 +1,126 @@
 
+// acinf — account details (B3-8). Export/removal logic in acinf/vue.js and
+// login storage untouched (forbidden zone); presentation only.
 #acinfqrcd {
     display: block;
-    margin: @pgpd*3 auto;
-    width: 256px;
-    height: 256px;
-    background: #fff6;
+    margin: 0 auto;
+    width: 224px;
+    height: 224px;
+    padding: @sp-2;
+    background: @bg-qrcode;
+    border-radius: @rd-card;
+    overflow: hidden; // lib draws a 256px default if the size option is lost
+
+    canvas,
+    img {
+        display: block;
+        width: 208px; // 224px plate - 2x@sp-2 padding
+        height: 208px;
+    }
 }
 
 #acinf {
-    .pvky {
-        padding: @pgpd*2;
-        textarea{
-            border: 2px solid #fff6;
-            padding: @pgpd;
-            margin: @pgpd 0;
+    .body {
+        padding: @sp-3 var(--mn-pad-need);
+    }
+
+    .qrcd {
+        text-align: center;
+
+        .qtip {
+            margin-top: @sp-3;
+            font-size: @fs-12;
+            color: @text-3;
         }
+    }
+
+    .pvky {
+        .warn {
+            margin-bottom: @sp-3;
+            padding: @sp-3;
+            background: @sem-error-bg;
+            border-radius: @rd-card;
+
+            p {
+                font-size: @fs-12;
+                line-height: 18px;
+                color: @sem-error;
+                text-align: left;
+            }
+        }
+
+        label {
+            font-size: @fs-14;
+            font-weight: 500;
+            color: @text-1;
+        }
+
+        textarea {
+            height: 96px;
+            margin: @sp-1 0 @sp-2;
+            font-family: @font-mono;
+            font-size: @fs-12;
+        }
+
         .cp {
             display: block;
             padding: 10px;
-            margin: auto;
-            background: #09c4;
-            width: auto;
             text-align: center;
-            border-radius: 100px;
+            color: @brand;
+            background: @brand-faint;
+            border-radius: @rd-input;
             cursor: pointer;
+            font-size: @fs-14;
+
+            &:hover {
+                background: rgba(0, 204, 255, 0.22);
+            }
         }
     }
+
     .btns {
-        padding: 0 @pgpd*2;
+        margin-top: @sp-4;
+
         button {
-            margin: @pgpd auto;
+            margin: @sp-2 auto;
             display: block;
             width: 100%;
         }
+
         .adr {
-            b, img {
-                height: 16px;
-                line-height: 16px;
+            height: auto;
+            min-height: 44px;
+            line-height: 20px;
+            padding: @sp-2;
+            font-family: @font-mono;
+
+            b, img, .icf {
+                display: inline-block;
                 vertical-align: middle;
             }
+
             b {
-                color: @clblue;
-                font-size: 12px;
+                color: @text-1;
+                font-size: @fs-12;
                 font-weight: normal;
+                word-break: break-all;
             }
-            img {
-                margin-left: 8px;
+
+            img, .icf {
+                width: 14px;
+                height: 14px;
+                margin-left: @sp-1;
             }
         }
+
         .rmv {
-            color: coral;
+            background: transparent;
+            border-color: transparent;
+            color: @sem-error;
+
+            &:hover {
+                border-color: @sem-error;
+            }
         }
     }
 }

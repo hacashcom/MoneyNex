@@ -55,6 +55,20 @@ var reqFeasibleFee = async (txsz, opts) => {
     let height = await queryLatestHeight()
     return { current_height: height || 0, expected_chain_id: mnx_chain_id, has_height: !!height }
 }
+, mnx_sdk_err_user = (msg) => {
+    // SDK validator errors leak module jargon ('[norm] amount semantic zero is
+    // not canonical') straight into request pages; map the known families to
+    // user language, keep the raw text as a parenthetical for support.
+    let m = String(msg || '')
+    let known = [
+        [/amount semantic zero is not canonical/i, 'This transaction carries a zero amount, or an amount written in a non-standard form, so it cannot be signed.'],
+        [/height.*window|valid_height/i, 'This transaction is only valid within a block-height window that the current network does not satisfy, so it cannot be signed.'],
+        [/chain.*allow|expected_chain/i, 'This transaction is not allowed on the currently selected network, so it cannot be signed.'],
+    ]
+    for (let i in known) { if (known[i][0].test(m)) return known[i][1] + ' (' + m + ')' }
+    if (/^\s*\[[\w-]+\]/.test(m)) return 'This transaction failed local validation, so it cannot be signed. (' + m + ')'
+    return m
+}
 , mnx_local_review = async (body, signer) => {
     // Prefer strict inspect (HeightScope/ChainAllow window). Height available and strict fails -> block signing explicitly;
     // height unavailable (offline / RPC down) -> degrade to inspect_report noting the window is unverified, handled by the confirm flow.
@@ -66,7 +80,7 @@ var reqFeasibleFee = async (txsz, opts) => {
             })
             return { review }
         } catch(e) {
-            return { err: 'Height/chain window check failed: '+mnx_err_message(e)+' (signing rejected)' }
+            return { err: mnx_sdk_err_user(mnx_err_message(e)) }
         }
     }
     try {
@@ -213,7 +227,8 @@ var reqFeasibleFee = async (txsz, opts) => {
 // DApp callback compatibility layer: restore the fields promised by sdk.md
 // (transfer: ret/success/txbody/txhash/txhashfee/txfee/description;
 //  signtx: sign_hash/hash/hash_with_fee/body/fee/address/need_sign_address/description/ret)
-// async：description 里的 Asset 金额要先用链上 metadata 换算小数位，调用方需 await。
+// async: Asset amounts in the description need on-chain metadata for their decimals,
+// so callers must await.
 , mnx_dapp_result = async (review, sigp, request, signer) => {
     await mnx_asset_meta_ensure((review && review.asset_serials) || [])
     let nsa = {}
@@ -371,8 +386,8 @@ var reqFeasibleFee = async (txsz, opts) => {
                 li = `Transfer ${names.length || p.count} HACD (${esc(names.join(','))})`
             }
             else if(p.type == 'asset'){
-                // atoms 是原始最小单位（Fold64 字符串）；小数位来自链上 AssetSmelt，
-                // 由 mnx_asset_meta_ensure(review.asset_serials) 预热后在此同步读取。
+                // atoms are the raw smallest unit (Fold64 string); decimals come from on-chain AssetSmelt,
+                // read synchronously here after mnx_asset_meta_ensure(review.asset_serials) warms the cache.
                 let amt = mnx_asset_amount_text(p.atoms, p.serial)
                 li = `Transfer Asset#${esc(p.serial)} <b class="amt">${esc(amt.text)}</b>`
                 if(amt.unit){ li += ` ${esc(amt.unit)}` }
@@ -430,7 +445,8 @@ var reqFeasibleFee = async (txsz, opts) => {
             line = parse(ai+1, li)
         }
         if(mnx_is_tx_message_action(act)){
-            // 签名页用 inline 布局：紧凑单行、字段全部左对齐（弹窗窄，不排表格列宽）
+            // signing page uses the inline layout: compact single rows, all fields left-aligned
+// (narrow popup, no fixed table columns)
             line += mnx_msglayout_block_html(act, bind.byArrayIndex[ai], 'inline')
         }
         txdesc.push(line)

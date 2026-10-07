@@ -1,0 +1,140 @@
+
+// ============================================================================
+// MoneyNex design tokens — single source of truth for the whole wallet UI.
+//
+// Structure (7-step type scale, radius/space/shadow scales, responsive page
+// container) follows the refactor plan §B1. Color identity follows the
+// 2026-10-01 user decision: BLACK / WHITE / CYAN — MoneyNex cyan is the only
+// brand color; layering uses grayscale only; MetaMask warm hues are banned.
+// Grayscale values are measured from the MetaMask v13.50 dark reference set
+// (doc/design/mm-ref/): page #000000, card #18181b, divider #222226,
+// border #2d2d32, secondary text #a3a4a7, muted text #66676a.
+// Brand cyan measured from the current MoneyNex UI (#00ccff, html.less @clblue).
+// ============================================================================
+
+// ---- brand ------------------------------------------------------------
+// THE one theme color (user decision 2026-10-05: change THIS value and the
+// whole accent system follows — hover/pressed/tints/selection/focus are all
+// derived here via less color functions, never hand-picked elsewhere).
+@brand: #6cb4e7;
+@brand-left: #4cceff;
+@brand-right: #6098eb;
+@brand-strong: lighten(@brand, 8%);       // hover
+@brand-dim: darken(@brand, 8%);           // pressed
+@brand-faint: fade(@brand, 13%);          // selected background tint
+@brand-glow: fade(@brand, 35%);           // focus ring
+
+// ---- surfaces -----------------------------------------------------------
+// Cards/inputs are translucent WHITE over the black page (user decision
+// 2026-10-05: "the card gray is a translucent white, a bit more translucent") — one ladder, defined
+// once, reused by every card style.
+@bg-page: #000000;        // page base
+@bg-card: rgba(255, 255, 255, 0.05);     // raised card / section
+@bg-card-hover: rgba(255, 255, 255, 0.08); // hovered row / card
+@bg-card-active: rgba(255, 255, 255, 0.11); // pressed row / active segment
+@bg-input: rgba(255, 255, 255, 0.03);    // input well
+@bg-overlay: rgba(0, 0, 0, 0.72); // legacy opaque scrim (unused once glass landed)
+// glassmorphism (user request 2026-10-06): confirm sheets + menus are frosted
+// glass — tint derives from the page backdrop so the ONE theme color rules it
+@glass-bg: fade(@bg-backdrop, 72%);
+@glass-blur: 24px;
+@scrim-bg: fade(#000, 35%);
+@scrim-blur: 4px;
+
+// ---- text ---------------------------------------------------------------
+@text-1: #ffffff;         // primary
+@text-2: #a3a4a7;         // secondary
+@text-3: #66676a;         // muted / disabled
+
+// ---- lines ---------------------------------------------------------------
+@line-0: #ffffff06;         // strong border (inputs, cards on black)
+@line-1: #ffffff11;         // strong border (inputs, cards on black)
+@line-2: #ffffff22;         // hairline divider
+
+// ---- semantic (EXCEPTION list — see report; desaturated, small areas) ----
+@sem-error: #e5544b;      // destructive text / validation
+@sem-error-bg: rgba(229, 84, 75, 0.12);
+@sem-ok: #3ba272;         // success confirmation
+@sem-warn: #c9862d;       // pending / caution
+
+// ---- functional one-offs (no token family; kept here for the single-source
+//      rule — B5 forbids raw hex outside this file) --------------------------
+@ink-on-brand: @bg-page;  // label on the cyan primary button = page bg (knockout effect, 2026-10-05)
+@ink-on-warn: #1a1206;    // label on the amber warn button
+@bg-qrcode: #ffffff;      // QR codes need a white well to stay scannable
+@scroll-thumb: rgba(255, 255, 255, 0.14);   // scrollbar thumb ramp — kept faint
+@scroll-thumb-hover: rgba(255, 255, 255, 0.22);
+@scroll-thumb-active: rgba(255, 255, 255, 0.30);
+
+// ---- type scale (7 steps, nothing else allowed) --------------------------
+@fs-10: 10px;
+@fs-12: 12px;
+@fs-14: 14px;
+@fs-16: 16px;
+@fs-17: 17px;
+@fs-18: 18px;
+@fs-24: 24px;
+@fs-28: 28px;
+@fs-32: 32px;
+
+// ---- radius scale ---------------------------------------------------------
+@rd-input: 10px;   // mm-ref inputs (mm-send-*.png)
+@rd-card: 10px;
+@rd-pill: 100px;
+
+// ---- space scale (4-base; vertical + intrinsic gaps) ----------------------
+@sp-1: 4px;
+@sp-2: 8px;
+@sp-3: 12px;
+@sp-4: 16px;
+@sp-6: 24px;
+@sp-8: 32px;
+
+// Responsive horizontal spacing (B0-8/B1): CSS custom properties scale with
+// the viewport across the whole 400→800 range (user decision 2026-10-05:
+// everything is proportional to width — 0 at the 400px floor, max at 800px+).
+// "necessary" keeps a floor so labels/chips never touch the window edge.
+:root {
+    // section side padding: 16px at 400px → 32px at 800px+
+    --mn-pad-loose: clamp(16px, calc(100vw - 400px + 16px), 32px);
+    // necessary inset (chips, inputs, headers): 12px at 400px → 16px at 480px+
+    --mn-pad-need: clamp(4px, calc((100vw - 400px) / 20), 20px);
+    // inter-card gap: 8px at 400px → 12px at 520px+
+    --mn-gap: clamp(8px, calc(100vw - 400px + 8px), 12px);
+    // content-card side margin: 0 at 400px → 16px at 800px+ (floats the card
+    // off the window edge as the viewport grows)
+    --mn-card-margin: clamp(0px, calc((100vw - 400px) / 25), 16px);
+    // content-card corner radius: 0 at 400px → 20px at 800px+ (user decision
+    // 2026-10-05: at the 400px floor a rounded top edge is meaningless, so
+    // radius and margin both start at 0 and grow with width)
+    --mn-card-radius: clamp(0px, calc((100vw - 400px) / 20), 20px);
+    // horizontal inset that bounds fixed overlays (menus, modals, toasts) to
+    // the content card's column: 0 at ≤800px viewports, then half the leftover
+    // space — so a menu anchored right:8px lands on the card edge, not the
+    // browser window corner. Mirrors #wpage's effective width exactly
+    // (min(800px, viewport minus both card margins)).
+    // (~"" escape: the bundled less tries to evaluate CSS min() itself and
+    // chokes on var(); the browser must do this math at paint time)
+    --mn-card-inset: ~"calc((100vw - min(800px, 100vw - 2 * var(--mn-card-margin))) / 2)";
+}
+
+// ---- shadow (heavier on dark; no inner/emboss shadows anywhere) -----------
+@shadow-card: 0 2px 8px rgba(0, 0, 0, 0.5);
+@shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.6);
+
+// ---- motion ----------------------------------------------------------------
+@tr-fast: 150ms;
+@tr-base: 180ms;
+
+// ---- fonts -----------------------------------------------------------------
+@font-main: "Euclid Circular B", Roboto, Helvetica, Arial, sans-serif;
+@font-mono: ui-monospace, Consolas, "Courier New", monospace;
+
+// ---- page container (user decision 2026-10-05: 400px floor, 800px cap) ----
+@wpage-min-w: 355px;
+@wpage-max-w: 800px;
+@wpage-min-h: 600px;
+
+// window backdrop behind the floating content card (visible only where the
+// card's side margins expose it — never at the 400px floor)
+@bg-backdrop: #101013;

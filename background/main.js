@@ -2,7 +2,7 @@
 
 
 /**
- * API 接口注册
+ * API handler registration
  */
 // 'wallet' (optkey_check_wallet) is answered by dealAccountApi (account.js): it must
 // reply to the content script, never open a popup page. Registering the full list here

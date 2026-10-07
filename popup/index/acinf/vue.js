@@ -49,12 +49,12 @@ var acinfLoadLib= no
             if(!ok) {
                 return
             }
-            // do remove — 按本页展示的地址删（t.myadr），绝不删可变的 current 指针：
-            // 其它窗口可能已把 current 切到别的账户
+            // do remove — delete by the address this page displays (t.myadr), never by the mutable current pointer:
+            // another window may already have switched current to another account
             let curadr = await stoRemoveAccount(t.myadr)
             if(!curadr){
-                // 最后一个账户被拒删（no）/ 记录不存在或写后校验失败（nil）：
-                // 状态未变，留在原地不重路由
+                // last account refused for deletion (no) / record missing or post-write verification failed (nil):
+                // nothing changed — stay put without rerouting
                 return
             }
             // reload page
@@ -70,7 +70,9 @@ var acinfLoadLib= no
         clbk&&clbk()
         // qrcode
         _setTimeout(()=>{
-            new QRCode("acinfqrcd", addr);
+            // draw at the plate's inner size (224px - 2x@sp-2 padding); the lib
+            // defaults to 256px which overflows the plate onto the caption
+            new QRCode("acinfqrcd", { text: addr, width: 208, height: 208 });
         },33)
 
         let adrmaps = await stoReadAccount()

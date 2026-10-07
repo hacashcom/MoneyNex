@@ -37,9 +37,26 @@
         },1500)
     };
     $clas(wptip, 'bg').onclick = ()=>{ wptipcg()/*hide*/ };
-    
+    // the scrim is display:none (this toast must never block the page), so the
+    // notice itself dismisses on click
+    wptipcon.onclick = ()=>{ wptipcg()/*hide*/ };
+
+    // errors used to hold a full-screen scrim and never auto-hide: a wrong
+    // password left the page (and even a successful later unlock) stuck under
+    // an unclickable overlay (user report 2026-10-06). Errors are transient
+    // like tips — 3s to read, then the same fade out.
+    var serr = (e) => {
+        wptipcg(e)
+        tout = _setTimeout(()=>{
+            cl.add(hd)
+            tout = _setTimeout(()=>{
+                pl.add(hd)
+            },500)
+        },3000)
+    };
+
     // showWPerr showWPtip hideWPtip
-    return [wptipcg, stip, wptipcg]
+    return [serr, stip, wptipcg]
 
 })();
 

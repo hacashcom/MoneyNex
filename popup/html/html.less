@@ -4,134 +4,229 @@
 @font-face { font-family: 'Euclid Circular B'; font-weight: 200; src: url('../image/font/Euclid Circular B Light.ttf'); }
 
 
-
-
-@bodyw: 400px;
-@bodyh: 600px;
-@bgcol: #2f2f2f;
-
-@headerh: 50px;
-@bodyerh: @bodyh - @headerh;
-@pgpd: 12px;
-
-// @clblue: #0c96ff;
-@clblue: #00ccff;
-@clok: #2aa515;
-@clerr: orangered;
-
-* {
-    border: none;
-    outline: none;
-    font-family: "Euclid Circular B", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 16px;
-    color: whitesmoke;
-    padding: 0;
-    margin: 0;
-    background: none;
-}
+// ============================================================================
+// Base reset — cascades from html/body instead of a *{} font/color blanket
+// (U-5): typography and color are inherited, UA quirks are normalized once.
+// ============================================================================
 
 html {
-    background: @bgcol + #111
+    // flat black page (user review 2026-10-06): no backdrop-vs-card contrast —
+    // html/body are the page background, #wpage is the bare content column
+    background: @bg-page;
+    // the document scrollbar must never narrow the layout when it appears
+    // (user review 2026-10-06): the gutter stays reserved, so the card column
+    // keeps its width whether or not the page overflows
+    scrollbar-gutter: stable;
 }
 
+body {
+    margin: 0;
+    font-family: @font-main;
+    font-size: @fs-14;
+    line-height: 1.45;
+    color: @text-1;
+    background: @bg-page;
+    padding: 0 var(--mn-card-margin);
+    -webkit-font-smoothing: antialiased;
+}
 
+h1, h2, h3, h4, h5, h6, p, ul, ol, li, figure, table {
+    margin: 0;
+    padding: 0;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+ul, ol {
+    list-style: none;
+}
+
+button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+input, textarea, select, button {
+    font: inherit;
+    color: inherit;
+}
+input, textarea, select, button {
+    // focus = the control's own border color only (comp.less); the UA focus
+    // ring reads as a second, larger activation border — kill it on the
+    // keyboard :focus-visible path too (user decision 2026-10-06)
+    outline: none;
+}
+
+textarea {
+    resize: none;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+b, strong {
+    font-weight: bold;
+}
+
+i, em {
+    font-style: italic;
+}
+
+img {
+    vertical-align: middle;
+}
+
+// No element may keep a UA outline; keyboard focus gets the token ring.
+:focus {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 2px solid @brand;
+    outline-offset: 1px;
+    border-radius: @rd-input;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+// ----------------------------------------------------------------------------
+// Page container (user decision 2026-10-05): floating content card, 400px
+// floor / 800px cap. At a 400px viewport (toolbar popup, notification window)
+// margin and radius are 0 — the card IS the window, edge to edge. As the
+// viewport grows the card floats: side margins (--mn-card-margin) and corner
+// radius (--mn-card-radius, max 20px) scale with width, and the html backdrop
+// shows around it. In an expanded tab the container stays capped and centered.
+// ----------------------------------------------------------------------------
 #wpage {
     position: relative;
-    margin: auto;
-    width: @bodyw;
-    height: @bodyh;
-    background-color: @bgcol;
-    box-shadow: 0 0 40px #fff4, 0 0 1px 3px #000;
-    overflow: hidden;
-    overflow-y: auto;
+    margin: 0 auto;
+    width: 100%;
+    min-width: @wpage-min-w;
+    max-width: @wpage-max-w;
+    // 600px floor is for tall tabs (expanded view); in a notification window
+    // (~590px inner) it must never exceed the viewport, or html/body itself
+    // scrolls beside #wpage's own scrollbar (double scrollbar, M2 finding)
+    min-height: min(@wpage-min-h, 100vh);
+    // height: 100vh;
+    background-color: @bg-page;
+    // no radius / no shadow: html and body already carry the same black — the
+    // "floating card" visual is gone (user decision 2026-10-06); the pad and
+    // overlay-inset curves stay proportional to width as before
+    border-radius: 0;
+    box-shadow: none;
+    // overflow: hidden;
+    // overflow-y: auto;
 }
-
-
 
 /************ scrollbar  **************/
 
-// Scrollbar overall width
 ::-webkit-scrollbar {
-    width: 6px;
-}
-// Scrollbar track style
-::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
-    border-radius: 6px;
-}
-// Scrollbar thumb style
-::-webkit-scrollbar-thumb {
-    border-radius: 6px;
-    background: #fff8;
-    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
-}
-::-webkit-scrollbar-thumb:hover{
-    background: #ccc;
-}
-::-webkit-scrollbar-thumb:active{
-    background: #999;
+    width: 5px;
+    height: 5px;
 }
 
-// TxMessage 展示块。虚线框内**只有解析出来的字段**：载荷字节数在 action 标题里
-// （`Message · N bytes`），源 HEX 在框外（.hexgray），两者都不进框。
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: @rd-pill;
+    background: @scroll-thumb;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: @scroll-thumb-hover;
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: @scroll-thumb-active;
+}
+
+// ============================================================================
+// Tx message visualization (classes produced by jslib/msglayout.js — names
+// are contract, styles are B-owned). Dark-theme token values only.
+// ============================================================================
+
+// TxMessage display block. The dashed box holds **only the parsed fields**: the payload byte count sits in the action title
+// ("Message · N bytes") and the source HEX stays outside the box (.hexgray); neither goes inside.
 .msgf {
-    margin-top: 8px;
-    padding: 8px 10px;
-    background: #0005;
-    border: 1px dashed #fff3;
-    border-radius: 8px;
+    margin-top: @sp-2;
+    padding: @sp-2 10px;
+    background: @bg-input;
+    border: 1px dashed @line-1;
+    border-radius: @rd-card;
     text-align: left;
+
     .fid {
-        color: #8ec8c8;
+        color: @brand;
         font-weight: normal;
-        font-size: 12px;
+        font-size: @fs-12;
     }
+
     .untrust {
         font-style: italic;
-        color: #c4a574;
-        font-size: 11px;
+        color: @sem-warn;
+        font-size: @fs-12;
         font-weight: normal;
-        margin-left: 6px;
-        // 与后面白色值之间再留一段距离（inline 模式下注记紧跟值，挤在一起读不清）
-        margin-right: 6px;
+        margin-left: @sp-1;
+        margin-right: @sp-1;
     }
+
     .layerr {
-        color: #e07070;
-        font-size: 12px;
-        margin: 4px 0;
+        color: @sem-error;
+        font-size: @fs-12;
+        margin: @sp-1 0;
         word-break: break-word;
     }
+
     .mfhex .fid {
-        color: #d4a0a0;
+        color: @text-2;
     }
+
     code.evm, code.maddr, code.magic, code.uint, code.amt, code.hacd, code.asset, code.text {
-        font-family: ui-monospace, Consolas, "Courier New", monospace;
-        font-size: 12px;
-        color: #dce7f5;
+        font-family: @font-mono;
+        font-size: @fs-12;
+        color: @text-1;
         word-break: break-all;
     }
+
     code.amt {
-        color: goldenrod;
+        color: @brand;
         font-weight: bold;
     }
-    // inline（签名页）：紧凑单行，字段全部左对齐——弹窗只有 400px 宽，不排固定列宽
+
+    // inline (signing page): compact single rows, all fields left-aligned — the popup is only 400px wide, no fixed columns
     &.inline {
         padding: 7px 9px;
+
         .mf {
-            font-size: 13px;
+            font-size: @fs-12;
             line-height: 18px;
-            margin-top: 4px;
+            margin-top: @sp-1;
             word-break: break-all;
+
             b, i, code {
                 display: inline;
                 font-size: inherit;
                 line-height: inherit;
                 vertical-align: baseline;
             }
-            .fid { margin-right: 4px; }
+
+            .fid {
+                margin-right: @sp-1;
+            }
         }
     }
-    // table（All Actions 全览页）：两列对齐，值列在各字段间对齐
+
+    // table (All Actions review page): two aligned columns, the value column aligned across fields
     &.table {
         .mfrow {
             display: grid;
@@ -139,20 +234,32 @@ html {
             gap: 14px;
             align-items: start;
             margin-top: 5px;
-            &:first-child { margin-top: 0; }
+
+            &:first-child {
+                margin-top: 0;
+            }
         }
-        .mfk { line-height: 18px; }
+
+        .mfk {
+            line-height: 18px;
+        }
+
         .mfv {
-            font-size: 13px;
+            font-size: @fs-12;
             line-height: 18px;
             word-break: break-all;
-            .fid { margin-right: 4px; }
+
+            .fid {
+                margin-right: @sp-1;
+            }
         }
+
         .mf {
-            font-size: 13px;
+            font-size: @fs-12;
             line-height: 18px;
             margin-top: 5px;
             word-break: break-all;
+
             b, i, code {
                 display: inline;
                 font-size: inherit;
@@ -163,41 +270,56 @@ html {
     }
 }
 
-// 十六进制显示（无背景框，区别于旧的 .hexdump 方框样式）：
-//   .hexplain = 白色值（本身即 HEX 的字段）  .hexgray = 灰色源数据（magic/u8..u64 的 0x 源、整条载荷原文）
-// 过长时截断并可点击开全文（事件委托在 msglayout.js 的 mnx_hex_bind_delegate）
+// hexadecimal display (no background box, unlike the old .hexdump boxed style):
+//   .hexplain = white value (fields that are HEX already)   .hexgray = gray source data (the magic/u8..u64 0x sources, the whole payload text)
+// overlong values truncate and expand on click (event delegation in msglayout.js mnx_hex_bind_delegate)
 .hexplain, .hexgray {
-    font-family: ui-monospace, Consolas, "Courier New", monospace;
-    font-size: 11.5px;
+    font-family: @font-mono;
+    font-size: @fs-12;
     line-height: 17px;
     letter-spacing: 0.2px;
     word-break: break-all;
     white-space: pre-wrap;
 }
-.hexplain { color: #dce7f5; }
-.hexgray { color: #aab4bd; }
+
+.hexplain {
+    color: @text-1;
+}
+
+.hexgray {
+    color: @text-2;
+}
+
 .hexplain.clickable, .hexgray.clickable {
     cursor: pointer;
-    &:hover { color: #cdd6de; }
+
+    &:hover {
+        color: @brand-strong;
+    }
 }
-// 虚线框内的 HEX 值（白色）与同行灰色源数据
+
+// HEX value (white) inside the dashed box with its same-row gray source data
 .msgf .hexsrc {
-    margin-left: 8px;
-    font-family: ui-monospace, Consolas, "Courier New", monospace;
-    font-size: 11.5px;
-    color: #aab4bd;
+    margin-left: @sp-2;
+    font-family: @font-mono;
+    font-size: @fs-12;
+    color: @text-2;
 }
+
 .msgf .mfv > .hexplain, .msgf .mfv > .hexgray, .msgf .mf > .hexplain, .msgf .mf > .hexgray {
     display: inline;
 }
-.avmsg .hexgray { margin-top: 6px; }
+
+.avmsg .hexgray {
+    margin-top: @sp-1;
+}
 
 .layouterr {
-    margin: 0 @pgpd @pgpd;
-    padding: 8px @pgpd;
-    font-size: 13px;
+    margin: 0 var(--mn-pad-loose) var(--mn-pad-loose);
+    padding: @sp-2 var(--mn-pad-loose);
+    font-size: @fs-12;
     line-height: 18px;
-    color: #e07070;
+    color: @sem-error;
     word-break: break-word;
 }
 
@@ -205,15 +327,14 @@ html {
 // `.txerr` (that banner is display-block with large margin/padding).
 .tx .txhint {
     display: inline;
-    margin: 0 0 0 6px;
+    margin: 0 0 0 @sp-1;
     padding: 1px 7px;
-    font-size: 11px;
+    font-size: @fs-10;
     font-weight: normal;
     line-height: 16px;
     vertical-align: middle;
-    color: #ffb4b4;
-    background: #ff000018;
-    border: 1px solid #ff00004d;
-    border-radius: 999px;
+    color: @sem-error;
+    background: @sem-error-bg;
+    border-radius: @rd-pill;
     white-space: nowrap;
 }

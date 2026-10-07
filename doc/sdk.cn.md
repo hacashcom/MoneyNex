@@ -3,6 +3,8 @@ MoneyNex 开放平台 SDK 接口文档
 
 > 本文档是 Hacash 生态钱包 MoneyNex 的第三方接入开发指引和 SDK 接口说明，为 Hacash 生态的交易平台、矿业服务或其他工具的开发者准备
 
+> 本文档对应钱包版本 **0.4.0**。此处描述的全部内容向后兼容 0.3.x；0.4.0 的新增点（明确的拒绝语义码、已连接站点管理）均为增量——参见[请求生命周期：取消与错误语义](#请求生命周期取消与错误语义)与 [0.4.0 发布说明](release-notes-0.4.0.cn.md)。
+
 通过 MoneyNex 钱包的开放接口，可以达成诸如获取用户地址、发起转账、签名交易或铭刻 HACD 等功能，并获取相应数据返回，为用户带来更便捷和安全的产品体验。
 
 请确保你已经在最新版本的 chrome 浏览器中安装好了 MoneyNex 钱包，特别注意，某些试验性质的 API 可能需要 Github 发布的最新版本才支持。让我们开始吧！
@@ -55,11 +57,13 @@ setTimeout(function(){
 
 window.MoneyNex 对象可用，即代表钱包 SDK 可用。
 
+SDK 准备就绪后，`MoneyNex.info` 携带钱包信息 `{ icon, name, version }`。`version` 在运行时从扩展 manifest 读取——当前版本为 **`0.4.0`**（来源：`content/content.js` 通过 `chrome.runtime.getManifest().version` 写入；`content/hacash_api.js` 将其暴露为 `MoneyNex.info`）。需要按版本区分行为时，请在运行时读取该字段。
+
 ### SDK API 列表
 
 钱包的 SDK 接口几乎都以 `MoneyNex.api_name(params, function(data){})` 的异步回调形式注册。以下是可用的 API 列表：
 
-1. `wallet` 获取用户钱包的当前主地址，未授权则返回 Error
+1. `wallet` 获取用户钱包的当前主地址；站点尚未授权时，请求以 `{err:'need connect first', code:'need_connect'}` 拒绝（同时钱包会自动打开连接授权窗口）
 2. `connect` 发起连接钱包的授权，成功后返回用户钱包信息
 3. `transfer` 发起各种交易并签名广播，返回交易信息
 4. `signtx` 对已经构建好的交易体签名，并可选择自动广播
@@ -85,6 +89,8 @@ MoneyNex.wallet({}, acc => {
 })
 ```
 
+若站点 origin 尚未授权，请求会以 `{err: 'need connect first', code: 'need_connect'}` 拒绝——与此同时，钱包会为用户打开连接授权窗口。用户完成授权后，请重新发起 `wallet` 调用，即可拿到 `{address}`。
+
 ### 发起钱包授权连接
 
 ```js
@@ -94,7 +100,31 @@ MoneyNex.connect({}, acc => {
 })
 ```
 
-调用 connect 接口，钱包将打开一个连接到钱包的授权页面，当用户完成授权时，钱包将通过回调通知成功。如果用户取消或者一直未点击确认授权，则回调函数不会被调用。
+调用 connect 接口，钱包将打开一个连接到钱包的授权窗口，当用户完成授权时，钱包将通过回调通知成功。如果用户取消该请求（点击取消，或未确认直接关闭授权窗口），请求将以 **`{ret:1, code:'user_canceled'}` 拒绝**——Promise reject，回调收到该对象。这是一次明确的拒绝而不是回调丢失：按旧版文档（"取消时回调不会被调用"）编写的 dApp 行为不变，只是会额外多观察到一次可以忽略的拒绝。
+
+用户随时可以在钱包的「已连接站点」管理页撤销某个站点的授权；撤销后，下一次 `connect`/`wallet` 调用会重新打开授权窗口。0.4.0 起授权按 origin（协议+主机+端口）精确记录；0.3.x 创建的授权会被迁移并继续对其主机生效。
+
+### 请求生命周期：取消与错误语义
+
+每个 SDK 请求都会收到**恰好一次应答**——无论成功、取消还是失败。应答经由该请求的 `did` 通道送达：callback 的第一个参数收到它；若其中带有 `err` 字段，返回的 Promise 会以同一对象 **reject**。一个 `did` 只会被第一次应答落定——迟到的或重复的应答（例如兜底取消与正常成功竞争）会被页面侧丢弃，dApp 不会对一个请求看到两次应答。
+
+常见拒绝语义码及 dApp 侧建议处理方式：
+
+| code | 触发场景 | 典型应答形状 | dApp 侧应对建议 |
+| --- | --- | --- | --- |
+| `user_canceled` | 用户在请求窗口点击了 Cancel，或未确认直接关闭窗口（X / Ctrl+W） | 页面取消：`{ret:1, err:'User canceled the ... request', code:'user_canceled'}`；未确认直接关窗：`{ret:1, err:'... canceled (popup closed)', code:'user_canceled'}` | 属正常、预期的拒绝：安静中止流程或给出中性的「已取消」提示；不要自动重试 |
+| `sign_refused` | 钱包因策略原因拒绝签名：transfer 的 `main_address` 与当前账户不符；`signtx` 交易体未通过本地审阅（签名者/格式规则）；`signtext` 文本形似 32 字节裸哈希或违反长度规则（8–4096 字符）；`raisefee` 目标交易不存在，或手续费由其他账户支付 | `{ret:1, err:'<人类可读原因>', code:'sign_refused'}` | 将 `err` 展示给用户并让其修正输入；只有在输入真正变化后才重新发起 |
+| `need_connect` | 站点 origin 未授权时调用了受限 API（`wallet`、`transfer`、`signtx`、`signtext`、`raisefee`、`switchchain`） | `{err:'need connect first', code:'need_connect'}` | 钱包会随此拒绝同时打开连接授权窗口；用户授权完成后重新发起原请求 |
+| `submit_failed` | 签名成功，但已签名交易广播上链失败（`transfer`；带 `autosubmit` 的 `signtx`；`raisefee` 提交） | `{ret:1, err:'Signed, but chain submission failed: ...', code:'submit_failed', txbody, body}`（`txbody`/`body` 仅 transfer/signtx 携带） | 已签名交易体就在你手上：可自行重试广播，或重新构造请求；不要默认交易已上链 |
+
+另有一些值得了解的语义：
+
+- **请求窗口形态。** 请求页面以独立的 400×620 通知小窗打开（窗口创建失败时回退为在请求标签页旁开普通标签页）。无论哪种形态，应答都绑定到发起请求的标签页，dApp 侧集成不受影响。
+- **未确认直接关窗也会有应答。** 两条相互独立的兜底会送达取消：页面 `beforeunload` 在销毁过程中尽力补发一次；钱包 background 还会监听 `chrome.windows.onRemoved` / `chrome.tabs.onRemoved`，回发权威的 `{did, ret:1, err:'Request canceled (popup closed)', code:'user_canceled'}`；该兜底背后的待决请求登记表持久化于 `chrome.storage.session`，即使 MV3 service worker 在请求与关窗之间被回收重启，取消应答仍会送达。由于重复应答会被丢弃，dApp 可以把取消处理当作可选项——按旧版「取消不回调」措辞编写的代码照常工作。
+- **链不匹配拒绝不带 `code`。** 当 transfer/signtx 的 `chain_id` 与钱包当前网络不符，或主网交易体包含 ChainAllow 动作（非主网交易体缺少所需动作）时，应答为 `{ret:1, err, current_chain_id?, request_chain_id?}`，不带 `code` 字段——以 `err` 文本和网络字段识别该情形。
+- **本地签名失败。** 钱包内签名步骤本身失败（如账户解锁失败）时，应答为 `{ret:1, err, code:'sign_failed'}`；请先解决钱包侧问题再重新发起。
+
+实现参考（MoneyNexNew 仓库）：单次应答助手 `mnx_dapp_reply` 位于 `popup/html/html.js`；各页取消/拒绝路径在 `popup/connect/conn/vue.js`、`popup/transfer/sigtrs/vue.js`、`popup/signtx/signtx/vue.js`、`popup/signtext/signtext/vue.js`、`popup/raisefee/raisefee/vue.js`；通知窗打开、标签页回退与关窗监听在 `background/init.js`（`openRequestPopupWindow`、由 `chrome.storage.session` 持久化的 `registerPendingReqReply`/`firePendingCancel`、`chrome.windows.onRemoved`、`chrome.tabs.onRemoved`）；连接门禁与 `need_connect` 在 `background/listener.js` 与 `background/account.js`；页面侧消息桥、`did` 单次落定表与 Promise 在 `content/hacash_api.js`。
 
 ### 查询 Chain 状态
 
@@ -399,11 +429,13 @@ MoneyNex.signtext({
 })
 ```
 
-钱包强制的安全规则（拒绝时返回错误且不会签署任何内容）：
+钱包强制的安全规则（拒绝时向页面返回错误 `{ret:1, err, code:"sign_refused"}` 且不会签署任何内容）：
 
 - 文本长度必须在 8 到 4096 字符之间。
 - 形似**32 字节裸哈希**的文本（64 位 hex、可带 `0x`/空白，或 43 字符 base64/base64url 载荷）一律拒绝——请不要用 `signtext` 让用户为哈希背书，交易请使用 `signtx`。
 - 签名前完整原文会在专门的审阅页面逐字展示给用户。
+
+拒绝时审阅窗口保持打开并显示原因，不会签署任何内容，dApp 收到 `{ret:1, err, code:"sign_refused"}`。若钱包内本地签名步骤本身失败（例如账户解锁失败），则改为返回 `{ret:1, err, code:"sign_failed"}`——请先解决钱包侧问题，再重新发起请求。
 
 ### 提升交易手续费
 

@@ -76,8 +76,8 @@
             let res = await reqFeasibleFee(txsz, opts)
             t.rcmgas = parseFloat(res && res.feasible)
             if(!isFinite(t.rcmgas)){
-                // 拿不到建议费（网络失败/网关异常）：保持最低费继续，但必须让用户知道，
-                // 否则一笔低于地板价的交易会被静默广播然后被节点拒绝
+                // Suggested fee unavailable (network failure / gateway error): continue with the floor fee, but the user must know,
+                // otherwise a below-floor transaction would be broadcast silently and then rejected by the node
                 showWPerr('Fee suggestion unavailable (network?) — using minimum fee')
             }else if(t.rcmgas > t.bgas){
                 t.bgas = t.rcmgas

@@ -109,7 +109,7 @@ var routePageDotrs = (options, clbk) => {
                 return showWPerr('Account unlocking failed')
             }
             try {
-                // 非主链自动附加 ChainAllow action（主链上原样返回，行为不变）
+                // non-main chains get a ChainAllow action appended automatically (main chain returns the body unchanged, behavior identical)
                 let txobjpre = { actions: [] }
                 if(typeof applyCurrentChainToTxobj === 'function'){
                     txobjpre = await applyCurrentChainToTxobj({ actions: [] })
