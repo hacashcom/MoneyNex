@@ -438,6 +438,59 @@ table {
         }
     }
 
+    // request pages reuse home's header-left account switcher (user decision
+    // 2026-10-07): the same .adrswrap structure as #home .homehead
+    // (home/vue.less), re-declared here because request pages bundle comp.less
+    // but not home's page styles
+    .adrswrap {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .adcp {
+        padding: 3px @sp-2;
+
+        b {
+            font-family: @font-mono;
+            font-size: @fs-10;
+            font-weight: normal;
+            color: @text-2;
+        }
+
+        .icf {
+            height: 10px;
+            width: 10px;
+            position: relative;
+            top: -2px;
+        }
+    }
+
+    .adrs-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: @sp-1;
+        height: 28px;
+        padding: 0 @sp-2;
+        border-radius: @sp-1;
+        font-size: @fs-16;
+        font-weight: 500;
+        color: @text-1;
+        cursor: pointer;
+        transition: background @tr-fast ease;
+
+        .icf {
+            width: 14px;
+            height: 14px;
+        }
+
+        &:hover {
+            background: @bg-card-hover;
+        }
+    }
+
     .pchead-r {
         justify-content: flex-end;
     }
@@ -655,7 +708,7 @@ table {
         min-height: @seg-h;
         border-radius: @rd-pill;
         // same size/weight as buttons (user decision 2026-10-05)
-        font-size: @fs-18;
+        font-size: @fs-16;
         font-weight: 500;
         color: @text-2;
         cursor: pointer;
@@ -684,7 +737,7 @@ table {
             text-shadow: 1px 1px 1px #000;
             color: @brand;
             background: linear-gradient(to right bottom, 
-                fade(@brand-left, 18%), fade(@brand-left, 8%));
+                fade(@brand, 68%), fade(@brand-left, 0%));
         }
     }
 }
@@ -868,6 +921,9 @@ table {
         .card {
             border: none;
             border-radius: 0;
+        }
+        .hexfray {
+            margin-top: 8px;
         }
     }
     .sitebar {

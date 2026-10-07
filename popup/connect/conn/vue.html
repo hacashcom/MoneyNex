@@ -1,7 +1,10 @@
 <div class="reqpage">
     <header class="pchead">
         <div class="pchead-l">
-            <button class="acctchip ast" @click="pgh_open_adr" :title="pgh_adr"><b>{{pgh_sadr}}</b><i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i></button>
+            <div class="adrswrap">
+                <h1 class="btn adrs-btn" @click="pgh_open_adr" :title="adr || pgh_adr">{{(adr || pgh_adr || '').substring(0,9)}}<i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i></h1>
+                <button class="ghbtn adcp" @click="pgh_cpadr" title="Copy address"><b>{{sadr || pgh_sadr}}</b><i class="icf" style="--ic: url('../image/ftic/copy.svg')"></i></button>
+            </div>
         </div>
         <div class="pchead-logo"></div>
                 <div class="pchead-r">

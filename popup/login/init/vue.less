@@ -1,5 +1,12 @@
 
 // init / unlock / onboarding (B3-3 reskin; flow logic in init/vue.js untouched).
+
+body.clcvr {
+    background-color: @brand;
+    background: linear-gradient(to right bottom, #3fcae9, #27296d);
+}
+
+
 #init {
     display: none;
 
@@ -53,9 +60,10 @@
         width: 100%;
         max-width: 280px;
         margin: 0 auto;
+        margin-top: 60px;
 
         .per {
-            height: 4px;
+            height: 24px;
             width: 100%;
             border-radius: @rd-pill;
             background: @bg-card;
@@ -78,7 +86,7 @@
 
         .tip {
             font-size: @fs-14;
-            color: @text-2;
+            color: @text-1;
         }
     }
 

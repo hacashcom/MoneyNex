@@ -38,11 +38,15 @@ async function sendMessageToCurrentTabContent(req, msg) {
 
 // A2: dApp request pages (connect/transfer/signtx/signtext/raisefee/switchchain)
 // open as a MetaMask-style notification popup window instead of a full tab:
-// type 'popup', width 400 = the page max-width (appendix.3-1, same as MetaMask
-// v12.17+), height 620 including the window frame. The tid/did/dmu URL contract
+// type 'popup', sized REQ_WIN_W x REQ_WIN_H (see the constants below — 800px
+// is the #wpage design max-width), outer size including the window frame.
+// The tid/did/dmu URL contract
 // and the ml_<tabid>_<did> session channel are unchanged — replies are delivered
 // to the source tab via chrome.tabs.sendMessage(tid), independent of the window
 // form, so the SDK message protocol is untouched.
+const REQ_WIN_W = 800
+, REQ_WIN_H = 800
+
 async function openWalletPopupPageInNextTab(req, tabid) {
     // console.log(req)
     req = req || {}
@@ -137,7 +141,7 @@ async function sourceWindowAnchor(tab) {
         if(w.state == 'minimized' || w.state == 'fullscreen'){ return null }
         if(w.left < -100 || w.top < -100 || w.left > 20000 || w.top > 20000){ return null }
         return {
-            left: Math.max((w.left || 0) + ((w.width || 0) - 400), 0),
+            left: Math.max((w.left || 0) + ((w.width || 0) - REQ_WIN_W), 0),
             top: w.top || 0,
         }
     }catch(e){
@@ -153,8 +157,8 @@ function openRequestPopupWindow(url, anchor) {
             let crt = {
                 url: url,
                 type: 'popup',
-                width: 400,
-                height: 620,
+                width: REQ_WIN_W,
+                height: REQ_WIN_H,
                 focused: true,
             }
             // [Modernize-1] create beside the requesting page's window when the
@@ -183,7 +187,7 @@ function openRequestPopupWindow(url, anchor) {
     })
 }
 
-// [Modernize-1] enforce the 400x620 contract + anchored position after create.
+// [Modernize-1] enforce the REQ_WIN_W x REQ_WIN_H contract + anchored position after create.
 // Two hardening facts shape this: (1) this sandbox launches Chrome minimized
 // off-screen and windows.create then ignores width/height/left/top entirely,
 // cloning the launch geometry (found live; the old in-callback size reassert
@@ -213,8 +217,8 @@ function reassertRequestPopupWindow(winId, crt) {
                     upds = { left: 0, top: 0 }
                 }
                 if(upds){
-                    upds.width = 400
-                    upds.height = 620
+                    upds.width = REQ_WIN_W
+                    upds.height = REQ_WIN_H
                     chrome.windows.update(winId, upds, () => {
                         let uerr = chrome.runtime && chrome.runtime.lastError
                         if(uerr){ console.warn('reassertRequestPopupWindow: ', uerr.message) }
@@ -527,7 +531,7 @@ chrome.runtime.onInstalled.addListener(async ({reason}) => {
     if (reason === 'install') {
         // First-run welcome: the wallet home opens as a normal tab. A2 scopes the
         // notification-window form to dApp-triggered request pages; onboarding is
-        // not a request, and a 400x620 window is the wrong first impression.
+        // not a request, and a request-sized window is the wrong first impression.
         await chrome.tabs.create({ url: 'popup/moneynex.html' })
     }
 });
@@ -544,7 +548,7 @@ chrome.runtime.onInstalled.addListener(async ({reason}) => {
 // restarts. default_popup stays declared as the graceful fallback: when the
 // sidePanel API is unavailable (older kernel / setPanelBehavior throws) an icon
 // click falls back to the original small popup. dApp-triggered request pages
-// (openRequestPopupWindow's 400x620 notification windows) and the install
+// (openRequestPopupWindow's notification windows) and the install
 // welcome tab are unrelated to this flag and keep their behavior.
 // To restore the popup-only form, remove this single call.
 if(chrome.sidePanel && chrome.sidePanel.setPanelBehavior){

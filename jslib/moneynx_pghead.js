@@ -1,7 +1,9 @@
 // moneynx_pghead — shared header behavior for the standalone request pages
 // (signtx/signtext/sigtrs/raisefee/switchchain/conn), user decision 2026-10-06:
-//   - LEFT: clickable account switcher — lists EXISTING accounts only, no
-//     create/import affordance (that stays home-only)
+//   - LEFT: home-header account switcher reused (user decision 2026-10-07):
+//     the same .adrswrap structure as home — switcher button + copy-address
+//     chip — listing EXISTING accounts only, no create/import affordance
+//     (that stays home-only)
 //   - RIGHT: burger menu — network switching among EXISTING networks only,
 //     no add-network entry (management stays in home/chains)
 // Pages register via VueCreateApp(..., extds={mixins:[mnx_pghead]}). Component
@@ -44,6 +46,13 @@ var mnx_pghead = {
             t.pgh_sadr = cur ? addrOmitted(cur) : ''
             t.adrswct = true
             t.netswct = false
+        }
+        , pgh_cpadr() {
+            // home-header parity: the copy chip copies the full address of the
+            // account this page is serving (live pages keep adr in sync via
+            // swtcuraddr; static pages fall back to pgh_adr)
+            copyToClipboard(this.adr || this.pgh_adr || '')
+            showWPtip(copyoktip)
         }
         , async pgh_swt_adr(a) {
             let t = this

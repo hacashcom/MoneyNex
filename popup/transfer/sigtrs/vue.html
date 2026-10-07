@@ -1,10 +1,10 @@
 <div class="reqpage">
     <header class="pchead">
         <div class="pchead-l">
-            <button class="acctchip ast" @click="openadrswct" :title="adr">
-                <b>{{(adr||'').substring(0,9)}}...</b>
-                <i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i>
-            </button>
+            <div class="adrswrap">
+                <h1 class="btn adrs-btn" @click="openadrswct" :title="adr">{{(adr||'').substring(0,9)}}<i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i></h1>
+                <button class="ghbtn adcp" @click="pgh_cpadr" title="Copy address"><b>{{sadr}}</b><i class="icf" style="--ic: url('../image/ftic/copy.svg')"></i></button>
+            </div>
         </div>
         <div class="pchead-logo"></div>
                 <div class="pchead-r">

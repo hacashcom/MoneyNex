@@ -62,6 +62,8 @@ var routePageInit = async (sc, force) => {
             if(!t.rdnstr){
                 if(t.rdnbct>=ACC_INIT_MV_NUM){
                     t.rdnstr = culkey
+                    // the progress bar goes away (v-if="!rdnstr") — body.clcvr goes with it
+                    document.body.classList.remove('clcvr')
                     await stoSaveRandomKey(SHA256(culkey))
                 }
                 t.rdnbct += 1
@@ -172,7 +174,11 @@ var routePageInit = async (sc, force) => {
             t.rdnstr = key
             await recordRandomString(key)
         }else{
+            // the mouse-entropy progress bar shows (v-if="!rdnstr") — paint the
+            // page background via body.clcvr (init/vue.less); mousemove
+            // completion removes it
             t.rdnstr = nil
+            document.body.classList.add('clcvr')
         }
         // if goto lock page
         let gotolockpage = curadr && psoverout===true && !force
