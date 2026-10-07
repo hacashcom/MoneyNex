@@ -78,7 +78,7 @@
       ],
       "resources": [
         "content/hacash_api.min.js",
-        "image/icos/128.png"
+        "image/icos/logo.svg"
       ]
     }
   ],
