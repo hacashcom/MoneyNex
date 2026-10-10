@@ -1,0 +1,43 @@
+<!-- pghead — shared request-page header (account chip + copy + network burger,
+     with the account-switch and network-switch menus). One implementation for
+     the six dApp request pages (signtx/sigtrs/signtext/raisefee/connect/
+     switchchain); previously each page hand-copied this block.
+     Props:  adr/sadr — the page's live account (static pages may leave them
+             empty; the component falls back to its own read of current_account).
+     Event:  swt — bound by pages with an in-place account switch (signtx/
+             sigtrs/raisefee @swt="swtcuraddr"); unbound pages get the default
+             "save current account + reload". -->
+<header class="pchead">
+    <div class="pchead-l">
+        <div class="adrswrap">
+            <h1 class="btn adrs-btn" @click="open_adr" :title="adr || pgh_adr">{{(adr || pgh_adr || '').substring(0,9)}}<i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i></h1>
+            <button class="ghbtn adcp" @click="cpadr" title="Copy address"><b>{{sadr || pgh_sadr}}</b><i class="icf" style="--ic: url('../image/ftic/copy.svg')"></i></button>
+        </div>
+    </div>
+    <div class="pchead-logo"></div>
+    <div class="pchead-r">
+        <button class="icbtn mnburger" @click="open_net" title="Networks"><i></i><i></i><i></i></button>
+    </div>
+</header>
+<!-- account switcher: existing accounts ONLY — no create/import here (home-only) -->
+<div class="popmenu acctmenu" v-if="adrswct" @click="adrswct=0">
+    <ul>
+        <div class="tt">Switch account:</div>
+        <li v-for="(v, k) in adrmaps"
+            :class="`${k==cur?'active':''}`"
+            @click="swt_adr(k)">
+            {{k}}
+        </li>
+    </ul>
+</div>
+<!-- burger menu: network switching among existing networks ONLY — no add-network -->
+<div class="popmenu netsmenu" v-if="netswct" @click="netswct=0">
+    <ul>
+        <div class="tt">Switch network</div>
+        <li v-for="n in pgh_nets"
+            :class="`${n.id==pgh_curcid?'active':''}`"
+            @click="swt_net(n.id)">
+            {{n.name}}<i v-if="n.id!=0">{{'ID '+n.id}}</i>
+        </li>
+    </ul>
+</div>

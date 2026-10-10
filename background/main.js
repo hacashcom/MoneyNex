@@ -1,6 +1,4 @@
 
-
-
 /**
  * API handler registration
  */

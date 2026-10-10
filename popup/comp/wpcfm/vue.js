@@ -61,13 +61,3 @@ let {ctx: wpcfm} = VueCreateApp('wpcfm', vue_tpl_wpcfm, {
     'Backed up'))
 }
 
-// test
-// _setTimeout(()=>{
-
-//     wpcfm.open('hahaha', 'Confirm', function(){
-//         alert('yes!')
-//     }, function(){
-//         // alert('no')
-//     })
-
-// }, 100)

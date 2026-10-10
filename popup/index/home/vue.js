@@ -39,6 +39,10 @@ var refreshHomeTrsLog = nil
         /* rpc settings */
         rpcset: no,
         rpcuri: '',
+        rpctip: fullnode_url, // build-time default node (placeholder)
+        /* in-wallet Connected indicator (B Phase 3 revised): {origin, host} of
+        the ACTIVE browser tab's site when connected, nil hides the bar */
+        connsite: nil,
     },{
         dotrs() {
             routePageDotrs(null, ()=>{
@@ -99,7 +103,6 @@ var refreshHomeTrsLog = nil
                         ds.push(d)
                     }
                 }
-                // console.log(ds)
                 t.dialis = ds
             }
 
@@ -161,8 +164,7 @@ var refreshHomeTrsLog = nil
             app.unmount()       
         }
         ,cpadr(){
-            copyToClipboard(this.addr)
-            showWPtip(copyoktip)
+            copyShowTip(this.addr)
         }
         ,chainName(){
             let t = this
@@ -180,11 +182,25 @@ var refreshHomeTrsLog = nil
                 pushhpgw('chains')
             })
         }
-        // Connected sites management page (A3, appendix.3-2/3-4): standalone page popup/connectedsites.html,
-        // listing connect_sites grants with per-site disconnect. The ⋮ menu item itself belongs to the vue.html template
-        // (B drafted it, A wired the event); before B's styling the page is reachable directly by URL.
+        // Connected sites management (A3, appendix.3-2/3-4): in-page hpgw view
+        // (same connlists component the standalone popup/connectedsites.html uses),
+        // listing connect_sites grants with per-site disconnect.
         , opconnlists(){
-            this.opurl('popup/connectedsites.html')
+            routePageConnlists(this.addr, ()=>{
+                pushhpgw('cnls')
+            })
+        }
+        // exit button on the Connected indicator: revoke through the background
+        // (sender-validated, with the legacy bare-host key fallback); the
+        // resulting connect_sites write fires the SDK 'disconnect' push to the
+        // site's frames, and the storage watcher re-queries this bar away. No
+        // local teardown — the background stays the single source of truth.
+        ,async dissite() {
+            let t = this
+            if(!t.connsite){ return }
+            try{
+                await chrome_runtime_sendmessage({ action: 'mnx_site_disconnect_origin', origin: t.connsite.origin })
+            }catch(e){}
         }
         // load balance (HAC/HACD and Assets are applied independently)
         ,async ldbls() {
@@ -232,9 +248,7 @@ var refreshHomeTrsLog = nil
             t.opurl(explorer_url+'/diamond-views?name='+dias)
         }
         ,cpdianms(){
-            let dias = this.dialis.join(',')
-            copyToClipboard(dias)
-            showWPtip(copyoktip)
+            copyShowTip(this.dialis.join(','))
         }
         // view address in exporer
         ,vmadrexpl(){
@@ -254,8 +268,7 @@ var refreshHomeTrsLog = nil
             this.opurl(explorer_url+'/tx/'+tx)
         }
         , cpbody(body) {
-            copyToClipboard(body)
-            showWPtip(copyoktip)
+            copyShowTip(body)
         }
         ,opurl(url){
             chrome_tabs_create({url:url})
@@ -266,7 +279,10 @@ var refreshHomeTrsLog = nil
         // RPC node settings (runtime override of build-time default; query/broadcast only, signing hash still computed locally)
         ,async oprpcset(){
             let t = this
-            t.rpcuri = (await stoReadRpcUrl()) || ''
+            // show the EFFECTIVE address (override > selected network's RPC >
+            // build-time default), not just the raw override — otherwise the box
+            // looks empty / shows a stale placeholder hint while a node is in use
+            t.rpcuri = (await mnx_get_fullnode_url()) || ''
             t.rpcset = yes
         }
         ,async rpcsave(dflt) {
@@ -288,7 +304,6 @@ var refreshHomeTrsLog = nil
         }
 
         , async updtxsts(updtrs) {
-            // console.log(updtrs)
             if(!updtrs.length) {
                 return
             }
@@ -376,28 +391,18 @@ var refreshHomeTrsLog = nil
         // update balance and trs log
         , async refreshAll() {
             let t = this
-            try {
-                if(typeof stoReadCurrentChain === 'function'){
-                    t.chain = await stoReadCurrentChain()
-                    t.chaintip = chainTip(t.chain)
-                }
-            } catch(e) {}
+            await mnx_load_chaintip(t)
             t.blsobj = nil
             await refreshHomeTrsLog()
             // load balance
             await t.ldbls()
-            // console.log("refresh all", ctime())
         }
 
     }, async (t) => {
+        connbarBind() // in-wallet Connected indicator: follow the active browser tab
         t.addr = adr
         t.sadr = addrOmitted(adr)
-        try {
-            if(typeof stoReadCurrentChain === 'function'){
-                t.chain = await stoReadCurrentChain()
-                t.chaintip = chainTip(t.chain)
-            }
-        } catch(e) {}
+        await mnx_load_chaintip(t)
         clbk && clbk()
         // load transaction
         await t.swttab('assets') // display initial tab (appendix.3-9); tx log still loads via refreshAll
@@ -406,21 +411,11 @@ var refreshHomeTrsLog = nil
             await rfhtl(t, reload)
         }
         await t.refreshAll()
-        // test
-        // t.opacinf()
-        // await t.openadrswct()
-        _setTimeout(async ()=>{
-            // t.blsobj = {HAC: '1200.8364', HACD: '65', BTC: '0.08625'} // test
-            // t.blsobj = {HAC: '0.0', HACD: '0', BTC: '0.0'} // test
-           
-        }, 600)
 
     })
 
     homePageAppPtr = app
     homePageCtxPtr = ctx
-
-    // console.log(app)
 
     async function rfhtl(t, reload) {
         if(reload) {
@@ -429,7 +424,6 @@ var refreshHomeTrsLog = nil
         // re-read storage every time: the transfer page (dotrs) may have just written new records,
         // reusing the stale in-memory array would let a later whole-array write overwrite them (W52).
         homeTrsDatas = await readTransactionLogs()
-        // homeTrsDatas[0].stat = 0
         let curtrs = []
         let updtrs = []
         for(var i in homeTrsDatas) {
@@ -445,16 +439,105 @@ var refreshHomeTrsLog = nil
         // return
         // update status
         await t.updtxsts(updtrs)
-        // console.log('hac_show_mei_unit', hac_show_mei_unit('999999999999:235'))
-
-        //test
-        // t.trslgs[2].stat = 1
-        // t.trslgs[3].stat = 1
-        // console.log('refreshHomeTrsLog', reload, t.trslgs)
     }   
 
 
 }
+
+// ============================================================================
+// B (Phase 3, revised): in-wallet "Connected" indicator. The side panel stays
+// open while the user browses, so the WALLET itself follows the ACTIVE
+// browser tab (MetaMask's pattern) and shows its site when connected:
+//   tabs.onActivated → follow the newly active tab (real-time on switching)
+//   tabs.onUpdated   → navigation on the followed tab: drop the stale
+//                      registry entry + hide, re-query once the load completes
+//   storage.onChanged(mnx_connect_tabs / connect_sites) → re-query
+// The origin never comes from tab.url ('tabs' permission stays out of the
+// manifest) — the background maps tabId→origin from content-script
+// registrations (sender-derived).
+// Listeners bind ONCE per page at module level: the home view unmounts when
+// entering sub-views (connlists etc.) and remounts on return; while home is
+// not mounted homePageCtxPtr is nil and every handler no-ops.
+// ============================================================================
+var connbarTabId = 0
+, connbarBound = no
+
+function connbarApply(res) {
+    let t = homePageCtxPtr
+    if(!t){ return }
+    t.connsite = (res && res.connected && res.host)
+        ? { origin: res.origin, host: res.host }
+        : nil
+}
+
+async function connbarQuery() {
+    if(!connbarTabId){ return }
+    let res = nil
+    try{
+        res = await chrome_runtime_sendmessage({ action: 'mnx_current_site', tabid: connbarTabId })
+    }catch(e){}
+    connbarApply(res)
+}
+
+function connbarFollow(tabid) {
+    connbarTabId = tabid || 0
+    connbarQuery()
+}
+
+async function connbarBind() {
+    // initial follow: the window the panel is attached to ('currentWindow'
+    // from an extension page = its own window); onActivated keeps it live
+    try{
+        let tabs = await chrome_tabs_query({ active: yes, currentWindow: yes })
+        if(tabs && tabs.length){ connbarFollow(tabs[0].id) }
+    }catch(e){}
+    if(connbarBound){ return }
+    connbarBound = yes
+    chrome_tabs_onActivated.addListener((info) => {
+        connbarFollow(info && info.tabId)
+    })
+    // 被跟随的标签被关闭（用户关掉 dapp 标签；或 connect 授权窗开/关期间焦点
+    // 短暂落在它的窗口上）：跟随目标已死，重新跟随当前聚焦窗口的活跃标签 ——
+    // 否则指示条停在旧目标上，直到用户下一次切换标签才恢复
+    chrome.tabs.onRemoved.addListener((tabid) => {
+        if(tabid != connbarTabId){ return }
+        chrome_tabs_query({ active: yes, lastFocusedWindow: yes }).then((tabs) => {
+            connbarFollow(tabs && tabs.length ? tabs[0].id : 0)
+        }).catch(()=>{})
+    })
+    chrome.windows.onFocusChanged.addListener((wid) => {
+        // tab switches inside a window fire onActivated; switching WINDOWS
+        // doesn't (that tab never re-activates) — follow the focused window's
+        // active tab so the indicator always names the site the user sees
+        if(wid == chrome.windows.WINDOW_ID_NONE){ return }
+        chrome_tabs_query({ active: yes, lastFocusedWindow: yes }).then((tabs) => {
+            if(tabs && tabs.length){ connbarFollow(tabs[0].id) }
+        }).catch(()=>{})
+    })
+    chrome_tabs_onUpdated.addListener((tabid, ci) => {
+        if(tabid != connbarTabId){ return }
+        if(ci && ci.status == 'loading'){
+            // navigation started on the followed tab: the page that registered
+            // the old origin is going away — drop its entry (else the bar
+            // would light up for the PREVIOUS site while the new page loads)
+            // and hide until the new page re-registers (document_idle)
+            connbarApply(nil)
+            chrome_runtime_sendmessage({ action: 'mnx_tab_invalidate', tabid: tabid }).catch(()=>{})
+        }else if(ci && ci.status == 'complete'){
+            // re-query after the new page's registration has landed (a
+            // same-origin reload writes an identical registry entry, so no
+            // storage.onChanged fires — this is the deterministic fallback)
+            _setTimeout(connbarQuery, 400)
+        }
+    })
+    chrome_storage.onChanged.addListener((ch, area) => {
+        if((area == 'session' && ch['mnx_connect_tabs'])
+        || (area == 'local' && ch['connect_sites'])){
+            connbarQuery()
+        }
+    })
+}
+
 
 // update balance and trs log
 _setInterval(async ()=>{

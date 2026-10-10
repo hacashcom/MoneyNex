@@ -52,13 +52,6 @@ var explorer_url = 'https://explorer.hacash.org'
     chrome.tabs.create({ url: url })
 }
 
-// local test
-// explorer_url = 'http://127.0.0.1:8002'
-// fullnode_url = 'http://127.0.0.1:8009/fullnode'
-// fullnode_url = 'http://127.0.0.1:18081'
-
-// test end
-
 var randomString = ctime(yes)+''
 , recordRandomString = s=>{
     randomString += s
@@ -490,7 +483,6 @@ var getAmtTip = (obj) => {
 var cti = ctime(yes)
 , btlgboot = $id('boot')
 , btlginit = $id('init')
-, btlglogok = $id('logok')
 , loginSwitchCloseAll  = ()=>{
     let ct = ctime(yes)
     , bcl = btlgboot.classList

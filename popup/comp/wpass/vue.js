@@ -85,10 +85,3 @@ let {ctx: wpass} = VueCreateApp('wpass', vue_tpl_wpass, {
     })
 }
 
-
-// test
-// _setTimeout(async ()=>{
-
-//     await wpass_open()
-
-// }, 100)

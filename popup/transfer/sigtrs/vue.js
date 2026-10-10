@@ -7,25 +7,30 @@
 // entry point must not reject the documented registry names (P3-1).
 // dapp kind 5=single name -> transfer_hacd_single_to (diamond field),
 // 6=multi names -> transfer_hacd_to (diamonds), 8=SAT -> transfer_sat_to, 17=Asset.
+// legacy numeric dapp kind for an action kind: accepts BOTH the numeric kinds and
+// their SDK registry names (ActionSpec.kind takes either form); unknown values
+// pass through unchanged.
+var mnx_action_numeric_kind = (kd) => {
+    if(kd == 'transfer_hac_to'){ return 1 }
+    if(kd == 'transfer_hacd_single_to'){ return 5 }
+    if(kd == 'transfer_hacd_to'){ return 6 }
+    if(kd == 'transfer_sat_to'){ return 8 }
+    if(kd == 'transfer_asset_to'){ return 17 }
+    if(kd == 'hacd_insc_push'){ return 32 }
+    return kd
+}
+
 var mnx_map_txobj_actions = (acts) => {
     let out = []
     for(let i in (acts || [])){
         let a = acts[i]
-        let kd = a.kind
-        // normalize SDK registry names to their legacy numeric kind
-        if(kd == 'transfer_hac_to'){ kd = 1 }
-        else if(kd == 'transfer_hacd_single_to'){ kd = 5 }
-        else if(kd == 'transfer_hacd_to'){ kd = 6 }
-        else if(kd == 'transfer_sat_to'){ kd = 8 }
-        else if(kd == 'transfer_asset_to'){ kd = 17 }
-        else if(kd == 'hacd_insc_push'){ kd = 32 }
+        let kd = mnx_action_numeric_kind(a.kind) // normalize SDK registry names to their legacy numeric kind
         if(kd == 1){
             // numeric-form field is `amount`, SDK-name-form field is `hacash` — accept both
             let amt = a.amount != null ? a.amount : a.hacash
             out.push({ kind: 'transfer_hac_to', to: a.to, hacash: (amt==null ? '0' : amt)+'' })
         }else if(kd == 5 || kd == 6){
-            let dn = (a.diamond || a.diamonds || '')
-            let names = dn.split(',').map(s=>s.trim()).filter(s=>s.length>0)
+            let names = mnx_split_diamond_names(a.diamond || a.diamonds)
             if(kd == 5 && names.length == 1){
                 out.push({ kind: 'transfer_hacd_single_to', to: a.to, diamond: names[0] })
             }else{
@@ -45,8 +50,7 @@ var mnx_map_txobj_actions = (acts) => {
             })
         }else if(kd == 32){
             // HACD inscription (engraved_content is UTF-8 hex)
-            let dn = (a.diamond || a.diamonds || '')
-            let names = dn.split(',').map(s=>s.trim()).filter(s=>s.length>0)
+            let names = mnx_split_diamond_names(a.diamond || a.diamonds)
             out.push({
                 kind: 'hacd_insc_push',
                 diamonds: names,
@@ -82,7 +86,7 @@ var routePageSigTrs = (adr, clbk) => {
     // below, so the mismatch branch alert()-returned with no reply channel — the DApp's
     // transfer promise hung forever. Created before the validations, like signtx's, every
     // contract-level refusal can answerOnce.)
-    let {isAnswered, answerOnce, closeWin, cancelAndClose} = mnx_dapp_reply('Transfer request')
+    let {answerOnce, closeWin, cancelAndClose, nop} = mnx_dapp_reply('Transfer request', 'User canceled the transfer request')
     if(txobj.main_address && txobj.main_address!=adr){
         // D3/§7.2: main_address mismatch is a terminal refusal — answer the DApp
         // {ret:1, code:'sign_refused'} (else its promise hangs forever) and keep the
@@ -113,8 +117,6 @@ var routePageSigTrs = (adr, clbk) => {
         lding: yes,
         adr: adr,
         sadr: addrOmitted(adr),
-        adrswct: no,
-        adrmaps: {},
         txres: {},
         txdesc: [],
         txerr: nil,
@@ -123,13 +125,12 @@ var routePageSigTrs = (adr, clbk) => {
         // swtgas app
         gasw: nil,
         gaswst: false,
+        // shared single-reply Cancel handler (mnx_dapp_reply): exposed as data so the
+        // template's @click="nop" resolves without a per-page 3-line copy
+        nop: nop,
     },{
-        nop() {
-            if(isAnswered()){ closeWin(); return }
-            cancelAndClose('User canceled the transfer request')
-        }
         // build + review (local SDK)
-        , async crtrs() {
+        async crtrs() {
             let t = this
             t.lding = yes
             // console.log(txobj)
@@ -231,27 +232,14 @@ var routePageSigTrs = (adr, clbk) => {
             // do sign
             t.dosign().then()
         }
-        , async openadrswct() {
-            let t = this
-            t.adrmaps = await stoReadAccount()
-            t.adrswct = yes
-        }
-        // Open the read-only full review page (body+review passed via storage.session; no re-fetching/modifying the tx)
+        // Open the read-only full review page (shared helper: body+review via storage.session)
         , async openactv() {
-            let t = this
-            let key = 'actv_' + (t.txres.review_binding || t.txres.tx_hash)
-            await chrome_storage_session.set({ [key]: {
-                body: t.body,
-                review: JSON.parse(JSON.stringify(mnx_sdk_review_clean(t.txres))),
-                msgparse: (mnx_msglayout_state && mnx_msglayout_state.extra) || null,
-            } })
-            mnx_open_actionview(key)
+            await mnx_open_actionview_for(this.body, this.txres)
         }
         ,async swtcuraddr(adr) {
             let t = this
             t.adr = adr
             t.sadr = addrOmitted(adr)
-            t.adrswct = no
             await stoSaveCurrentAccount(adr)
             await t.crtrs() // refresh tx
         }
@@ -303,12 +291,7 @@ var routePageSigTrs = (adr, clbk) => {
             console.log(acts)
             if(acts.length==1){
                 let act = acts[0]
-                , kd = act.kind
-                if(kd == 'transfer_hac_to'){ kd = 1 }
-                else if(kd == 'transfer_hacd_single_to'){ kd = 5 }
-                else if(kd == 'transfer_hacd_to'){ kd = 6 }
-                else if(kd == 'transfer_sat_to'){ kd = 8 }
-                else if(kd == 'transfer_asset_to'){ kd = 17 }
+                , kd = mnx_action_numeric_kind(act.kind)
                 if(kd==1 || kd==5 || kd==6 || kd==8 || kd==17){
                     // transfer
                     txlog.collection_address = act.to
@@ -345,12 +328,7 @@ var routePageSigTrs = (adr, clbk) => {
         }
     }, async(t)=>{
         clbk && clbk()
-        try {
-            if(typeof stoReadCurrentChain === 'function'){
-                t.chain = await stoReadCurrentChain()
-                t.chaintip = chainTip(t.chain)
-            }
-        } catch(e) {}
+        await mnx_load_chaintip(t)
         t.gasw = t.$refs.swtgas
         t.gasw.swt(gas => {
             // console.log(gas)
@@ -362,6 +340,7 @@ var routePageSigTrs = (adr, clbk) => {
     }, nil, {
         components: {
             swtgas: swtgasAppObj,
+            pghead: pgheadAppObj,
         },
     });
 

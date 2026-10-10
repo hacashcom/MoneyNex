@@ -8,6 +8,12 @@ var routePageSwitchchain = (adr, clbk) => {
     let {app} = VueCreateApp('swchn', vue_tpl_switchchain, {
         icfp: icfpath,
         dmu: urlquery.dmu,
+        // the shared header reads {{adr || pgh_adr}} / {{sadr || pgh_sadr}}: both must
+        // be DECLARED keys — an undeclared binding is a render-time ReferenceError
+        // unless the pghead mixin's async created() happens to win the race (found
+        // by the test/ui baseline: the page rendered blank whenever first paint
+        // beat the storage read).
+        adr: adr || '',
         sadr: addrOmitted(adr || ''),
         cur: default_chain_configs[MAIN_CHAIN_ID],
         req: reqc,
@@ -138,6 +144,10 @@ var routePageSwitchchain = (adr, clbk) => {
             })
             return window.close()
         }
+    }, nil, {
+        components: {
+            pghead: pgheadAppObj,
+        },
     })
 
 }

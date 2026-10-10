@@ -464,6 +464,39 @@ Hacash 支持实时提升手续费来改变在交易池内的排序，以达到�
 ```
 
 
+### 事件
+
+除上述请求类接口外，SDK 还提供一个小巧的**纯增量**事件面。订阅不会打开任何窗口、也不要求已连接：`MoneyNex.on(event, callback)` / `MoneyNex.off(event, callback)`，两者都返回 `MoneyNex` 对象以便链式调用。订阅未知的事件名会被静默忽略——将来新增事件名时，拼错的名字不会变成一个永远不触发的监听器。
+
+第一个事件是 **`disconnect`**。当你的站点连接被撤销时触发——用户点击钱包内「Connected」指示条的退出图标，或在钱包的已连接网站管理页断开了你的站点。回调收到被撤销的 origin：
+
+```js
+    MoneyNex.on('disconnect', (detail) => {
+        // detail = { origin: "https://your.site" }
+        console.log('钱包已断开连接:', detail.origin)
+    })
+```
+
+同一通知也会以 DOM `CustomEvent` 形式派发到 `window`，不接触 SDK 对象的框架同样可以监听：
+
+```js
+    window.addEventListener('MoneyNexDisconnect', (e) => {
+        // e.detail = { origin: "https://your.site" }
+    })
+```
+
+断开后，任何后续请求类调用（`wallet()`、`transfer()` 等）都会以 `{err:'need connect first', code:'need_connect'}` 被拒绝，并且钱包会重新打开连接授权窗口；调用 `connect()`（或让用户再次确认）即可恢复连接。
+
+**「Connected」指示条。** 指示条位于钱包自己的界面里，不在你的页面上：钱包面板保持打开时，会跟随浏览器当前活跃的标签页——当屏幕上的标签页连接着钱包时，钱包内显示一条绿色圆点、*Connected* 字样与站点域名的横条。切换标签页或窗口都会实时更新；钱包不会向你的页面 DOM 注入任何元素，也不会添加任何 CSS。指示条上的齿轮图标打开钱包的已连接网站管理；红色退出图标撤销当前屏幕站点的连接，并触发上述 `disconnect` 事件。重新授权连接后无需刷新页面，指示条会重新出现。
+
+事件能力与「Connected」指示条同版本提供；在不具备的旧版本扩展上 `MoneyNex.on` 是 `undefined`——请做特性检测：
+
+```js
+    if (typeof MoneyNex.on === 'function') { MoneyNex.on('disconnect', handler) }
+    window.addEventListener('MoneyNexDisconnect', handler) // 任何版本都可用
+```
+
+
 ### 测试代码
 
 上述 SDK 接口的测试参考用例，可以在下面目录中找到，并可作为开发者的编写示范：

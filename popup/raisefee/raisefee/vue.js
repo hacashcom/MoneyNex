@@ -8,7 +8,7 @@ var routePageRaiseFee = (adr, clbk) => {
 
     // Single-reply contract (shared helper): reply to the DApp once (success or {err}) then close;
     // a silent cancel would leave the DApp's raisefee request hanging forever.
-    let {isAnswered, answerOnce, closeWin, cancelAndClose} = mnx_dapp_reply('Raise fee request')
+    let {isAnswered, answerOnce, cancelAndClose, nop} = mnx_dapp_reply('Raise fee request', 'User canceled the raise-fee request')
     // Terminal failure must reach the DApp (single-reply contract): show the reason
     // in the window AND answer {ret:1, err, code} once, or the DApp's raisefee
     // promise hangs forever while the window just sits on the error (found as a
@@ -27,20 +27,16 @@ var routePageRaiseFee = (adr, clbk) => {
         lding: yes,
         adr: adr,
         sadr: addrOmitted(adr),
-        adrswct: no,
-        adrmaps: {},
         // data
         err: null,
         hash,
         fee,
         chain: nil,
-        chaintip: '', 
+        chaintip: '',
+        // shared single-reply Cancel handler (mnx_dapp_reply), exposed as data
+        nop: nop,
     },{
-        nop() {
-            if(isAnswered()){ closeWin(); return }
-            cancelAndClose('User canceled the raise-fee request')
-        }
-        , async doraise() {
+        async doraise() {
             let t = this
             if(!t.hash){
                 return raisefail('Please enter the tx hash.', 'sign_refused')
@@ -161,29 +157,21 @@ var routePageRaiseFee = (adr, clbk) => {
             // do raise
             t.doraise().then()
         }
-        , async openadrswct() {
-            let t = this
-            t.adrmaps = await stoReadAccount()
-            t.adrswct = yes
-        }
         ,async swtcuraddr(adr) {
             let t = this
             t.adr = adr
             t.sadr = addrOmitted(adr)
-            t.adrswct = no
             await stoSaveCurrentAccount(adr)
-            // await t.crtrs() // refresh tx
         }
 
 
     }, async(t)=>{
         clbk && clbk()
-        try {
-            if(typeof stoReadCurrentChain === 'function'){
-                t.chain = await stoReadCurrentChain()
-                t.chaintip = chainTip(t.chain)
-            }
-        } catch(e) {}
+        await mnx_load_chaintip(t)
+    }, nil, {
+        components: {
+            pghead: pgheadAppObj,
+        },
     });
 
 

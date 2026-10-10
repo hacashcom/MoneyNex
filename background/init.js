@@ -29,13 +29,6 @@ async function sendMessageToTabContent(tabid, req, msg) {
     }
 }
 
-async function sendMessageToCurrentTabContent(req, msg) {
-    let curtab = await getCurrentTab()
-    if(curtab && curtab.id){
-        await sendMessageToTabContent(curtab.id, req, msg)
-    }
-}
-
 // A2: dApp request pages (connect/transfer/signtx/signtext/raisefee/switchchain)
 // open as a MetaMask-style notification popup window instead of a full tab:
 // type 'popup', sized REQ_WIN_W x REQ_WIN_H (see the constants below — 800px
@@ -102,10 +95,16 @@ async function openWalletPopupPageInNextTab(req, tabid) {
     , win = await openRequestPopupWindow(url, anchor)
     if(win){
         let rid = newReqRid()
-        await registerPendingReqReply(await reqReplyKeys(win), { tid: tabid2, did: req.did || 0, rid: rid })
+        // kind: badge/notification gating (sign-class only); url: exact replay
+        // target for the wallet-surface routing (mnx_pending_sign) — request
+        // pages need their full param set (tid/did/mlkey/dmu…), which is not
+        // reconstructable from tid/did alone
+        await registerPendingReqReply(await reqReplyKeys(win), { tid: tabid2, did: req.did || 0, rid: rid, kind: actpage, url: url })
         // [Modernize-2] recall aids on the pending registry: OS notification
         // (click refocuses the request window) + toolbar badge count. Both are
-        // fire-and-forget; window-open latency is unchanged.
+        // fire-and-forget; window-open latency is unchanged. 需求(2026-10-10):
+        // 仅 sign 类发起角标与通知，connect/切链/只读审查不打扰（MetaMask 同款
+        // 边界：badge 只数待确认签署）。
         notifyPendingRequest(rid, actpage, req.dmu)
         updateRequestBadge()
         return win
@@ -120,7 +119,7 @@ async function openWalletPopupPageInNextTab(req, tabid) {
     });
     if(ftab && ftab.id){
         let rid = newReqRid()
-        await registerPendingReqReply(['t' + ftab.id], { tid: tabid2, did: req.did || 0, rid: rid })
+        await registerPendingReqReply(['t' + ftab.id], { tid: tabid2, did: req.did || 0, rid: rid, kind: actpage, url: url })
         notifyPendingRequest(rid, actpage, req.dmu)
         updateRequestBadge()
     }
@@ -331,13 +330,17 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 // [Modernize-2] toolbar badge + OS notification recall for dApp request windows.
 // The pending_req_replies registry is the single source of truth — one rid per
-// open request window, dropped when the window/tab goes away — so the badge is
-// just its distinct-rid count and every notification id is 'mnxreq-' + rid,
-// which makes both self-cleaning. The badge is re-derived on every
-// service-worker start (call at the bottom of this file): the badge text lives
-// browser-side across worker restarts, so the restart call refreshes it after
-// a browser restart and repairs it if a worker died mid-update.
+// open request window, dropped when the window/tab goes away. 需求(2026-10-10):
+// 只有会发起签署的请求类（REQ_SIGN_KINDS）才计数角标/发通知 —— connect、切链、
+// 只读 actionview 静默打开（MetaMask 同款边界：badge 只数待确认签署）。
+// The badge is re-derived on every service-worker start (call at the bottom of
+// this file): the badge text lives browser-side across worker restarts, so the
+// restart call refreshes it after a browser restart and repairs it if a worker
+// died mid-update.
 const BADGE_COLOR = '#d9534f'
+// sign-class request pages: transfers, transaction/message signing, fee raise —
+// the actions that commit (or authorize) on-chain effects and deserve a recall
+const REQ_SIGN_KINDS = { transfer: 1, signtx: 1, signtext: 1, raisefee: 1 }
 // The badge write must land OUTSIDE the request event's window-open churn:
 // setBadgeText issued while a request popup is being created is silently
 // dropped by Chrome 152 (found live — the write "succeeds" but the badge never
@@ -350,28 +353,51 @@ function updateRequestBadge() {
     if(badgeDeferTimer){ clearTimeout(badgeDeferTimer) }
     badgeDeferTimer = setTimeout(() => {
         badgeDeferTimer = null
-        withPendingReqLock(async () => {
-            let obj = await chrome.storage.session.get(PENDING_REQ_KEY)
-            , tbl = (obj && obj[PENDING_REQ_KEY]) || {}
-            , rids = {}
-            for(let k in tbl){ rids[tbl[k] ? tbl[k].rid : 0] = 1 }
-            let n = Object.keys(rids).length
-            try{
-                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLOR })
-                chrome.action.setBadgeText({ text: n > 0 ? (n > 9 ? '9+' : '' + n) : '' })
-            }catch(e){
-                console.warn('updateRequestBadge: setBadge failed: ', e)
-            }
-        }).catch(e => {
-            console.warn('updateRequestBadge: ', e)
-        })
+        writeBadgeVerified(3)
     }, 250)
 }
+// Chrome 152 实证（B 阶段就发现过）：window-open churn 期间 setBadgeText 会
+// 静默丢写——调用"成功"但状态不落地，陈旧值长期残留；250ms 延迟已不足以避开
+// churn。写后回读校验、不一致退避重写（纯自愈，不改变语义）。SW 在事件后至少
+// 存活 ~30s，重试链安全。
+function writeBadgeVerified(attempts) {
+    withPendingReqLock(async () => {
+        let obj = await chrome.storage.session.get(PENDING_REQ_KEY)
+        , tbl = (obj && obj[PENDING_REQ_KEY]) || {}
+        , rids = {}
+        for(let k in tbl){
+            let e = tbl[k]
+            if(e && REQ_SIGN_KINDS[e.kind]){ rids[e.rid] = 1 }
+        }
+        let n = Object.keys(rids).length
+        , want = n > 0 ? (n > 9 ? '9+' : '' + n) : ''
+        try{
+            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLOR })
+            chrome.action.setBadgeText({ text: want })
+        }catch(e){
+            console.warn('writeBadgeVerified: setBadge failed: ', e)
+            return
+        }
+        if(attempts > 0){
+            setTimeout(() => {
+                try{
+                    chrome.action.getBadgeText({}, (cur) => {
+                        if(chrome.runtime && chrome.runtime.lastError){ return }
+                        if(((cur && cur.text) || '') !== want){ writeBadgeVerified(attempts - 1) }
+                    })
+                }catch(e){}
+            }, 500)
+        }
+    }).catch(e => {
+        console.warn('writeBadgeVerified: ', e)
+    })
+}
 
-// OS notification when a request window opens: the recall path for a window
-// buried under others or a whole browser left in the background. Clicking
-// focuses the request window — chrome.windows.update needs no user gesture,
-// and notification clicks are deliberately NOT used for sidePanel.open here
+// OS notification when a sign-class request window opens: the recall path for
+// a window buried under others or a whole browser left in the background. connect /
+// switchchain / actionview stay silent (REQ_SIGN_KINDS gate). Clicking focuses
+// the request window — chrome.windows.update needs no user gesture, and
+// notification clicks are deliberately NOT used for sidePanel.open here
 // (they are not a valid gesture for it; verified against the official gesture
 // list). The notification clears itself when the request goes away or on click.
 const REQ_PAGE_LABELS = {
@@ -385,6 +411,7 @@ const REQ_PAGE_LABELS = {
     connectedsites: 'Connected sites management',
 }
 function notifyPendingRequest(rid, actpage, dmu) {
+    if(!REQ_SIGN_KINDS[actpage]){ return }
     if(!chrome.notifications || !chrome.notifications.create || !rid){ return }
     try{
         let label = REQ_PAGE_LABELS[actpage] || 'Wallet request'

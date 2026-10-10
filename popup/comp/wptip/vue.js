@@ -63,15 +63,6 @@
 let showWPerr = wptipex[0]
 , showWPtip = wptipex[1]
 , hideWPtip = wptipex[2]
-, showWPcopyok = _=> showWPtip(copyoktip)
 ;
 
 
-
-// // test
-// _setTimeout(()=>{
-
-//     showWPtip("hahaha")
-
-
-// }, 123);

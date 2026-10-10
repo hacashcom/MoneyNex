@@ -469,6 +469,39 @@ API return:
 ```
 
 
+### Events
+
+Besides the request APIs above, the SDK exposes a small **additive** event surface. Subscribing never opens a window and never requires connection: `MoneyNex.on(event, callback)` / `MoneyNex.off(event, callback)`. Both return the `MoneyNex` object for chaining. Subscribing to an unknown event name is a silent no-op, so future event names cannot turn a typo into a listener that never fires.
+
+The first event is **`disconnect`**. It fires when your site's connection is revoked — by the user pressing the exit icon on the wallet's "Connected" indicator, or disconnecting the site in the wallet's connected-sites management page. The callback receives the revoked origin:
+
+```js
+    MoneyNex.on('disconnect', (detail) => {
+        // detail = { origin: "https://your.site" }
+        console.log('wallet disconnected:', detail.origin)
+    })
+```
+
+The same notification is also dispatched as a DOM `CustomEvent` on `window`, so frameworks that never touch the SDK object can listen as well:
+
+```js
+    window.addEventListener('MoneyNexDisconnect', (e) => {
+        // e.detail = { origin: "https://your.site" }
+    })
+```
+
+After a disconnect, any subsequent request API call (`wallet()`, `transfer()`, …) is rejected with `{err:'need connect first', code:'need_connect'}` and the wallet reopens its connect approval; call `connect()` (or let the user re-approve) to get connected again.
+
+**The "Connected" indicator.** The indicator lives in the wallet's own UI, not on your page: while the wallet panel stays open, it follows the browser's active tab — when the tab currently on screen is connected to the wallet, the wallet shows a bar with a green dot, the word *Connected* and your site's host. Switching tabs or windows updates it in real time, and no element is ever injected into your page's DOM or CSS. The indicator's gear icon opens the wallet's connected-sites management; the red exit icon revokes the connection of the site on screen, which fires the `disconnect` event described above. Re-approving a connection shows the indicator again without a page reload.
+
+Events and the Connected indicator ship together; on extension versions without them, `MoneyNex.on` is simply `undefined` — feature-detect it:
+
+```js
+    if (typeof MoneyNex.on === 'function') { MoneyNex.on('disconnect', handler) }
+    window.addEventListener('MoneyNexDisconnect', handler) // works regardless
+```
+
+
 ### Test code
 
 The test reference use cases of the above SDK interfaces can be found in the following directory and can be used as a writing example for developers:

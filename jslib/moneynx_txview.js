@@ -10,6 +10,15 @@
  * before the popup pages. All cross-file references (login.js storage vars,
  * html.js helpers) resolve at call time — nothing here runs at load time.
  */
+// Decoded diamonds come as a comma string (multi-name) or a single-name diamond
+// field (or an array); normalize to a trimmed non-empty name array. Shared by
+// txjson_to_spec / parseTxDesc / the actionview renderer / the transfer page.
+var mnx_split_diamond_names = (v) => {
+    if(v == null){ return [] }
+    let arr = typeof v === 'string' ? v.split(',') : v
+    return arr.map(s=>(s+'').trim()).filter(s=>s.length>0)
+}
+
 var reqFeasibleFee = async (txsz, opts) => {
     let url = (await mnx_get_fullnode_url())+"/query/fee/average?unit=mei"
     if(txsz > 0){
@@ -108,13 +117,7 @@ var reqFeasibleFee = async (txsz, opts) => {
 // strings (never Number()) so Fold64 values above MAX_SAFE_INTEGER keep their precision.
 // maincall's marks must carry the 0x prefix (codes/engraved_content must drop it).
 , mnx_txjson_to_spec = (txjson) => {
-    // Decoded diamonds come as a comma string (multi-name) or a single-name diamond field; normalize to array
-    let dnames = (v) => {
-        if(v == null){ return [] }
-        let arr = typeof v === 'string' ? v.split(',') : v
-        return arr.map(s=>(s+'').trim()).filter(s=>s.length>0)
-    }
-    , num = (v, dft) => {
+    let num = (v, dft) => {
         let n = Number(v)
         return isFinite(n) ? n : (dft || 0)
     }
@@ -148,7 +151,7 @@ var reqFeasibleFee = async (txsz, opts) => {
         }else if(kd == 5){ // HACD single
             sp = { kind: kindname[kd], diamond: (j.diamond+'').trim(), to: j.to }
         }else if(kd == 6 || kd == 7 || kd == 8){ // HACD from_to / to / from
-            let names = dnames(j.diamond).concat(dnames(j.diamonds))
+            let names = mnx_split_diamond_names(j.diamond).concat(mnx_split_diamond_names(j.diamonds))
             // kind 6=DiaFromToTrs 7=DiaToTrs 8=DiaFromTrs (rebuild keeps the wire format)
             sp = { kind: kindname[kd], diamonds: names }
             if(kd==6){ sp.from = j.from, sp.to = j.to }else if(kd==7){ sp.to = j.to }else{ sp.from = j.from }
@@ -172,7 +175,7 @@ var reqFeasibleFee = async (txsz, opts) => {
         }else if(kd == 32){ // hacd_insc_push
             sp = {
                 kind: kindname[kd],
-                diamonds: dnames(j.diamonds),
+                diamonds: mnx_split_diamond_names(j.diamonds),
                 protocol_cost: (j.protocol_cost==null ? '0' : j.protocol_cost)+'',
                 engraved_type: j.engraved_type == null ? 0 : j.engraved_type,
                 engraved_content: (j.engraved_content||'').replace(/^0x/,''),
@@ -180,7 +183,7 @@ var reqFeasibleFee = async (txsz, opts) => {
         }else if(kd == 33){ // hacd_insc_clean
             sp = {
                 kind: kindname[kd],
-                diamonds: dnames(j.diamonds),
+                diamonds: mnx_split_diamond_names(j.diamonds),
                 protocol_cost: (j.protocol_cost==null ? '0' : j.protocol_cost)+'',
             }
         }else if(kd == 34){ // hacd_insc_edit
@@ -222,6 +225,22 @@ var reqFeasibleFee = async (txsz, opts) => {
         out.push(sp)
     }
     return out
+}
+
+// Open the read-only All Actions review page: body+review passed via
+// chrome.storage.session (key = review_binding), no re-fetching/modifying the
+// tx. Shared by the signtx/transfer request pages (their openactv methods).
+// mnx_open_actionview lives in each page's bundled login.js; chrome_storage_session
+// in html.js — both resolve at call time (see file header).
+, mnx_open_actionview_for = async (body, txres) => {
+    let key = 'actv_' + (txres.review_binding || txres.tx_hash)
+    await chrome_storage_session.set({ [key]: {
+        body: body,
+        // Drop Vue proxies so arrays (actions / signers) survive session storage
+        review: JSON.parse(JSON.stringify(mnx_sdk_review_clean(txres))),
+        msgparse: (mnx_msglayout_state && mnx_msglayout_state.extra) || null,
+    } })
+    mnx_open_actionview(key)
 }
 
 // DApp callback compatibility layer: restore the fields promised by sdk.md
@@ -286,12 +305,6 @@ var reqFeasibleFee = async (txsz, opts) => {
 , mnx_is_maincall_action = function(act) {
     return !!(act && (act.kind == 44 || act.name === 'contract_main_call'))
 }
-, mnx_esc_pre = function(s) {
-    return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-}
 , mnx_vm_decompile = async function(act) {
     let codes = mnx_act_codes_hex(act)
     if(!codes){ return { err: 'no codes in action json' } }
@@ -321,7 +334,8 @@ var reqFeasibleFee = async (txsz, opts) => {
     }
     let extra = r.truncated ? '\n…(truncated)' : ''
     let cls = mode === 'sign' ? 'codeprint sign' : 'avpre avcode'
-    return `<pre class="${cls}">${mnx_esc_pre(r.text)}${extra}</pre>`
+    // mnx_esc_html also escapes quotes; inside <pre> that renders identically
+    return `<pre class="${cls}">${mnx_esc_html(r.text)}${extra}</pre>`
 }
 , mnx_txdesc_attach_code = async function(review, txdesc) {
     if(!review || !review.actions || !txdesc){ return txdesc }
@@ -346,12 +360,6 @@ var reqFeasibleFee = async (txsz, opts) => {
         let li = (text||'').replace(/(\s[0-9\.]+)HAC\s/g, ` <b class="amt">$1</b> HAC `)
             .replace(/([a-km-zA-HJ-NP-Z1-9]{28,34})/g, ` <a class="addr" href="${explorer_url}/address/$1" target="_blank" title="$1">$1</a> `)
         return `<span>${1+i}</span> ${li}`
-    }
-    // Decoded json diamonds may be a comma string or an array
-    let dnames = (v) => {
-        if(v == null){ return [] }
-        let arr = typeof v === 'string' ? v.split(',') : v
-        return arr.map(s=>(s+'').trim()).filter(s=>s.length>0)
     }
     // First line: fee / type / guard window / signing status (audit level no longer shown; full review lives in the All Actions page)
     let mainline = `${mnx_fin_to_decimal(review.fee)} HAC fee`
@@ -380,7 +388,7 @@ var reqFeasibleFee = async (txsz, opts) => {
                 if(!names.length){
                     try {
                         let j = JSON_parse(act.json)
-                        names = dnames(j.diamond).concat(dnames(j.diamonds))
+                        names = mnx_split_diamond_names(j.diamond).concat(mnx_split_diamond_names(j.diamonds))
                     } catch(e){}
                 }
                 li = `Transfer ${names.length || p.count} HACD (${esc(names.join(','))})`
@@ -429,9 +437,9 @@ var reqFeasibleFee = async (txsz, opts) => {
                 try {
                     let j = JSON_parse(act.json)
                     if(act.name == 'hacd_insc_push'){
-                        li = `Inscript ${dnames(j.diamonds).length} HACD (${esc(dnames(j.diamonds).join(','))}) with "${esc(mnx_hex_to_utf8(j.engraved_content))}"`
+                        li = `Inscript ${mnx_split_diamond_names(j.diamonds).length} HACD (${esc(mnx_split_diamond_names(j.diamonds).join(','))}) with "${esc(mnx_hex_to_utf8(j.engraved_content))}"`
                     }else if(act.name == 'hacd_insc_clean'){
-                        li = `Clean inscript ${dnames(j.diamonds).length} HACD (${esc(dnames(j.diamonds).join(','))})`
+                        li = `Clean inscript ${mnx_split_diamond_names(j.diamonds).length} HACD (${esc(mnx_split_diamond_names(j.diamonds).join(','))})`
                     }else if(act.name == 'hacd_insc_edit'){
                         li = `Edit inscription #${esc(j.index)} of HACD ${esc(j.diamond)} to "${esc(mnx_hex_to_utf8(j.engraved_content))}"`
                     }else if(act.name == 'hacd_insc_move'){

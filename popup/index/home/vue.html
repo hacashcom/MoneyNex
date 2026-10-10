@@ -25,7 +25,7 @@
                 {{k}}
             </li>
             <div class="add">
-                <button class="mid" @click="donewacc">Create or import a new account</button>
+                <button class="mid" @click="donewacc">+ Create or import</button>
             </div>
         </ul>
     </div>
@@ -33,29 +33,29 @@
     <!-- options menu -->
     <div class="popmenu" v-if="optmenu" @click="optmenu=0">
         <ul>
-            <li @click="opacinf">
-                <i class="icf" style="--ic: url('../image/ftic/info.svg')"></i>
-                <a>Account details</a>
-            </li>
             <li @click="opchains">
                 <i class="icf" style="--ic: url('../image/ftic/network.svg')"></i>
                 <a>Networks<i>{{chaintip}}</i></a>
-            </li>
-            <li @click="opconnlists">
-                <i class="icf" style="--ic: url('../image/ftic/linkchain.svg')"></i>
-                <a>Connected sites</a>
             </li>
             <li @click="oprpcset">
                 <i class="icf" style="--ic: url('../image/ftic/plug.svg')"></i>
                 <a>RPC node</a>
             </li>
-            <li @click="opintab">
-                <i class="icf" style="--ic: url('../image/ftic/unfold.svg')"></i>
-                <a>Expand view</a>
+            <li @click="opconnlists">
+                <i class="icf" style="--ic: url('../image/ftic/linkchain.svg')"></i>
+                <a>Connected sites</a>
+            </li>
+            <li @click="opacinf">
+                <i class="icf" style="--ic: url('../image/ftic/info.svg')"></i>
+                <a>Account details</a>
             </li>
             <li class="f" @click="vmadrexpl">
                 <i class="icf" style="--ic: url('../image/ftic/jump.svg')"></i>
                 <a>View on explorer<i>hacash.org</i></a>
+            </li>
+            <li @click="opintab">
+                <i class="icf" style="--ic: url('../image/ftic/unfold.svg')"></i>
+                <a>Expand view</a>
             </li>
             <li @click="dospt">
                 <i class="icf" style="--ic: url('../image/ftic/support.svg')"></i>
@@ -74,7 +74,7 @@
 </header>
 
 
-<div class="hmpg">
+<div :class="`hmpg ${connsite?'has-connbar':''}`">
     <div class="blsw">
         <div v-for="(v) in blsctx" :class="`brow ${v}`">
             <i class="icf lg" :style="{'--ic': 'url(../image/ftic/' + v.toLowerCase() + '.svg)'}" ></i>
@@ -225,13 +225,24 @@
         </div>
     </div>
 
+    <!-- in-wallet "Connected" indicator (B Phase 3 revised): follows the
+         ACTIVE browser tab; gear opens the in-page connected-sites view,
+         red button revokes the site -->
+    <div class="connbar" v-if="connsite">
+        <i class="dot"></i>
+        <span class="tt">Connected</span>
+        <b class="host" :title="connsite.origin">{{connsite.host}}</b>
+        <button class="icbtn" @click="opconnlists" title="Connected sites"><i class="icf" style="--ic: url('../image/ftic/gear.svg')"></i></button>
+        <button class="icbtn dis" @click="dissite" title="Disconnect this site"><i class="icf" style="--ic: url('../image/ftic/disconnect.svg')"></i></button>
+    </div>
+
     <!-- rpc settings -->
     <div class="rpcsg" v-if="rpcset">
         <div class="rpcsg-bg" @click="rpcset=0"></div>
         <div class="rpcsg-box">
             <h3>RPC node</h3>
-            <p class="tip">Fullnode RPC address. Used for balance query and transaction broadcast only — the signing hash is always computed locally from the transaction body. Leave empty to use the default node.</p>
-            <input v-model="rpcuri" placeholder="http://127.0.0.1:8009/fullnode" />
+            <p class="tip">Fullnode RPC address. Used for balance query and transaction broadcast only — the signing hash is always computed locally from the transaction body. This override takes priority over the selected network's RPC; leave empty to fall back to the network's own address (or the default node).</p>
+            <input v-model="rpcuri" :placeholder="rpctip" />
             <div class="btns">
                 <button class="mid" @click="rpcsave()">Save</button>
                 <button class="mid" @click="rpcsave(1)">Use default</button>

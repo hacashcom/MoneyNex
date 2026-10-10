@@ -223,12 +223,7 @@ var routePageDotrs = (options, clbk) => {
         }
     }, async(t)=>{
         clbk && clbk()
-        try {
-            if(typeof stoReadCurrentChain === 'function'){
-                t.chain = await stoReadCurrentChain()
-                t.chaintip = chainTip(t.chain)
-            }
-        } catch(e) {}
+        await mnx_load_chaintip(t)
         t.myadr = await stoReadCurrentAccount()
         t.gasw = t.$refs.swtgas
         let feeOpts = t.transferType=='ASSET' ? {extra9: true, tx_type: 2} : nil

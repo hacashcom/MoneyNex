@@ -121,58 +121,14 @@ var mnx_sdk_ptr = null
 , sdk_tx_attach_signature = function(body, proof, review, request) {
     return mnx_sdk_invoke(MNX_OP.TX_ATTACH_SIGNATURE, { body, proof, review: mnx_sdk_review_clean(review), request })
 }
-, sdk_tx_attach_signature_unbound = function(body, proof) {
-    return mnx_sdk_invoke(MNX_OP.TX_ATTACH_SIGNATURE_UNBOUND, { body, proof })
-}
-, sdk_tx_verify = function(body) {
-    return mnx_sdk_invoke(MNX_OP.TX_VERIFY, { body })
-}
-, sdk_tx_signature_report = function(body) {
-    return mnx_sdk_invoke(MNX_OP.TX_SIGNATURE_REPORT, { body })
-}
 , sdk_tx_decode = function(body) {
     return mnx_sdk_invoke(MNX_OP.TX_DECODE, { body })
 }
-, sdk_tx_encode = function(transaction, review) {
-    let req = { transaction }
-    if(review){ req.review = review }
-    return mnx_sdk_invoke(MNX_OP.TX_ENCODE, req)
-}
 
-///////////////// system / account / amount /////////////////
+///////////////// account / vm /////////////////
 
-, sdk_system_sdk_version = function() {
-    return mnx_sdk_invoke(MNX_OP.SYSTEM_SDK_VERSION, {})
-}
-, sdk_system_params = function() {
-    return mnx_sdk_invoke(MNX_OP.SYSTEM_PARAMS, {})
-}
-, sdk_account_verify_address = function(address) {
-    return mnx_sdk_invoke(MNX_OP.ACCOUNT_VERIFY_ADDRESS, { address })
-}
 , sdk_account_address_from_public_key = function(public_key) {
     return mnx_sdk_invoke(MNX_OP.ACCOUNT_ADDRESS_FROM_PUBLIC_KEY, { public_key })
-}
-, sdk_amount_parse = function(value) {
-    return mnx_sdk_invoke(MNX_OP.AMOUNT_PARSE, { value })
-}
-, sdk_amount_format = function(value, unit) {
-    return mnx_sdk_invoke(MNX_OP.AMOUNT_FORMAT, { value, unit })
-}
-, sdk_policy_evaluate = function(review, policy) {
-    let req = { review }
-    if(policy){ req.policy = policy }
-    return mnx_sdk_invoke(MNX_OP.POLICY_EVALUATE, req)
-}
-// Single-action describe (action = raw action hex; describe optional {description,json,code} booleans)
-, sdk_action_describe = function(action, describe) {
-    let req = { action }
-    if(describe){ req.describe = describe }
-    return mnx_sdk_invoke(MNX_OP.ACTION_DESCRIBE, req)
-}
-// contract_main_call structured view (action = raw action hex): marks/codeconf/code_type/codes_hash
-, sdk_vm_decode_call = function(action) {
-    return mnx_sdk_invoke(MNX_OP.VM_DECODE_CALL, { action })
 }
 // Code decompilation: code_type 0=bytecode -> assembly|raw;
 // 1=ir_node -> fitsh|tree|assembly|raw. codes is hex.
@@ -180,26 +136,6 @@ var mnx_sdk_ptr = null
     let req = { codes, code_type: String(code_type) }
     if(format){ req.format = format }
     return mnx_sdk_invoke(MNX_OP.VM_CODE, req)
-}
-, sdk_tx_estimate_fee = function(body, height) {
-    let req = { body }
-    if(height != null){ req.height = height }
-    return mnx_sdk_invoke(MNX_OP.TX_ESTIMATE_FEE, req)
-}
-, sdk_account_verify_signature = function(public_key, digest, signature) {
-    return mnx_sdk_invoke(MNX_OP.ACCOUNT_VERIFY_SIGNATURE, { public_key, digest, signature })
-}
-, sdk_diamond_lookup = function(name, serial) {
-    let req = {}
-    if(name != null){ req.name = name }
-    if(serial != null){ req.serial = serial }
-    return mnx_sdk_invoke(MNX_OP.DIAMOND_LOOKUP, req)
-}
-, sdk_message_prepare_signature = function(params) {
-    return mnx_sdk_invoke(MNX_OP.MESSAGE_PREPARE_SIGNATURE, { params })
-}
-, sdk_message_verify = function(request, proof) {
-    return mnx_sdk_invoke(MNX_OP.MESSAGE_VERIFY, { request, proof })
 }
 
 ///////////////// ECDSA (pure JS, replaces old wasm sign/create_account_by) ///////////////

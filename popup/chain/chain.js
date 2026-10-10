@@ -90,7 +90,17 @@ var MAIN_CHAIN_ID = 0
     return `${name}${idtip}${cfg.remark ? ' | '+cfg.remark : ''}`
 }
 , chainRemark = cfg => ((cfg || {}).remark || '') + ''
-, chainRpcText = cfg => ((cfg || {}).rpc || '').replace(/^https?:\/\//i, '')
+// Shared page-header helper: load the current network into a page's
+// {chain, chaintip} data (used by sigtrs/signtx/raisefee/dotrs/home). The
+// typeof guard keeps working pages that bundle without the chain service.
+, mnx_load_chaintip = async (t) => {
+    try {
+        if(typeof stoReadCurrentChain === 'function'){
+            t.chain = await stoReadCurrentChain()
+            t.chaintip = chainTip(t.chain)
+        }
+    } catch(e) {}
+}
 , stoUpsertChainConfig = async cfg => {
     cfg = chainNormalize(cfg)
     if(!cfg.rpc) {

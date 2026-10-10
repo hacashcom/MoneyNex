@@ -301,7 +301,7 @@ async function build(is_release) {
         './jslib/message-types', 'content/define', 'content/hacash_api' 
     ], `content/hacash_api.min.js`, is_release?jsminify:null)
     await mergeFile('js', [
-        './jslib/message-types', 'content/define', 'content/content'
+        './jslib/message-types', 'content/define', 'content/content', 'content/sitesync' // B (Phase 3, revised): site registration + SDK event delivery (no page UI — the Connected indicator lives in the wallet)
     ], `content/content.min.js`, is_release?jsminify:null)
     await mergeFile('less', ['content/content'], `content/content.min.css`, less2css)
     // background

@@ -1,39 +1,5 @@
 <div class="reqpage">
-    <header class="pchead">
-        <div class="pchead-l">
-            <div class="adrswrap">
-                <h1 class="btn adrs-btn" @click="pgh_open_adr" :title="adr || pgh_adr">{{(adr || pgh_adr || '').substring(0,9)}}<i class="icf" style="--ic: url('../image/ftic/downmore.svg')"></i></h1>
-                <button class="ghbtn adcp" @click="pgh_cpadr" title="Copy address"><b>{{sadr || pgh_sadr}}</b><i class="icf" style="--ic: url('../image/ftic/copy.svg')"></i></button>
-            </div>
-        </div>
-        <div class="pchead-logo"></div>
-                <div class="pchead-r">
-            <button class="icbtn mnburger" @click="pgh_open_net" title="Networks"><i></i><i></i><i></i></button>
-        </div>
-    </header>
-    <!-- account switcher: existing accounts ONLY — no create/import here (home-only) -->
-    <div class="popmenu acctmenu" v-if="adrswct" @click="adrswct=0">
-        <ul>
-            <div class="tt">Switch account:</div>
-            <li v-for="(v, k) in adrmaps"
-                :class="`${k==pgh_adr?'active':''}`"
-                @click="pgh_swt_adr(k)">
-                {{k}}
-            </li>
-        </ul>
-    </div>
-
-    <!-- burger menu: network switching among existing networks ONLY — no add-network -->
-    <div class="popmenu netsmenu" v-if="netswct" @click="netswct=0">
-        <ul>
-            <div class="tt">Switch network</div>
-            <li v-for="n in pgh_nets"
-                :class="`${n.id==pgh_curcid?'active':''}`"
-                @click="pgh_swt_net(n.id)">
-                {{n.name}}<i v-if="n.id!=0">{{'ID '+n.id}}</i>
-            </li>
-        </ul>
-    </div>
+    <pghead :adr="adr" :sadr="sadr"/>
 
     <div class="pgtitle">Sign Text</div>
 

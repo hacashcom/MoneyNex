@@ -43,12 +43,7 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
             if(!names.length){
                 try {
                     let j = JSON_parse(act.json)
-                    let dn = (v) => {
-                        if(v == null){ return [] }
-                        let arr = typeof v === 'string' ? v.split(',') : v
-                        return arr.map(s=>(s+'').trim()).filter(s=>s.length>0)
-                    }
-                    names = dn(j.diamond).concat(dn(j.diamonds))
+                    names = mnx_split_diamond_names(j.diamond).concat(mnx_split_diamond_names(j.diamonds))
                 } catch(e){}
             }
             amt = `<b class="amt">${esc(names.length || p.count)}</b> HACD <span class="avsub">(${esc(names.join(', '))})</span>`

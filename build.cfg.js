@@ -19,6 +19,7 @@ module.exports = {
         './jslib/message-types',
         `${bgd}init`,
         `${bgd}listener`,
+        `${bgd}sites`, // B (Phase 3): site-connection notification framework (connect_sites diff → tab pushes)
         `${bgd}account`,
         `${bgd}main`,
     ],
@@ -31,7 +32,6 @@ module.exports = {
         './jslib/msglayout',
         './jslib/assetamt',
         './jslib/importkey',
-        './jslib/moneynx_pghead',
     ],
     popup_common: [
         [
@@ -39,6 +39,7 @@ module.exports = {
             'comp/wpcfm',
             'comp/wpass',
             'comp/swtgas',
+            'comp/pghead',
             'login/init',
         ],
         ['tokens', 'html', 'comp'] // add login; 'tokens' = design tokens wired first (B1; the single build.cfg line owned by workflow B)
@@ -54,6 +55,7 @@ module.exports = {
                 'index/dotrs',
                 'index/chains',
                 'index/chainform',
+                'connectedsites/connlists', // in-page view (home ⋮ menu), same component as the standalone page
             ],
             ['index']
         ], // index

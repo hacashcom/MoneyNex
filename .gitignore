@@ -1,6 +1,14 @@
 .zcodeignore
 .claude/
-test/
+test/*
+# the UI simulation baseline + dApp harness ARE committed (refactor gate);
+# `test/` (whole dir) cannot be negated back, hence `test/*` + explicit re-includes
+!test/ui
+!test/dapp-sim.html
+!test/frame-host.html
+test/ui/artifacts/
+# self-contained UI env caches (CFT binary, optional hacash-testnet source clone)
+test/ui/.cache/
 
 *-sdk2.md
 

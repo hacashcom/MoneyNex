@@ -12,7 +12,7 @@ var routePageSignTx = (adr, clbk) => {
     let sa = 'sign_addr'
     // Single-reply contract (shared helper): reply signed tx data or {err} once, then close.
     // Cancel / confirm-reject / sign failure / submit failure must all reply before closing.
-    let {isAnswered, answerOnce, closeWin, cancelAndClose} = mnx_dapp_reply('Transaction signing')
+    let {answerOnce, closeWin, cancelAndClose, nop} = mnx_dapp_reply('Transaction signing', 'User canceled the signing request')
     // ok
     let {app} = VueCreateApp('sgtx', vue_tpl_signtx, {
         icfp: icfpath,
@@ -25,20 +25,16 @@ var routePageSignTx = (adr, clbk) => {
         lding: yes,
         adr: adr,
         sadr: addrOmitted(adr),
-        adrswct: no,
-        adrmaps: {},
         txres: {},
         txsgck: {},
         txdesc: [],
         txerr: nil,
         layouterr: '',
+        // shared single-reply Cancel handler (mnx_dapp_reply), exposed as data
+        nop: nop,
     },{
-        nop() {
-            if(isAnswered()){ closeWin(); return }
-            cancelAndClose('User canceled the signing request')
-        }
         // SDK local review (strict window + degraded report)
-        , async req_check() {
+        async req_check() {
             let t = this
             return await mnx_local_review(txbody, t.adr)
         }
@@ -112,28 +108,14 @@ var routePageSignTx = (adr, clbk) => {
             // do sign
             t.dosign().then()
         }
-        , async openadrswct() {
-            let t = this
-            t.adrmaps = await stoReadAccount()
-            t.adrswct = yes
-        }
-        // Open the read-only full review page (body+review passed via storage.session; no re-fetching/modifying the tx)
+        // Open the read-only full review page (shared helper: body+review via storage.session)
         , async openactv() {
-            let t = this
-            let key = 'actv_' + (t.txres.review_binding || t.txres.tx_hash)
-            await chrome_storage_session.set({ [key]: {
-                body: txbody,
-                // Drop Vue proxies so arrays (actions / signers) survive session storage
-                review: JSON.parse(JSON.stringify(mnx_sdk_review_clean(t.txres))),
-                msgparse: (mnx_msglayout_state && mnx_msglayout_state.extra) || null,
-            } })
-            mnx_open_actionview(key)
+            await mnx_open_actionview_for(txbody, this.txres)
         }
         ,async swtcuraddr(adr) {
             let t = this
             t.adr = adr
             t.sadr = addrOmitted(adr)
-            t.adrswct = no
             await stoSaveCurrentAccount(adr)
             await t.crtrs() // refresh tx
         }
@@ -197,13 +179,12 @@ var routePageSignTx = (adr, clbk) => {
         }
     }, async(t)=>{
         clbk && clbk()
-        try {
-            if(typeof stoReadCurrentChain === 'function'){
-                t.chain = await stoReadCurrentChain()
-                t.chaintip = chainTip(t.chain)
-            }
-        } catch(e) {}
+        await mnx_load_chaintip(t)
         await t.crtrs()
+    }, nil, {
+        components: {
+            pghead: pgheadAppObj,
+        },
     });
 
 

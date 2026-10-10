@@ -21,12 +21,10 @@ var acinfLoadLib= no
             })
         }
         , cpadr() {
-            copyToClipboard(this.myadr)
-            showWPtip(copyoktip)
+            copyShowTip(this.myadr)
         }
         , cppvk() {
-            copyToClipboard(this.privkey)
-            showWPtip(copyoktip)
+            copyShowTip(this.privkey)
         }
         , async sprivk() {
             let t = this

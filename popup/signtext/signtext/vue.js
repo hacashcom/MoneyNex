@@ -4,7 +4,7 @@ var routePageSignText = (adr, clbk) => {
 
     // Single-reply contract (shared helper): reply to the DApp once (success data or {err}), then close.
     // Cancel / confirm-reject / sign failure must all reply {err} before closing, or the DApp waits forever.
-    let {isAnswered, answerOnce, closeWin, cancelAndClose} = mnx_dapp_reply('Signing request')
+    let {answerOnce, closeWin, cancelAndClose, nop} = mnx_dapp_reply('Signing request', 'User canceled the signing request')
     // Whether input "looks like a raw 32B hash / key-like data": hex-64 (0x/0X prefix and any whitespace allowed),
     // or 43-char pure base64/url-base64 (a 32B payload encodes to exactly 43 chars, optional single '=' padding).
     // Such text is always refused — never endorse an unreadable hash/authorization string as "meaningful text".
@@ -27,16 +27,19 @@ var routePageSignText = (adr, clbk) => {
         ing: no,
         lding: yes,
         adr: adr,
+        // the shared header reads {{sadr || pgh_sadr}}: sadr must be a defined key
+        // (an undefined binding is a render-time ReferenceError, which left the
+        // whole page blank — found by the test/ui baseline). Same shape as
+        // raisefee/switchchain.
+        sadr: addrOmitted(adr || ''),
         text: '',
         digest: '',
         texterr: '',
+        // shared single-reply Cancel handler (mnx_dapp_reply), exposed as data
+        nop: nop,
     },{
-        nop() {
-            if(isAnswered()){ closeWin(); return }
-            cancelAndClose('User canceled the signing request')
-        }
         // Text written to session storage by background (multi-line text doesn't fit a URL)
-        , async loadtext() {
+        async loadtext() {
             let t = this
             let text = ''
             try {
@@ -44,8 +47,11 @@ var routePageSignText = (adr, clbk) => {
                     let obj = await chrome_storage_session.get(urlquery.mlkey)
                     let extra = obj && obj[urlquery.mlkey]
                     text = (extra && extra.text) || ''
-                    // Cleanup after use (don't leave sensitive plaintext in session storage)
-                    chrome_storage_session.remove(urlquery.mlkey)
+                    // Cleanup happens at answer time (mnx_dapp_reply.answerOnce),
+                    // NOT here: the recall-routing replay page (boot hook) loads
+                    // the same URL and must still find the text — removing it on
+                    // first read left the replay with empty text and a bogus
+                    // sign_refused answer that killed the live request.
                 }
             } catch(e) {}
             if(!text && urlquery.text){ text = decodeURIComponent(urlquery.text) }
@@ -126,6 +132,10 @@ var routePageSignText = (adr, clbk) => {
             await answerOnce({ret: 1, err: t.texterr, code: 'sign_refused'})
         }
         t.lding = no
+    }, nil, {
+        components: {
+            pghead: pgheadAppObj,
+        },
     });
 
 

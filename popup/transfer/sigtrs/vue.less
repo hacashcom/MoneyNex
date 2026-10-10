@@ -4,77 +4,19 @@
 
 #sgtx {
     .card {
-        background: @bg-card;
-        border: 1px solid @line-2;
-        border-radius: @rd-card;
-        padding: @sp-3;
-        margin-bottom: var(--mn-gap, @sp-2);
+        .mnx-rp-card();
     }
 
     .lbl {
-        display: block;
-        font-size: @fs-12;
-        color: @text-2;
-        margin-bottom: @sp-1;
+        .mnx-rp-lbl();
     }
 
     .txd {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-
-        li {
-            display: block;
-            position: relative;
-            padding: @sp-2 0;
-            font-size: @fs-14;
-            line-height: 20px;
-            color: @text-1;
-            overflow-wrap: break-word;
-
-            & + li {
-                border-top: 1px solid @line-2;
-            }
-
-            // step-number badge on the action row's own leading span only
-            > span {
-                vertical-align: middle;
-                display: inline-block;
-                margin-right: 6px;
-                width: 16px;
-                height: 16px;
-                position: relative;
-                top: -2px;
-                border: 1px solid @line-1;
-                background: @bg-card-hover;
-                border-radius: 50%;
-                text-align: center;
-                line-height: 14px;
-                font-size: @fs-10;
-                color: @text-2;
-            }
-        }
+        .mnx-rp-txd();
     }
 
     .txerr {
-        padding: @sp-3;
-        background: @sem-error-bg;
-        border-radius: @rd-card;
-        margin-bottom: var(--mn-gap, @sp-2);
-
-        h1 {
-            font-size: @fs-14;
-            font-weight: 500;
-            color: @sem-error;
-        }
-
-        p {
-            margin-top: @sp-1;
-            font-size: @fs-12;
-            line-height: 18px;
-            color: @text-2;
-            word-break: break-word;
-        }
+        .mnx-rp-txerr();
     }
 
     .gas {
@@ -82,43 +24,15 @@
     }
 
     .success {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: @sp-3;
-        padding: @sp-6;
-
-        img, .icf {
-            width: 56px;
-            height: 56px;
-            opacity: 0;
-            transform: scale(0.6);
-            transition: all 0.3s ease;
-
-            &.show {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
+        .mnx-rp-success();
 
         p {
-            font-size: @fs-16;
-            color: @text-1;
             max-width: 280px;
             text-align: center;
         }
     }
 
     .wtip {
-        padding: 0 var(--mn-pad-need) @sp-3;
-
-        p {
-            font-size: @fs-12;
-            line-height: 18px;
-            color: @text-3;
-            text-align: center;
-        }
+        .mnx-rp-wtip();
     }
 }

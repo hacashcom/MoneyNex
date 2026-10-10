@@ -3,6 +3,12 @@
 // permission list is page-specific here. Scoped to #conn (page root id).
 
 #conn {
+    // the request-error block (template uses .txerr; the shared style was
+    // missing here — drift fixed in refactor batch D)
+    .txerr {
+        .mnx-rp-txerr();
+    }
+
     .perms {
         .pmlist {
             list-style: none;

@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MoneyNex dApp Simulator</title>
+<!--
+  MoneyNexNew SDK regression target (repo-only; never shipped in release/).
+
+  What it is: a plain page that, once served over http(s) and loaded in a browser
+  with the MoneyNex extension, receives the content script and exposes a button
+  for every doc/sdk.md API plus the documented cancel / error paths. Every reply
+  (resolve or reject) is rendered as JSON — this is the standard target for
+  A-regression and M2 SDK contract checks.
+
+  Serve it standalone (any free port; keep clear of the wallet-sandbox port block):
+    python3 -m http.server 18642 --directory test/
+  then open http://127.0.0.1:18642/dapp-sim.html
+-->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 0; background: #f5f5f7; color: #1c1c1e; }
+  header { background: #fff; border-bottom: 1px solid #d9d9de; padding: 10px 16px; }
+  header h1 { font-size: 16px; margin: 0 0 2px; }
+  header .sub { color: #66666c; font-size: 12px; }
+  #wallet-state { padding: 4px 16px; font-size: 12px; }
+  #wallet-state .ok { color: #1a7f37; }
+  #wallet-state .bad { color: #c62828; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 12px; padding: 12px 16px; max-width: 1500px; }
+  section { background: #fff; border: 1px solid #d9d9de; border-radius: 8px; padding: 10px 12px; }
+  section h2 { font-size: 13px; margin: 0 0 8px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+  .row label { font-size: 12px; color: #55555c; min-width: 74px; }
+  .row input, .row textarea, .row select { font: 12px/1.4 ui-monospace, monospace; padding: 3px 6px; border: 1px solid #c4c4cc; border-radius: 4px; }
+  .row input { width: 300px; }
+  .row textarea { width: 100%; min-height: 54px; }
+  button { font: 12px/1 system-ui; padding: 6px 10px; border-radius: 5px; border: 1px solid #9a9aa2; background: #ececf0; cursor: pointer; }
+  button.primary { background: #0a66d0; border-color: #0a66d0; color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  pre.out { font: 11px/1.45 ui-monospace, monospace; background: #101418; color: #d5e2f2; padding: 8px; border-radius: 6px; max-height: 190px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; }
+  pre.out.err { color: #ffb4ae; }
+  pre.out.pending { color: #ffd479; }
+  .note { font-size: 11px; color: #66666c; margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MoneyNex dApp Simulator</h1>
+  <div class="sub">doc/sdk.md contract harness — success / cancel / error paths per API. Replies below are verbatim JSON.</div>
+</header>
+<div id="wallet-state">detecting MoneyNex…</div>
+
+<main>
+  <section id="sec-info">
+    <h2>MoneyNex.info</h2>
+    <div class="row"><button id="b-rediscover">Re-detect wallet</button></div>
+    <pre class="out" id="out-info">—</pre>
+    <p class="note">sdk.md: MoneyNexInit callback or polling window.MoneyNex. MoneyNex.info.version must equal the manifest version.</p>
+  </section>
+
+  <section id="sec-connect">
+    <h2>connect</h2>
+    <div class="row">
+      <button class="primary" id="b-connect">connect({})</button>
+      <button id="b-connect-p">connect() promise</button>
+      <button id="b-connect-dup">connect twice (dedup: 2nd replaces 1st window)</button>
+    </div>
+    <pre class="out" id="out-connect">—</pre>
+    <p class="note">Success → {address}; user cancel → reject {ret:1, code:'user_canceled'}; already authorized → immediate {address}, no window.</p>
+  </section>
+
+  <section id="sec-wallet">
+    <h2>wallet</h2>
+    <div class="row"><button class="primary" id="b-wallet">wallet({})</button></div>
+    <pre class="out" id="out-wallet">—</pre>
+    <p class="note">Authorized → {address}; unauthorized → reject {err:'need connect first', code:'need_connect'} (and the wallet opens a connect window).</p>
+  </section>
+
+  <section id="sec-chain">
+    <h2>chain (read-only)</h2>
+    <div class="row"><label>chain_id</label><input id="i-chain-id" value="0"></div>
+    <div class="row"><button class="primary" id="b-chain">chain({chain_id})</button></div>
+    <pre class="out" id="out-chain">—</pre>
+    <p class="note">Never opens a page, never requires connect. Returns current/target chain, configured, matched, need_add, need_switch, diff.</p>
+  </section>
+
+  <section id="sec-switchchain">
+    <h2>switchchain</h2>
+    <div class="row"><label>chain_id</label><input id="i-sw-id" value="0"></div>
+    <div class="row"><label>name</label><input id="i-sw-name" value=""></div>
+    <div class="row"><label>rpc</label><input id="i-sw-rpc" value=""></div>
+    <div class="row"><label>explorer</label><input id="i-sw-explorer" value=""></div>
+    <div class="row"><label>mode</label>
+      <select id="i-sw-mode">
+        <option value="">(default addOrSwitch)</option>
+        <option>addOrSwitch</option><option>switch</option><option>add</option>
+      </select>
+      <label>update</label>
+      <select id="i-sw-update">
+        <option value="">(default ask)</option>
+        <option>ask</option><option>never</option><option>always</option>
+      </select>
+    </div>
+    <div class="row"><button class="primary" id="b-switchchain">switchchain(params)</button></div>
+    <pre class="out" id="out-switchchain">—</pre>
+    <p class="note">Already current → {already_current:true, switched:false}. User reject → {err:'User rejected network switch'}; unconfigured in `switch` mode → {err:'Chain not configured', need_add:true}.</p>
+  </section>
+
+  <section id="sec-transfer">
+    <h2>transfer</h2>
+    <div class="row"><label>to</label><input id="i-tr-to" value="1MzNY1oA3kfgYi75zquj3SRUPYztzXHzK9"></div>
+    <div class="row"><label>amount</label><input id="i-tr-amt" value="0.001"></div>
+    <div class="row"><label>chain_id</label><input id="i-tr-chain" value=""></div>
+    <div class="row">
+      <button class="primary" id="b-transfer">transfer({txobj})</button>
+      <button id="b-transfer-cancel">transfer then cancel in wallet</button>
+    </div>
+    <pre class="out" id="out-transfer">—</pre>
+    <p class="note">Builds {actions:[{kind:1, to, amount}]} → btoa → {txobj}. Success → {ret:0, success:true, submit:true, txhash,…}. Submit rejected by node → {ret:1, code:'submit_failed'}.</p>
+  </section>
+
+  <section id="sec-signtx">
+    <h2>signtx</h2>
+    <div class="row"><label>txbody</label></div>
+    <div class="row"><textarea id="i-stx-body" rows="3">02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed1804000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500000000</textarea></div>
+    <div class="row"><label>chain_id</label><input id="i-stx-chain" value="" style="width:80px"><label>autosubmit</label><input type="checkbox" id="i-stx-auto"></div>
+    <div class="row"><button class="primary" id="b-signtx">signtx(params)</button></div>
+    <pre class="out" id="out-signtx">—</pre>
+    <p class="note">Multi-sig partial signature → {complete:false, missing_signers,…}; complete → {complete:true}. ChainAllow violation on mainnet is rejected.</p>
+  </section>
+
+  <section id="sec-signtext">
+    <h2>signtext</h2>
+    <div class="row"><label>text</label></div>
+    <div class="row"><textarea id="i-stext">Login to dapp-sim at local test time</textarea></div>
+    <div class="row">
+      <button class="primary" id="b-signtext">signtext({text})</button>
+      <button id="b-signtext-hash">raw 32B hash (must be refused)</button>
+      <button id="b-signtext-short">too short (must be refused)</button>
+    </div>
+    <pre class="out" id="out-signtext">—</pre>
+    <p class="note">Success → {ret:0, digest, public_key, signature, address}. 8..4096 chars enforced; 64-hex / 43-char base64 payloads are always refused.</p>
+  </section>
+
+  <section id="sec-raisefee">
+    <h2>raisefee</h2>
+    <div class="row"><label>hash</label><input id="i-rf-hash" value="e2700db4558ef1e1b540fd53f5e7a0fa7b9d096947f9dc20d07bd507969987b9" style="width:430px"></div>
+    <div class="row"><label>fee</label><input id="i-rf-fee" value="0.002" style="width:110px"><label>chain_id</label><input id="i-rf-chain" value="" style="width:80px"></div>
+    <div class="row"><button class="primary" id="b-raisefee">raisefee(params)</button></div>
+    <pre class="out" id="out-raisefee">—</pre>
+    <p class="note">Success → {ret:0, success:true}. Unknown hash / node rejection surfaces as an error reply.</p>
+  </section>
+
+  <section id="sec-events">
+    <h2>Events (MoneyNex.on / MoneyNexDisconnect)</h2>
+    <div class="row"><button id="b-events-sub">subscribe disconnect</button><button id="b-events-unsub">unsubscribe</button></div>
+    <pre class="out" id="out-events">—</pre>
+    <p class="note">sdk.md events: MoneyNex.on('disconnect', cb) → cb({origin}) AND window 'MoneyNexDisconnect' CustomEvent, fired when this site's connection is revoked (wallet Connected indicator or connected-sites management).</p>
+  </section>
+
+  <section id="sec-log">
+    <h2>Reply log (append-only evidence)</h2>
+    <div class="row"><button id="b-clearlog">clear</button></div>
+    <pre class="out" id="out-log">—</pre>
+  </section>
+</main>
+
+<script>
+'use strict';
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const stateEl = $('wallet-state');
+
+  // ---- wallet detection (sdk.md: MoneyNexInit callback + polling fallback) ----
+  let MNX = null;
+  function renderState() {
+    if (MNX) {
+      stateEl.innerHTML = '<span class="ok">MoneyNex detected</span> — info: ' +
+        JSON.stringify(MNX.info);
+      $('out-info').textContent = JSON.stringify(MNX.info, null, 2);
+    } else {
+      stateEl.innerHTML = '<span class="bad">MoneyNex NOT detected</span> — extension content script not injected (wrong profile? content_scripts disabled? not http/https?)';
+      $('out-info').textContent = '—';
+    }
+  }
+  window.MoneyNexInit = function(walletInfo, mnx) {
+    MNX = mnx;
+    renderState();
+    subscribeDisconnect();
+    log('MoneyNexInit fired: ' + JSON.stringify(walletInfo));
+  };
+
+  // ---- helpers ----
+  function pretty(v) { return JSON.stringify(v, null, 2); }
+  function setOut(id, text, cls) {
+    const el = $(id);
+    el.textContent = text;
+    el.className = 'out' + (cls ? ' ' + cls : '');
+  }
+  function log(line) {
+    const el = $('out-log');
+    if (el.textContent === '—') { el.textContent = ''; }
+    el.textContent += '[' + new Date().toISOString() + '] ' + line + '\n';
+    el.scrollTop = el.scrollHeight;
+  }
+  // Run one SDK call; every terminal outcome (resolve/reject/exception) is logged
+  // and rendered. No retry, no fallback: the raw contract is the point.
+  function call(api, buttonId, outId, invoke) {
+    $(buttonId).addEventListener('click', async () => {
+      if (!MNX) { setOut(outId, 'MoneyNex not detected — click Re-detect or reload', 'err'); return; }
+      setOut(outId, 'pending…', 'pending');
+      log(api + ' → request sent');
+      let p;
+      try { p = invoke(MNX); } catch (e) { setOut(outId, 'invoke threw: ' + e.message, 'err'); log(api + ' ⇐ invoke threw: ' + e.message); return; }
+      try {
+        const res = await p;
+        setOut(outId, 'resolve:\n' + pretty(res));
+        log(api + ' ⇐ resolve ' + JSON.stringify(res));
+      } catch (e) {
+        setOut(outId, 'reject:\n' + pretty(e), 'err');
+        log(api + ' ⇐ reject ' + JSON.stringify(e));
+      }
+    });
+  }
+
+  // ---- txobj builder (transfer) ----
+  function buildTransferTxobj() {
+    const to = $('i-tr-to').value.trim();
+    const amount = $('i-tr-amt').value.trim();
+    const actions = [{ kind: 1, to: to, amount: amount }];
+    const json = JSON.stringify({ actions: actions });
+    // btoa is latin1: encode UTF-8 first (docs use plain btoa; inputs here are ASCII-safe)
+    return encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
+  }
+
+  // ---- bind all API buttons ----
+  call('connect', 'b-connect', 'out-connect', (m) => m.connect({}));
+  call('connect(promise)', 'b-connect-p', 'out-connect', (m) => m.connect());
+  $('b-connect-dup').addEventListener('click', async () => {
+    // A2 dedup check: same-origin rapid-fire. The 2nd request must replace the
+    // 1st approval window; each reply carries its own did.
+    if (!MNX) { setOut('out-connect', 'MoneyNex not detected', 'err'); return; }
+    setOut('out-connect', 'pending (two requests)…', 'pending');
+    log('connect x2 → first request sent');
+    const p1 = MNX.connect({});
+    await new Promise((r) => setTimeout(r, 400));
+    log('connect x2 → second request sent');
+    const p2 = MNX.connect({});
+    p1.then((v) => log('connect x2 ⇐ first resolve ' + JSON.stringify(v)), (e) => log('connect x2 ⇐ first reject ' + JSON.stringify(e)));
+    try {
+      const v = await p2;
+      setOut('out-connect', 'resolve(2nd):\n' + pretty(v));
+      log('connect x2 ⇐ second resolve ' + JSON.stringify(v));
+    } catch (e) {
+      setOut('out-connect', 'reject(2nd):\n' + pretty(e), 'err');
+      log('connect x2 ⇐ second reject ' + JSON.stringify(e));
+    }
+  });
+
+  call('wallet', 'b-wallet', 'out-wallet', (m) => m.wallet({}));
+
+  $('b-chain').addEventListener('click', async () => {
+    if (!MNX) { setOut('out-chain', 'MoneyNex not detected', 'err'); return; }
+    const cid = $('i-chain-id').value.trim();
+    const params = cid === '' ? {} : { chain_id: parseInt(cid) || 0 };
+    setOut('out-chain', 'pending…', 'pending');
+    log('chain ' + JSON.stringify(params) + ' → request sent');
+    try {
+      const res = await MNX.chain(params);
+      setOut('out-chain', 'resolve:\n' + pretty(res));
+      log('chain ⇐ resolve ' + JSON.stringify(res));
+    } catch (e) {
+      setOut('out-chain', 'reject:\n' + pretty(e), 'err');
+      log('chain ⇐ reject ' + JSON.stringify(e));
+    }
+  });
+
+  $('b-switchchain').addEventListener('click', async () => {
+    if (!MNX) { setOut('out-switchchain', 'MoneyNex not detected', 'err'); return; }
+    const params = {};
+    const cid = $('i-sw-id').value.trim();
+    if (cid !== '') { params.chain_id = parseInt(cid) || 0; }
+    if ($('i-sw-name').value.trim()) { params.name = $('i-sw-name').value.trim(); }
+    if ($('i-sw-rpc').value.trim()) { params.rpc = $('i-sw-rpc').value.trim(); }
+    if ($('i-sw-explorer').value.trim()) { params.explorer = $('i-sw-explorer').value.trim(); }
+    if ($('i-sw-mode').value) { params.mode = $('i-sw-mode').value; }
+    if ($('i-sw-update').value) { params.update = $('i-sw-update').value; }
+    setOut('out-switchchain', 'pending…', 'pending');
+    log('switchchain ' + JSON.stringify(params) + ' → request sent');
+    try {
+      const res = await MNX.switchchain(params);
+      setOut('out-switchchain', 'resolve:\n' + pretty(res));
+      log('switchchain ⇐ resolve ' + JSON.stringify(res));
+    } catch (e) {
+      setOut('out-switchchain', 'reject:\n' + pretty(e), 'err');
+      log('switchchain ⇐ reject ' + JSON.stringify(e));
+    }
+  });
+
+  $('b-transfer').addEventListener('click', async () => {
+    if (!MNX) { setOut('out-transfer', 'MoneyNex not detected', 'err'); return; }
+    const txobj = buildTransferTxobj();
+    const params = { txobj: txobj };
+    const cid = $('i-tr-chain').value.trim();
+    if (cid !== '') { params.chain_id = parseInt(cid) || 0; }
+    setOut('out-transfer', 'pending…\ntxobj json: ' + decodeURIComponent(escape(atob(decodeURIComponent(txobj)))), 'pending');
+    log('transfer → request sent (amount=' + $('i-tr-amt').value.trim() + ' to=' + $('i-tr-to').value.trim() + ')');
+    try {
+      const res = await MNX.transfer(params);
+      setOut('out-transfer', 'resolve:\n' + pretty(res));
+      log('transfer ⇐ resolve ' + JSON.stringify(res));
+    } catch (e) {
+      setOut('out-transfer', 'reject:\n' + pretty(e), 'err');
+      log('transfer ⇐ reject ' + JSON.stringify(e));
+    }
+  });
+  // Cancel path for transfer: same request; the user cancels inside the wallet.
+  $('b-transfer-cancel').addEventListener('click', () => { $('b-transfer').click(); });
+
+  $('b-signtx').addEventListener('click', async () => {
+    if (!MNX) { setOut('out-signtx', 'MoneyNex not detected', 'err'); return; }
+    const params = { txbody: $('i-stx-body').value.trim() };
+    const cid = $('i-stx-chain').value.trim();
+    if (cid !== '') { params.chain_id = parseInt(cid) || 0; }
+    if ($('i-stx-auto').checked) { params.autosubmit = true; }
+    setOut('out-signtx', 'pending…', 'pending');
+    log('signtx → request sent (chain_id=' + (params.chain_id || 0) + ', autosubmit=' + !!params.autosubmit + ')');
+    try {
+      const res = await MNX.signtx(params);
+      setOut('out-signtx', 'resolve:\n' + pretty(res));
+      log('signtx ⇐ resolve ' + JSON.stringify(res));
+    } catch (e) {
+      setOut('out-signtx', 'reject:\n' + pretty(e), 'err');
+      log('signtx ⇐ reject ' + JSON.stringify(e));
+    }
+  });
+
+  $('b-signtext').addEventListener('click', () => signtextRun($('i-stext').value));
+  $('b-signtext-hash').addEventListener('click', () =>
+    signtextRun('a3f5c1877d9eb2f4102c9d3a6e51b8c90d4f7a21be63c8594d0e2f1a8b7c6d59'));
+  $('b-signtext-short').addEventListener('click', () => signtextRun('short'));
+  function signtextRun(text) {
+    if (!MNX) { setOut('out-signtext', 'MoneyNex not detected', 'err'); return; }
+    setOut('out-signtext', 'pending…', 'pending');
+    log('signtext → request sent (len=' + text.length + ')');
+    MNX.signtext({ text: text }).then(
+      (res) => { setOut('out-signtext', 'resolve:\n' + pretty(res)); log('signtext ⇐ resolve ' + JSON.stringify(res)); },
+      (e) => { setOut('out-signtext', 'reject:\n' + pretty(e), 'err'); log('signtext ⇐ reject ' + JSON.stringify(e)); }
+    );
+  }
+
+  $('b-raisefee').addEventListener('click', async () => {
+    if (!MNX) { setOut('out-raisefee', 'MoneyNex not detected', 'err'); return; }
+    const params = { hash: $('i-rf-hash').value.trim(), fee: $('i-rf-fee').value.trim() };
+    const cid = $('i-rf-chain').value.trim();
+    if (cid !== '') { params.chain_id = parseInt(cid) || 0; }
+    setOut('out-raisefee', 'pending…', 'pending');
+    log('raisefee → request sent (hash=' + params.hash.slice(0, 12) + '… fee=' + params.fee + ')');
+    try {
+      const res = await MNX.raisefee(params);
+      setOut('out-raisefee', 'resolve:\n' + pretty(res));
+      log('raisefee ⇐ resolve ' + JSON.stringify(res));
+    } catch (e) {
+      setOut('out-raisefee', 'reject:\n' + pretty(e), 'err');
+      log('raisefee ⇐ reject ' + JSON.stringify(e));
+    }
+  });
+
+  $('b-rediscover').addEventListener('click', () => {
+    MNX = window.MoneyNex || null;
+    renderState();
+    if (!MNX) {
+      // Poll briefly; the content script injects the API ~15ms after DOM insert,
+      // but a slow tab can beat it.
+      let tries = 0;
+      const t = setInterval(() => {
+        tries++;
+        if (window.MoneyNex) { MNX = window.MoneyNex; renderState(); clearInterval(t); }
+        else if (tries > 20) { clearInterval(t); renderState(); }
+      }, 250);
+    }
+  });
+
+  // ---- events (sdk.md events: on/off + MoneyNexDisconnect) ----
+  // Both delivery channels append evidence lines to #out-events (never
+  // overwrite — the disconnect during a test must stay visible next to earlier
+  // deliveries). Subscription is set up as soon as the SDK appears, so a
+  // disconnect that fires without any button click is still recorded.
+  const eventsOut = () => $('out-events');
+  function eventsAppend(line) {
+    const el = eventsOut();
+    if (el.textContent === '—') { el.textContent = ''; }
+    el.textContent += '[' + new Date().toISOString() + '] ' + line + '\n';
+    el.scrollTop = el.scrollHeight;
+    // framed (frame-host.html): relay evidence lines to the host page
+    if (window.parent !== window) {
+      try { window.parent.postMessage({ mnxFwd: line }, '*'); } catch (e) {}
+    }
+  }
+  let subCb = null;
+  function subscribeDisconnect() {
+    if (!MNX || !MNX.on || subCb) { return; }
+    subCb = function (detail) {
+      eventsAppend('MoneyNex.on disconnect: ' + JSON.stringify(detail));
+      log('event ⇐ MoneyNex.on(disconnect) ' + JSON.stringify(detail));
+    };
+    MNX.on('disconnect', subCb);
+  }
+  $('b-events-sub').addEventListener('click', () => {
+    if (!MNX) { eventsOut().textContent = 'MoneyNex not detected — click Re-detect or reload'; return; }
+    subscribeDisconnect();
+    eventsAppend('subscribed (MoneyNex.on disconnect, cb#' + (subCb ? 'set' : 'none') + ')');
+  });
+  $('b-events-unsub').addEventListener('click', () => {
+    if (!MNX || !subCb) { eventsOut().textContent = 'nothing to unsubscribe'; return; }
+    MNX.off('disconnect', subCb);
+    eventsAppend('unsubscribed (MoneyNex.off disconnect)');
+    subCb = null;
+  });
+  window.addEventListener('MoneyNexDisconnect', (e) => {
+    eventsAppend('MoneyNexDisconnect: ' + JSON.stringify(e.detail || null));
+    log('event ⇐ window MoneyNexDisconnect ' + JSON.stringify(e.detail || null));
+  });
+
+  $('b-clearlog').addEventListener('click', () => { $('out-log').textContent = '—'; });
+
+  // initial detection: direct hit or short poll
+  if (window.MoneyNex) { MNX = window.MoneyNex; renderState(); subscribeDisconnect(); }
+  else {
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      if (window.MoneyNex) { MNX = window.MoneyNex; renderState(); subscribeDisconnect(); clearInterval(t); }
+      else if (tries > 12) { clearInterval(t); renderState(); }
+    }, 250);
+  }
+})();
+</script>
+</body>
+</html>

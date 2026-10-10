@@ -64,6 +64,83 @@
     // beside #wpage's, 2026-10-05)
     padding-bottom: @sp-6;
 
+    // extra tail room while the Connected indicator is pinned below
+    &.has-connbar {
+        padding-bottom: 60px;
+    }
+
+    // in-wallet "Connected" indicator (B Phase 3 revised): pinned to the
+    // viewport bottom, MetaMask-style — the wallet follows the active browser
+    // tab. Border uses the same token as the page header's bottom border;
+    // label and host share identical font props so they align exactly.
+    .connbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 98; // under modals (.rpcsg is 99)
+        display: flex;
+        align-items: center;
+        gap: @sp-2;
+        height: 40px;
+        padding: 0 var(--mn-pad-need, @sp-3);
+        background: @bg-page;
+        border-top: 1px solid @line-2;
+        user-select: none;
+
+        .dot {
+            flex: none;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: @sem-ok;
+        }
+
+        .tt,
+        .host {
+            font-size: @fs-12;
+            line-height: 16px;
+        }
+
+        .tt {
+            flex: none;
+            font-weight: 500;
+            color: @sem-ok;
+        }
+
+        .host {
+            flex: 1;
+            min-width: 0;
+            font-weight: normal;
+            color: @text-1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .icbtn {
+            flex: none;
+            width: 26px;
+            min-width: 26px;
+            height: 26px;
+            border-radius: @rd-pill;
+
+            .icf {
+                width: 14px;
+                height: 14px;
+            }
+
+            &:hover {
+                background: @bg-card;
+            }
+
+            // revoke button — the one destructive affordance on the bar
+            &.dis {
+                color: @sem-error;
+            }
+        }
+    }
+
     // balances — centered stack
     .blsw {
         user-select: none;

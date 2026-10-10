@@ -2,10 +2,6 @@ const ACC_INIT_MV_NUM = 600;
 
 var routePageInit = async (sc, force) => {
 
-    // await chrome_storage_sync.clear()
-    // await chrome_storage_local.clear()
-    // await chrome_storage_session.clear()
-
     let pgname = 'init'
     // check current account
     let curadr = await stoReadCurrentAccount()
@@ -21,12 +17,9 @@ var routePageInit = async (sc, force) => {
     if(!force && urlquery.key && typeof routePageActionView === 'function'){
         return await routePageActionView(curadr || '', loginSwitchCloseAll)
     }
-    // console.log(curadr, passwd, psoverout)
-    // console.log(`if(curadr && psoverout===false) force=`, force)
     if(curadr && psoverout===false && !force) {
         return await routePageMain(curadr, loginSwitchCloseAll)
     }
-    // console.log(`VueCreateApp('init'`)
     // start mount
     let {app} = VueCreateApp(pgname, vue_tpl_init, {
         pgi: 1, // 1:create 2.import
@@ -37,7 +30,6 @@ var routePageInit = async (sc, force) => {
         acc: nil,
         backup: no,
         setpass: no,
-        // setpass: yes,
         newmode: !!force,
         unlock: no,
         pass1: '',
@@ -73,10 +65,6 @@ var routePageInit = async (sc, force) => {
         },
         clswd(){
             window.close()
-            // chrome.runtime.sendMessage({ action: 'close' }, function(req) {
-            //     console.log(`sendMessage({ action: 'close' } back!!! `, req)
-            //     // window.close()
-            // })
         },
         async create() {
             let t = this
@@ -87,11 +75,7 @@ var routePageInit = async (sc, force) => {
             hideWPtip()
         },
         cprvk(){
-            let t = this
-            , pvk = t.acc.private_key
-            ;
-            copyToClipboard(pvk)
-            showWPtip(copyoktip)
+            copyShowTip(this.acc.private_key)
         },
         importpk(){
             // 1) 64-hex private key (drop whitespace, optional 0x)
@@ -142,14 +126,11 @@ var routePageInit = async (sc, force) => {
             await initroutetohome(t.acc, t.pass1)
         },
         pskup(e){
-            // console.log(e)
             if(e.code == 'Enter') {
                 this.doulk().then()
             }
         },
         async doulk() {
-            // await chrome_storage_sync.clear()
-            // await chrome_storage_local.clear()
             var t = this
             , p = t.ulkpass
             if(!p) {
@@ -169,7 +150,6 @@ var routePageInit = async (sc, force) => {
         },
     }, async (t)=>{
         let key = await stoReadRandomKey()
-        // console.log(key)
         if(key){
             t.rdnstr = key
             await recordRandomString(key)
@@ -192,8 +172,6 @@ var routePageInit = async (sc, force) => {
         sc&&sc()
         
         
-        // test
-        // t.create()
     })
 
     async function initroutetohome(acc, pass) {
@@ -211,9 +189,6 @@ var routePageInit = async (sc, force) => {
         }else{
             adr = await stoReadCurrentAccount()
         }
-        // console.log(await stoReadPassword())
-        // console.log(await stoReadAccount())
-        // console.log(await stoReadCurrentAccount())
 
         // route to home
         await routePageMain(adr)
@@ -232,7 +207,6 @@ var routePageInit = async (sc, force) => {
         mnx_derive_address(keyhex).then(res => {
             t.crting = false
             t.acc = res
-            // console.log(res)
             if(iscreatenew) {
                 t.backup = yes
             }else{

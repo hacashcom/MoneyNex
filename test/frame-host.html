@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MoneyNex frame host — top-frame registration check</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; background: #f4f4f6; color: #222; }
+  iframe { width: 100%; height: 320px; border: 1px solid #999; border-radius: 6px; background: #fff; }
+  code { background: #e8e8ec; padding: 1px 5px; border-radius: 4px; }
+  #frame-state { font-weight: 600; margin: 12px 0; }
+</style>
+</head>
+<body>
+<h1>MoneyNex frame host</h1>
+<p>This page (top frame) embeds <code>dapp-sim.html</code> same-origin in an iframe. Only
+the top frame registers the tab with the wallet (the iframe's registration is ignored by
+the background), so the wallet's Connected indicator names this page's origin while the
+tab is active. Evidence lines from the embedded page's event recorder land here via
+postMessage.</p>
+<div id="frame-state">iframe loading…</div>
+<iframe id="dappframe" src="dapp-sim.html"></iframe>
+<pre id="out-frame-events" style="background:#101418;color:#d5e2f2;padding:8px;border-radius:6px;max-height:160px;overflow:auto;font:11px/1.45 ui-monospace,monospace;">—</pre>
+<script>
+'use strict';
+const frameEl = document.getElementById('dappframe');
+const stateEl = document.getElementById('frame-state');
+const outEl = document.getElementById('out-frame-events');
+frameEl.addEventListener('load', () => {
+  stateEl.textContent = 'iframe loaded: ' + (frameEl.src || 'dapp-sim.html');
+});
+window.addEventListener('message', (e) => {
+  // same-origin dapp-sim relays its event-recorder lines for visibility
+  if (e && e.data && typeof e.data.mnxFwd === 'string') {
+    if (outEl.textContent === '—') { outEl.textContent = ''; }
+    outEl.textContent += e.data.mnxFwd + '\n';
+  }
+});
+</script>
+</body>
+</html>

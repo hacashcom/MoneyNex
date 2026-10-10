@@ -1,11 +1,19 @@
 
-// Connected sites management page (A3, doc/plan.cn.md appendix.3-2):
-// mount id 'cnls'; entries come from stoListConnectSites()
+// Connected sites management (A3, doc/plan.cn.md appendix.3-2): mount id 'cnls';
+// entries come from stoListConnectSites()
 // ({origin, host, connectedAt, accountAtConnect, legacy} sorted newest first);
-// Disconnect revokes via stoRemoveConnectSite(origin). Styling is a skeleton —
-// workflow B re-skins in M2. The home ⋮ menu entry is B's template work
-// (appendix.3-4); this page is directly reachable at popup/connectedsites.html.
-var routePageConnlists = (adr, clbk) => {
+// Disconnect revokes via stoRemoveConnectSite(origin).
+// Two hosts: the moneynex home ⋮ menu opens it as an in-page hpgw view, and the
+// standalone popup/connectedsites.html remains directly reachable (its dismissal
+// follows the project's standalone-page pattern window.close()).
+var connlistsPageAppPtr = nil
+, routePageConnlists = (adr, clbk) => {
+
+    // re-open guard (same pattern as routePageChains): unmount the previous view
+    if(connlistsPageAppPtr) {
+        connlistsPageAppPtr.unmount()
+        connlistsPageAppPtr = nil
+    }
 
     let {app} = VueCreateApp('cnls', vue_tpl_connlists, {
         icfp: icfpath,
@@ -14,11 +22,16 @@ var routePageConnlists = (adr, clbk) => {
         sites: nil, // null = loading
     },{
         back(){
-            // Standalone tab opened from home ⋮ via chrome_tabs_create: the
-            // moneynex hpgw page-stack (pophpgw) is not bundled into this page
-            // (it lives in popup/index/index.js, only in popup/moneynex.js), so
-            // dismissal follows the project's standalone-page pattern
-            // (switchchain/actionview/login-init window.close()).
+            let t = this
+            // in-page (moneynex hpgw stack): pop back and unmount; standalone
+            // page (pophpgw not bundled): close the window/tab
+            if(typeof pophpgw === 'function'){
+                pophpgw(()=>{
+                    app.unmount()
+                    if(connlistsPageAppPtr == app){ connlistsPageAppPtr = nil }
+                })
+                return
+            }
             window.close()
         },
         fmttime(ts){
@@ -53,5 +66,7 @@ var routePageConnlists = (adr, clbk) => {
         await t.refresh()
         clbk && clbk()
     });
+
+    connlistsPageAppPtr = app
 
 }

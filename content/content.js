@@ -48,11 +48,39 @@ $irsd(hacash_api_div)
 
 
 /**
+ * wallet→page event div (B, Phase 3): must exist before hacash_api.min.js runs
+ * (its 15ms bind timer looks it up); created here next to the api div for the
+ * same ordering guarantee.
+ */
+var hacash_evt_div = $div('div')
+hacash_evt_div.id = optkey_evt_id
+$display_none(hacash_evt_div)
+$irsd(hacash_evt_div)
+
+
+/**
  * reg APIs
  */
 function sendmsg(params){
-    // console.log("sendmsg:", params)
-    chrome.runtime.sendMessage(params)
+    // 扩展重载/升级后旧内容脚本成孤儿：chrome.* 访问直接抛
+    // "Extension context invalidated"（线上实例：defi.hacd.it/bridge）。
+    // 不能只吞——把错误经事件桥回给页面世界，让 dApp 的 pending promise
+    // 可见地 reject（而非永远挂起）；页面重载后 SDK 自动恢复。
+    try{
+        chrome.runtime.sendMessage(params)
+    }catch(e){
+        console.warn('MoneyNex: extension context invalidated — reload the page to restore the SDK', e)
+        try{
+            $attr(hacash_api_div, 'did', params.did || 0)
+            $attr(hacash_api_div, 'data', JSON_stringify({
+                did: params.did || 0,
+                ret: 1,
+                err: 'extension context invalidated — reload the page',
+                code: 'context_invalidated',
+            }))
+            hacash_api_div.click()
+        }catch(e2){}
+    }
 }
 function registerCommonHacashApis(apikeys) {
     for(var i in apikeys){
@@ -90,37 +118,3 @@ injectScript( chrome.runtime.getURL('content/hacash_api.min.js'));
 
 
 
-// ok
-
-
-
-
-
-// document.body.onclick = function(){
-//     console.log("chrome.action", chrome.action)
-
-    // chrome-extension://bafhnhhcnjhlbhibnncmmdjjajcdmijp/popup/moneynex.html
-
-
-    // window.open(
-    //     'chrome-extension://bafhnhhcnjhlbhibnncmmdjjajcdmijp/popup/moneynex.html',
-        
-    // )
-    // window.open(
-    //     'chrome-extension://bafhnhhcnjhlbhibnncmmdjjajcdmijp/popup/moneynex.html',
-    //     'MoneyNex',
-    //     'height=600,width=400,top=100,left=200,toolbar=no,menubar=no, scrollbars=no,resizable=no,location=no, status=no'
-    // )
-
-// }
-
-
-
-
-// window.hacash = {
-//     open_wallet() {
-//         chrome.runtime.sendMessage({
-//             action: "open_wallet",
-//         })
-//     }
-// }

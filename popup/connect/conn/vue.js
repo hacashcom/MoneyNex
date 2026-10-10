@@ -3,7 +3,7 @@ var routePageConn = (adr, clbk) => {
 
     // Single-reply contract (shared helper): reply {address} once then close; cancel/failure must
     // also reply {err} or the DApp's connect request hangs forever.
-    let {isAnswered, answerOnce, closeWin, cancelAndClose} = mnx_dapp_reply('Connection request')
+    let {answerOnce, closeWin, nop} = mnx_dapp_reply('Connection request', 'User canceled the connection request')
 
     // A3 defensive validation of the request contract. tid/did/dmu arrive via the
     // background-built URL (dmu is always derived from the message sender there,
@@ -34,11 +34,9 @@ var routePageConn = (adr, clbk) => {
             !dmuok ? 'Invalid connection request: bad site origin' :
             'Invalid connection request: bad tab or request id'
         ),
+        // shared single-reply Cancel handler (mnx_dapp_reply), exposed as data
+        nop: nop,
     },{
-        nop(){
-            if(isAnswered()){ closeWin(); return }
-            cancelAndClose('User canceled the connection request')
-        },
         async doconn(){
             let t = this
             // UI-level unreachable (error is shown instead of the confirm flow);
@@ -60,6 +58,10 @@ var routePageConn = (adr, clbk) => {
             showWPerr(t.reqerr)
         }
         clbk && clbk()
+    }, nil, {
+        components: {
+            pghead: pgheadAppObj,
+        },
     });
 
 

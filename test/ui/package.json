@@ -1,0 +1,10 @@
+{
+  "name": "moneynex-ui-tests",
+  "version": "0.4.1",
+  "private": true,
+  "description": "MoneyNex UI simulation test harness (self-contained). Install: npm install (inside test/ui).",
+  "type": "module",
+  "dependencies": {
+    "puppeteer-core": "23.11.1"
+  }
+}
