@@ -560,26 +560,27 @@ var MNX_MSG_KIND_MESSAGE = 1025
     return (got.bytes ? got.bytes.length : 0) + ' bytes'
 }
 
-, mnx_msglayout_state = { tables: null, extra: null, loaded: false, display_err: '' }
+, mnx_msglayout_state = { tables: null, extra: null, loaded: false, loaded_key: '', display_err: '', sourcemaps: [] }
 
 , mnx_msglayout_reset = function() {
-    mnx_msglayout_state = { tables: null, extra: null, loaded: false, display_err: '' }
+    mnx_msglayout_state = { tables: null, extra: null, loaded: false, loaded_key: '', display_err: '', sourcemaps: [] }
 }
 
 , mnx_msglayout_load = async function() {
-    if(mnx_msglayout_state.loaded){ return mnx_msglayout_state }
+    let requestKey = (typeof urlquery !== 'undefined' && urlquery.mlkey) ? String(urlquery.mlkey) : ''
+    if(mnx_msglayout_state.loaded && mnx_msglayout_state.loaded_key === requestKey){ return mnx_msglayout_state }
+    if(mnx_msglayout_state.loaded_key !== requestKey){ mnx_msglayout_reset() }
     mnx_msglayout_state.loaded = true
+    mnx_msglayout_state.loaded_key = requestKey
     let extra = null
     try {
         if(typeof urlquery !== 'undefined' && urlquery.mlkey && typeof chrome_storage_session !== 'undefined'){
             let obj = await chrome_storage_session.get(urlquery.mlkey)
             extra = obj[urlquery.mlkey] || null
-            // delete after use: ml_<tid>_<did> serves only this request (data is already in
-            // memory; openactv keeps its own actv_ key) — do not leave it until the session ends
-            await chrome_storage_session.remove(urlquery.mlkey)
         }
     } catch(e) {}
     mnx_msglayout_state.extra = extra
+    mnx_msglayout_state.sourcemaps = Array.isArray(extra && extra.sourcemaps) ? extra.sourcemaps : []
     mnx_msglayout_state.tables = mnx_msglayout_normalize(extra)
     mnx_msglayout_state.display_err = ''
     return mnx_msglayout_state

@@ -17,6 +17,145 @@
 
     .txd {
         .mnx-rp-txd();
+
+        .codehint {
+            display: block;
+            margin-top: @sp-1;
+            color: @text-3;
+            font-size: @fs-12;
+            overflow-wrap: anywhere;
+        }
+
+        .codeprint {
+            display: block;
+            max-height: 320px;
+            overflow: auto;
+            margin-top: @sp-1;
+            padding: @sp-2;
+            border: 1px solid @line-2;
+            background: @bg-input;
+            font-family: @font-mono;
+            font-size: @fs-12;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .codefull summary { cursor: pointer; color: @text-2; }
+        .height-time { color: @text-2; font-size: @fs-12; }
+        .height-scope-note { margin-top: @sp-1; color: @text-2; }
+        .code-notes {
+            margin-top: @sp-1;
+            summary { cursor: pointer; color: @text-3; font-size: @fs-12; }
+        }
+        a.addr:hover, a.addr:focus-visible { text-decoration: underline; }
+        .asset-unit-unknown { color: @sem-warn; }
+        .asset-unit-warning {
+            display: inline-block;
+            color: @sem-warn;
+            border: 1px solid @sem-warn;
+            padding: 2px @sp-1;
+            font-size: @fs-12;
+            border-radius: 4px;
+        }
+    }
+
+    .txmeta, .txfee {
+        dl {
+            display: grid;
+            gap: @sp-1;
+        }
+
+        dl > div {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: @sp-2;
+        }
+
+        dt {
+            color: @text-2;
+            font-size: @fs-12;
+        }
+
+        dd {
+            margin: 0;
+            min-width: 0;
+            text-align: right;
+            overflow-wrap: anywhere;
+            font-size: @fs-12;
+        }
+
+        .mono {
+            font-family: @font-mono;
+        }
+    }
+
+    .txfee {
+        .fee-help {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            min-width: 16px;
+            height: 16px;
+            line-height: 16px;
+            padding: 0;
+            margin-left: 3px;
+            border: 1px solid @line-1;
+            border-radius: 50%;
+            background: transparent;
+            color: @text-2;
+            font-size: @fs-12;
+            cursor: pointer;
+        }
+
+        .gas-more {
+            margin-top: @sp-2;
+
+            summary {
+                color: @text-2;
+                cursor: pointer;
+                font-size: @fs-12;
+                user-select: none;
+            }
+
+            dl {
+                display: grid;
+                gap: @sp-1;
+                margin: @sp-2 0 0;
+            }
+
+            dl > div {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: @sp-2;
+            }
+
+            dt { color: @text-2; font-size: @fs-12; }
+            dd {
+                margin: 0;
+                text-align: right;
+                overflow-wrap: anywhere;
+                font-family: @font-mono;
+                font-size: @fs-12;
+            }
+        }
+    }
+
+    .txhead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: @sp-2;
+        margin-bottom: @sp-1;
+
+        .lbl { margin: 0; }
+        .count {
+            margin-left: @sp-1;
+            color: @text-3;
+            font-weight: 400;
+        }
     }
 
     .txerr {
@@ -33,12 +172,15 @@
             font-size: @fs-12;
 
             a {
+                min-width: 0;
+                overflow-wrap: anywhere;
                 font-family: @font-mono;
                 color: @text-2;
                 text-decoration: none;
             }
 
             b {
+                flex-shrink: 0;
                 font-weight: 500;
 
                 &.yes {
@@ -51,10 +193,6 @@
             }
         }
 
-        .actopen {
-            margin: @sp-2 0 0;
-            text-align: right;
-        }
     }
 
     .gas {

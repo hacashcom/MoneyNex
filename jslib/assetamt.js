@@ -193,68 +193,97 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
 // An issued asset's decimal/name/ticket are immutable (only supply changes, which the
 // display never uses), so the cache never expires; only successful lookups are cached,
 // misses retry next time. atoms stay strings throughout (Fold64 can exceed 2^53).
-, mnx_asset_meta_storage_key = 'asset_meta_cache'
+, mnx_asset_meta_storage_key = 'asset_meta_cache_v2_'
 , mnx_asset_meta_mem = null
+, mnx_asset_meta_active_chain_id = function() {
+    let chain = typeof current_chain !== 'undefined' ? current_chain : null
+    let raw = chain && chain.id != null ? chain.id : (typeof mnx_chain_id !== 'undefined' ? mnx_chain_id : 0)
+    let id = Number(raw)
+    return /^\d+$/.test(String(raw)) && Number.isInteger(id) && id >= 0 && id <= 4294967295 ? id : null
+}
+, mnx_asset_meta_context = async function() {
+    let chain = typeof stoReadCurrentChain === 'function' ? await stoReadCurrentChain() : null
+    let raw = chain && chain.id != null ? chain.id : mnx_asset_meta_active_chain_id()
+    let id = Number(raw)
+    if(raw == null || !/^\d+$/.test(String(raw)) || !Number.isInteger(id) || id < 0 || id > 4294967295){ throw new Error('Asset cache chain ID is unavailable') }
+    let rpc = chain && chain.rpc || (typeof fullnode_url !== 'undefined' ? fullnode_url : '')
+    // Resolve the override against this captured chain, not a later selection.
+    if(typeof stoReadRpcUrl === 'function'){
+        let override = await stoReadRpcUrl()
+        if(override){ rpc = override }
+    }
+    return { chain_id: id, rpc: String(rpc).replace(/\/+$/, '') }
+}
 , mnx_asset_meta_norm = function(raw) {
     if(!raw || typeof raw !== 'object' || raw.metadata === false){ return null }
     let decimal = raw.decimal
     if(decimal == null || decimal === ''){ return null }
-    let d = typeof decimal === 'number' ? decimal : parseInt(String(decimal), 10)
-    if(!(d >= 0 && d <= 16)){ return null }
+    let d = typeof decimal === 'number' ? decimal : (/^\d+$/.test(String(decimal)) ? Number(decimal) : NaN)
+    if(!Number.isInteger(d) || !(d >= 0 && d <= 16)){ return null }
     return {
         decimal: d,
         name: (raw.name == null ? '' : String(raw.name)).trim(),
         ticket: (raw.ticket == null ? '' : String(raw.ticket)).trim(),
     }
 }
-, mnx_asset_meta_load = async function(force) {
-    if(mnx_asset_meta_mem && !force){ return mnx_asset_meta_mem }
-    let mem = {}
+, mnx_asset_meta_load = async function(force, context) {
+    context = context || await mnx_asset_meta_context()
+    let id = context.chain_id, key = mnx_asset_meta_storage_key + id
+    if(!mnx_asset_meta_mem){ mnx_asset_meta_mem = Object.create(null) }
+    let cached = mnx_asset_meta_mem[id]
+    if(cached && !force){ return cached }
+    let mem = cached || {}
+    mnx_asset_meta_mem[id] = mem
     try {
-        let got = await chrome.storage.local.get(mnx_asset_meta_storage_key)
-        let saved = got && got[mnx_asset_meta_storage_key]
+        // The old flat cache has no chain provenance and is deliberately not migrated.
+        let got = await chrome.storage.local.get(key)
+        let saved = got && got[key]
         if(saved && typeof saved === 'object'){
             for(let k in saved){
                 let one = mnx_asset_meta_norm(saved[k])
-                if(one){ mem[k] = one }
+                if(one && !mem[k]){ mem[k] = one }
             }
         }
     } catch(e) {}
-    mnx_asset_meta_mem = mem
     return mem
 }
 // Synchronous read (for render functions): await mnx_asset_meta_ensure(serials) first
 , mnx_asset_meta_get = function(serial) {
     if(!mnx_asset_meta_mem){ return null }
     let s = mnx_u64_string(serial)
-    return s ? (mnx_asset_meta_mem[s] || null) : null
+    let mem = mnx_asset_meta_mem[mnx_asset_meta_active_chain_id()]
+    return s && mem ? (mem[s] || null) : null
 }
-, mnx_asset_meta_save = async function(mem) {
-    mnx_asset_meta_mem = mem
+, mnx_asset_meta_save = async function(mem, context) {
+    context = context || await mnx_asset_meta_context()
+    if(!mnx_asset_meta_mem){ mnx_asset_meta_mem = Object.create(null) }
+    mnx_asset_meta_mem[context.chain_id] = mem
     try {
         let sv = {}
-        sv[mnx_asset_meta_storage_key] = mem
+        sv[mnx_asset_meta_storage_key + context.chain_id] = mem
         await chrome.storage.local.set(sv)
     } catch(e) {}
 }
 // Batch fill: memory -> storage -> fullnode /query/asset?serial=N (address-independent;
 // queryable even when the signer does not hold the asset)
 , mnx_asset_meta_ensure = async function(serials) {
+    let context
+    try { context = await mnx_asset_meta_context() } catch(e) { return {} }
     let want = []
     for(let i in (serials || [])){
         let s = mnx_u64_string(serials[i])
         if(s && want.indexOf(s) < 0){ want.push(s) }
     }
-    if(!want.length){ return await mnx_asset_meta_load() }
-    let mem = await mnx_asset_meta_load()
+    if(!want.length){ return await mnx_asset_meta_load(false, context) }
+    let mem = await mnx_asset_meta_load(false, context)
     let miss = want.filter(s => !mem[s])
     if(miss.length){
-        mem = await mnx_asset_meta_load(true) // other pages may have just written; re-read storage first
+        mem = await mnx_asset_meta_load(true, context) // other pages may have just written; re-read storage first
         miss = want.filter(s => !mem[s])
     }
     if(!miss.length){ return mem }
-    let base = fullnode_url
-    try { base = (typeof mnx_get_fullnode_url === 'function') ? await mnx_get_fullnode_url() : fullnode_url } catch(e) {}
+    let base = context.rpc
+    if(!/^https?:\/\//.test(base)){ return mem }
     let changed = false
     for(let i in miss){
         let serial = miss[i]
@@ -262,13 +291,14 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
         let one = mnx_asset_meta_norm(res && res.asset)
         if(one){ mem[serial] = one; changed = true }
     }
-    if(changed){ await mnx_asset_meta_save(mem) }
+    if(changed){ await mnx_asset_meta_save(mem, context) }
     return mem
 }
 // The home page's /query/balance?assets=true&asset_meta=true result merges into the same
 // cache, so signing pages need no extra request
-, mnx_asset_meta_put_list = async function(list) {
-    let mem = await mnx_asset_meta_load()
+, mnx_asset_meta_put_list = async function(list, context) {
+    context = context || await mnx_asset_meta_context()
+    let mem = await mnx_asset_meta_load(false, context)
     let changed = false
     for(let i in (list || [])){
         let one = list[i]
@@ -276,7 +306,7 @@ var MNX_ASSET_FOLD64_MAX = (1n << 61n) - 1n
         let norm = mnx_asset_meta_norm(one)
         if(serial && norm && !mem[serial]){ mem[serial] = norm; changed = true }
     }
-    if(changed){ await mnx_asset_meta_save(mem) }
+    if(changed){ await mnx_asset_meta_save(mem, context) }
     return mem
 }
 // Display text: unknown metadata returns raw atoms with known=false — never guess decimals

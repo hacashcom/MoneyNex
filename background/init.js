@@ -67,7 +67,7 @@ async function openWalletPopupPageInNextTab(req, tabid) {
     const layoutKeys = {
         msglayout: 1, msg_layout: 1, msglayouts: 1, msg_layouts: 1,
         msgid: 1, msg_id: 1, message_id: 1, action_id: 1,
-        text: 1,
+        text: 1, sourcemaps: 1,
     }
     for(let k in req){
         if(layoutKeys[k] || (req[k] != null && typeof req[k] === 'object')){
@@ -75,12 +75,29 @@ async function openWalletPopupPageInNextTab(req, tabid) {
             delete req[k]
         }
     }
+    if(Object.prototype.hasOwnProperty.call(extra, 'sourcemaps') && !Array.isArray(extra.sourcemaps)){
+        let error = new Error('sourcemaps must be an array of {action_path, sourcemap} entries')
+        error.code = 'request_invalid'
+        throw error
+    }
+    if(Array.isArray(extra.sourcemaps)){
+        if(extra.sourcemaps.length > 256){ let error = new Error('Too many sourcemap entries (maximum 256)'); error.code = 'request_invalid'; throw error }
+        let mapBytes = 0
+        for(let i = 0; i < extra.sourcemaps.length; i++){
+            let entry = extra.sourcemaps[i]
+            let size = new TextEncoder().encode(JSON.stringify(entry)).length
+            if(size > 64 * 1024){ let error = new Error('A sourcemap entry exceeds 64 KiB'); error.code = 'request_invalid'; throw error }
+            mapBytes += size
+        }
+        if(mapBytes > 256 * 1024){ let error = new Error('Sourcemap entries exceed 256 KiB total'); error.code = 'request_invalid'; throw error }
+    }
+    if(Object.prototype.hasOwnProperty.call(extra, 'sourcemap')){ extra.sourcemap = true }
     if(Object.keys(extra).length){
-        let mlkey = 'ml_' + tabid2 + '_' + (req.did || 0)
+        let mlkey = 'ml_' + tabid2 + '_' + (req.did || 0) + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2)
         try {
             await chrome.storage.session.set({ [mlkey]: extra })
             params += `&mlkey=${mlkey}`
-        } catch(e) {}
+        } catch(e) { let error = new Error('Could not store signing request display data'); error.code = 'display_data_failed'; throw error }
     }
     for(let k in req){
         params += `&${k}=${req[k]}`
@@ -112,11 +129,17 @@ async function openWalletPopupPageInNextTab(req, tabid) {
     // Fallback to the original next-tab open, mandated by the refactor plan for
     // environments where window creation fails (e.g. no window manager). The
     // cause is logged above, never swallowed.
-    let ftab = await chrome.tabs.create({
-        url: url,
-        index: cidx + 1,
-        openerTabId: tabid2,
-    });
+    let ftab
+    try {
+        ftab = await chrome.tabs.create({
+            url: url,
+            index: cidx + 1,
+            openerTabId: tabid2,
+        })
+    } catch(e) {
+        await removeRequestExtraFromUrl(url)
+        throw e
+    }
     if(ftab && ftab.id){
         let rid = newReqRid()
         await registerPendingReqReply(['t' + ftab.id], { tid: tabid2, did: req.did || 0, rid: rid, kind: actpage, url: url })
@@ -124,6 +147,13 @@ async function openWalletPopupPageInNextTab(req, tabid) {
         updateRequestBadge()
     }
     return ftab
+}
+
+async function removeRequestExtraFromUrl(url) {
+    let match = String(url || '').match(/[?&]mlkey=([^&]+)/)
+    if(match){
+        try { await chrome.storage.session.remove(decodeURIComponent(match[1])) } catch(e) {}
+    }
 }
 
 // [Modernize-1] top-right anchor of the window that owns the source tab — the
@@ -301,6 +331,7 @@ function firePendingCancel(key){
         if(!pend){ return null }
         for(let k in tbl){ if(tbl[k].rid === pend.rid){ delete tbl[k] } }
         await chrome.storage.session.set({ [PENDING_REQ_KEY]: tbl })
+        await removeRequestExtraFromUrl(pend.url)
         return pend
     }).then(pend => {
         if(!pend){ return }

@@ -1,0 +1,10 @@
+<!-- wphelp -->
+<div :class="`popbox ${show?'':'hide'}`">
+    <div class="bg dark" @click="cok"></div>
+    <div :class="`con box ${cnsh?'':'hide'}`">
+        <p :class="`tip cfmt`" v-html="tip"></p>
+        <div class="btnrow single">
+            <button class="cancel" @click="cok">OK</button>
+        </div>
+    </div>
+</div>

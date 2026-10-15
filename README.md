@@ -4,7 +4,7 @@ A Hacash and Bitcoin wallet — Chrome browser extension (Manifest V3), with an 
 
 Your key to future money.
 
-Current release: **0.4.0** — see the [release notes](doc/release-notes-0.4.0.md) / [中文发布说明](doc/release-notes-0.4.0.cn.md).
+Current release: **0.4.2** — fixes binary encoding for HACD inscriptions and preserves byte payloads when rebuilding transactions to raise fees.
 
 ### SDK API
 

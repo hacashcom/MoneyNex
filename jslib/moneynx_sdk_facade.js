@@ -1,12 +1,12 @@
 /**
- * MoneyNex SDK facade (thin wrapper, fullnode sdk transport v10 adapter)
+ * MoneyNex SDK facade (thin wrapper, fullnode sdk transport v11 adapter)
  *
  * Concat order (build.js pppjslibs): crypto-util -> message-types -> elliptic
  * -> hacash_sdk (page build, wasm inlined as base64, exposes globalThis.hacash_sdk)
  * -> this file. Loaded by popup pages only; background does not load the SDK.
  *
  * Talks to the fullnode sdk single transport surface (transport v10, doc 14;
- * v10 = fee pricing in the u232 unit: review/fee-estimate/params carry an explicit
+ * v11 = fee pricing in the u232 unit: review/fee-estimate/params carry an explicit
  * fee_purity_unit and purity/floor figures are u232-valued — envelope/ops unchanged):
  *   sdk_invoke_json(operation_id, payload_json_bytes) -> envelope string
  *     {"ok":1,"body":<json>} / {"ok":0,"code":<id>,"msg":"...","detail":"..."}
@@ -132,9 +132,12 @@ var mnx_sdk_ptr = null
 }
 // Code decompilation: code_type 0=bytecode -> assembly|raw;
 // 1=ir_node -> fitsh|tree|assembly|raw. codes is hex.
-, sdk_vm_code = function(codes, code_type, format) {
+, sdk_vm_code = function(codes, code_type, format, sourcemap, limit, offset) {
     let req = { codes, code_type: String(code_type) }
     if(format){ req.format = format }
+    if(sourcemap != null){ req.sourcemap = sourcemap }
+    if(limit != null){ req.limit = String(limit) }
+    if(offset != null){ req.offset = String(offset) }
     return mnx_sdk_invoke(MNX_OP.VM_CODE, req)
 }
 
@@ -239,7 +242,7 @@ var mnx_sdk_ptr = null
     }
     try { return decodeURIComponent(escape(out)) } catch(e) { return out }
 }
-// UTF-8 string -> hex (engraved content etc. must be hex in ActionSpec's BytesW1 fields)
+// UTF-8 string -> prefixed hex (ActionSpec BytesW1 fields use the SDK JSON binary format)
 , mnx_utf8_to_hex = function(text) {
     text = (text == null ? '' : String(text))
     let bytes = new TextEncoder().encode(text)
@@ -247,7 +250,7 @@ var mnx_sdk_ptr = null
     for(let i = 0; i < bytes.length; i++){
         out += bytes[i].toString(16).padStart(2, '0')
     }
-    return out
+    return '0x' + out
 }
 
 function Buffer_from_hex(hex) {

@@ -6,6 +6,8 @@ test/*
 !test/ui
 !test/dapp-sim.html
 !test/frame-host.html
+!test/signtx-review-presets.json
+!test/sourcemaps-audit.cjs
 test/ui/artifacts/
 # self-contained UI env caches (CFT binary, optional hacash-testnet source clone)
 test/ui/.cache/

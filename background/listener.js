@@ -100,6 +100,7 @@ messageHandler['mnx_req_done'] = async function(req, sender, ok){
                     if(!e || e.tid !== tid || e.did !== did){ continue }
                     hit = true
                     rids[e.rid] = 1
+                    await removeRequestExtraFromUrl(e.url)
                     if(('' + k).indexOf('t') != 0){ winIds.push(parseInt(k)) }
                     delete tbl[k]
                 }
@@ -174,7 +175,15 @@ function dealHandleHacashApiToPopup(apis) {
                 return
             }
             // console.log(req)
-            await openWalletPopupPageInNextTab(req, tabid)
+            try {
+                await openWalletPopupPageInNextTab(req, tabid)
+            } catch(e) {
+                if(tabid){
+                    await sendMessageToTabContent(tabid, req, {ret: 1, err: e.message || 'Could not open signing request', code: e.code || 'display_data_failed'})
+                }
+                ok({})
+                return
+            }
             ok({})
         }
     }

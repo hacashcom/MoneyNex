@@ -10,6 +10,8 @@ var routePageSignTx = (adr, clbk) => {
     let asv = String(urlquery.autosubmit == null ? '' : urlquery.autosubmit).trim().toLowerCase()
     , autosubmit = (asv == 'true' || asv == '1')
     let sa = 'sign_addr'
+    let reviewGeneration = 0
+    window.addEventListener('pagehide', ()=>{ reviewGeneration++ })
     // Single-reply contract (shared helper): reply signed tx data or {err} once, then close.
     // Cancel / confirm-reject / sign failure / submit failure must all reply before closing.
     let {answerOnce, closeWin, cancelAndClose, nop} = mnx_dapp_reply('Transaction signing', 'User canceled the signing request')
@@ -23,9 +25,13 @@ var routePageSignTx = (adr, clbk) => {
         ende: no,
         ing: no,
         lding: yes,
+        reviewReady: false,
         adr: adr,
         sadr: addrOmitted(adr),
         txres: {},
+        txmeta: {},
+        txfee: {},
+        displayContext: {},
         txsgck: {},
         txdesc: [],
         txerr: nil,
@@ -41,8 +47,11 @@ var routePageSignTx = (adr, clbk) => {
         // check trs
         , async crtrs() {
             let t = this
+            let generation = ++reviewGeneration
+            t.reviewReady = false
             t.lding = yes
             let rv = await t.req_check()
+            if(generation !== reviewGeneration){ return }
             if(rv.err){
                 t.lding = no
                 t.txerr = rv.err
@@ -59,9 +68,22 @@ var routePageSignTx = (adr, clbk) => {
             }
             let review = rv.review
             t.txres = review
+            t.txmeta = { timestamp: new Date(review.timestamp * 1000).toLocaleString() }
+            t.txfee = {
+                amount: mnx_fin_to_decimal(review.fee),
+                gasMax: review.gas_max == null ? 'Not set' : review.gas_max,
+                gasBudget: review.gas_budget,
+                maxCharge: review.gas_max_charge == null ? null : mnx_fin_to_decimal(review.gas_max_charge),
+                purity: review.fee_purity,
+                purityUnit: review.fee_purity_unit,
+                purityFloor: review.fee_purity_floor,
+                billingSize: review.billing_size,
+                estimateHeight: review.gas_estimate_height,
+            }
             // the body's ChainAllow must allow the current network, otherwise refuse outright and answer the DApp (remote semantics)
             if(typeof assertCheckedBodyChain === 'function'){
                 let cherr = await assertCheckedBodyChain(review, yes)
+                if(generation !== reviewGeneration){ return }
                 if(cherr) {
                     t.lding = no
                     t.txerr = cherr.err
@@ -74,13 +96,20 @@ var routePageSignTx = (adr, clbk) => {
                 }
             }
             await mnx_msglayout_load()
+            if(generation !== reviewGeneration){ return }
             // Asset amount display needs on-chain decimals: warm the metadata from review.asset_serials first (failure never blocks signing)
             await mnx_asset_meta_ensure(review.asset_serials || [])
-            t.txdesc = parseTxDesc(review)
-            await mnx_txdesc_attach_code(review, t.txdesc)
+            if(generation !== reviewGeneration){ return }
+            let heightClock = await mnx_height_clock_load(review, t.chain)
+            if(generation !== reviewGeneration){ return }
+            t.displayContext = { height_clock: heightClock }
+            t.txdesc = parseTxDesc(review, t.displayContext)
+            t.lding = no
+            await mnx_txdesc_attach_code(review, t.txdesc, () => generation === reviewGeneration, () => {})
+            if(generation !== reviewGeneration){ return }
             t.layouterr = (mnx_msglayout_state && mnx_msglayout_state.display_err) || ''
             t.txerr = nil
-            t.lding = no
+            t.reviewReady = true
             // Signer status: local Review required/present/missing
             let sg = {}
             for(let i in (review.required_signers || [])){
@@ -91,7 +120,7 @@ var routePageSignTx = (adr, clbk) => {
         }
         , async cfim() {
             let t = this
-            if(t.txerr){
+            if(t.txerr || !t.reviewReady || t.lding){
                 return
             }
             if(t.txres && t.txres.auditability && t.txres.auditability != 'full'){
@@ -110,7 +139,13 @@ var routePageSignTx = (adr, clbk) => {
         }
         // Open the read-only full review page (shared helper: body+review via storage.session)
         , async openactv() {
-            await mnx_open_actionview_for(txbody, this.txres)
+            await mnx_open_actionview_for(txbody, this.txres, this.displayContext)
+        }
+        , async gashelp() {
+            let text = this.txfee.gasBudget == null
+                ? 'No gas budget is specified for this transaction.'
+                : '<b>About the maximum gas charge</b><br>Estimated charge at the full gas budget, using the higher of transaction fee purity and the protocol purity floor, rounded up to the settlement unit. Actual charge depends on gas used and refunds.'
+            await wphelp_open(text)
         }
         ,async swtcuraddr(adr) {
             let t = this

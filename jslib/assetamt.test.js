@@ -112,7 +112,7 @@ eq(unknown.text, '5000000', 'unknown meta -> raw atoms')
 eq(unknown.known, false, 'unknown meta flag')
 eq(unknown.unit, '', 'unknown meta unit empty')
 // after warm-up: converted via the on-chain decimal, unit from ticket
-ctx.mnx_asset_meta_mem = { '5': { decimal: 6, name: 'HUSD', ticket: 'HUSD' } }
+ctx.mnx_asset_meta_mem = { '0': { '5': { decimal: 6, name: 'HUSD', ticket: 'HUSD' } } }
 let known = ctx.mnx_asset_amount_text('5000000', '5')
 eq(known.text, '5', 'known meta applies decimal')
 eq(known.unit, 'HUSD', 'known meta unit from ticket')

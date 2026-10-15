@@ -125,8 +125,18 @@
     <div class="row"><textarea id="i-stx-body" rows="3">02006607794700e63c33a796b3032ce6b856f68fccf06608d9ed1804000300010040afae783ae7927badaede2c4c97dbd53d542915f7010c000100674e11e34c472ebfba2d34528fccd8aba826f2c4f8017d000600674e11e34c472ebfba2d34528fccd8aba826f2c400e63c33a796b3032ce6b856f68fccf06608d9ed1801545548424d4500000000</textarea></div>
     <div class="row"><label>chain_id</label><input id="i-stx-chain" value="" style="width:80px"><label>autosubmit</label><input type="checkbox" id="i-stx-auto"></div>
     <div class="row"><button class="primary" id="b-signtx">signtx(params)</button></div>
+    <div class="row">
+      <select id="i-stx-review-preset" aria-label="Review request preset">
+        <option value="single-mainnet">One action · Mainnet</option>
+        <option value="multi-mainnet">Multiple actions · Mainnet</option>
+        <option value="single-chain1">One action · Chain ID 1</option>
+        <option value="multi-chain1">Multiple actions · Chain ID 1</option>
+      </select>
+      <button id="b-stx-review">Open review request</button>
+      <button id="b-stx-sourcemap">Open multi-maincall sourcemap fixture</button>
+    </div>
     <pre class="out" id="out-signtx">—</pre>
-    <p class="note">Multi-sig partial signature → {complete:false, missing_signers,…}; complete → {complete:true}. ChainAllow violation on mainnet is rejected.</p>
+    <p class="note">Review presets are unsigned and never autosubmit. The sourcemap fixture has two identical IR maincalls with different labels and one nested maincall.</p>
   </section>
 
   <section id="sec-signtext">
@@ -332,6 +342,47 @@
     } catch (e) {
       setOut('out-signtx', 'reject:\n' + pretty(e), 'err');
       log('signtx ⇐ reject ' + JSON.stringify(e));
+    }
+  });
+
+  $('b-stx-review').addEventListener('click', async () => {
+    if (!MNX) { setOut('out-signtx', 'MoneyNex not detected', 'err'); return; }
+    try {
+      const presets = await fetch('./signtx-review-presets.json').then((r) => {
+        if (!r.ok) throw new Error('Review presets could not be loaded');
+        return r.json();
+      });
+      const body = presets[$('i-stx-review-preset').value];
+      if (!body) throw new Error('Unknown review preset');
+      const input = $('i-stx-body');
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, body);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      $('i-stx-auto').checked = false;
+      $('i-stx-chain').value = '';
+      $('b-signtx').click();
+    } catch (e) {
+      setOut('out-signtx', 'reject:\n' + pretty({ err: e.message }), 'err');
+    }
+  });
+
+  $('b-stx-sourcemap').addEventListener('click', async () => {
+    if (!MNX) { setOut('out-signtx', 'MoneyNex not detected', 'err'); return; }
+    const txbody = '0300689e96d400e63c33a796b3032ce6b856f68fccf06608d9ed18f401010003002c0000000100097f017c0025eeb08026002c0000000100097f017c0025eeb080260019010101002c0000000100097f017c0026eeb0802600000100';
+    const clean = { libs: [], funcs: [], lets: [], vars: [], params: [], param_prelude_count: null, consts: [] };
+    const sourcemaps = [
+      { action_path: '0', sourcemap: { ...clean, slots: ['amount'] } },
+      { action_path: '1', sourcemap: { ...clean, slots: ['result'] } },
+      { action_path: '2/0', sourcemap: { ...clean, slots: ['nested_value'] } },
+    ];
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call($('i-stx-body'), txbody);
+    $('i-stx-body').dispatchEvent(new Event('input', { bubbles: true }));
+    $('i-stx-auto').checked = false;
+    setOut('out-signtx', 'pending…', 'pending');
+    try {
+      const res = await MNX.signtx({ txbody, sourcemaps });
+      setOut('out-signtx', 'resolve:\n' + pretty(res));
+    } catch (e) {
+      setOut('out-signtx', 'reject:\n' + pretty(e), 'err');
     }
   });
 

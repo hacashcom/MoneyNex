@@ -32,6 +32,8 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
     if(act.blob){ head += `<span class="avtag">payload</span>` }
     else if(!act.protocol_valid){ head += `<span class="avtag err">invalid</span>` }
     out.push(`<div class="${cls}"><div class="avhd">${head}</div>`)
+    let scope = mnx_height_scope_html(act, layoutCtx && layoutCtx.height_clock)
+    if(scope){ out.push(`<div class="avrow"><span class="avk">Height scope</span><span class="avv">${scope}</span></div>`) }
 
     if(act.transfer){
         let p = act.transfer.payload
@@ -59,6 +61,19 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
         if(act.transfer.from){ path += `${mnx_actv_addr_html(act.transfer.from)}<span class="avarrow">→</span>` }
         path += mnx_actv_addr_html(act.transfer.to)
         out.push(`<div class="avrow"><span class="avk">transfer</span><span class="avv">${amt}<span class="avarrow">→</span>${path}</span></div>`)
+    }
+
+    let assetRegistration = mnx_asset_registration_facts(act)
+    if(assetRegistration){
+        if(assetRegistration.serial != null){ out.push(`<div class="avrow"><span class="avk">serial</span><span class="avv">#${esc(assetRegistration.serial)}</span></div>`) }
+        if(assetRegistration.ticket){ out.push(`<div class="avrow"><span class="avk">ticket</span><span class="avv">${esc(assetRegistration.ticket)}</span></div>`) }
+        if(assetRegistration.name){ out.push(`<div class="avrow"><span class="avk">name</span><span class="avv">${esc(assetRegistration.name)}</span></div>`) }
+        if(assetRegistration.issuer){ out.push(`<div class="avrow"><span class="avk">issuer</span><span class="avv">${mnx_actv_addr_html(assetRegistration.issuer)}</span></div>`) }
+    }
+    let deployment = mnx_contract_deployment_facts(act, layoutCtx && layoutCtx.review && layoutCtx.review.main)
+    if(deployment){
+        if(deployment.nonce != null){ out.push(`<div class="avrow"><span class="avk">deployment nonce</span><span class="avv">${esc(deployment.nonce)}</span></div>`) }
+        if(deployment.address){ out.push(`<div class="avrow"><span class="avk">contract address</span><span class="avv">${mnx_actv_addr_html(deployment.address)}</span></div>`) }
     }
 
     if(mnx_is_tx_message_action(act)){
@@ -124,14 +139,20 @@ var routePageActionView = (adr, clbk) => {
             }
             let obj = await chrome_storage_session.get(key)
             let data = obj[key]
+            // Keep this window's snapshot across reloads; closing the tab clears it.
+            try {
+                if(data){ sessionStorage.setItem(key, JSON.stringify(data)) }
+                else { data = JSON.parse(sessionStorage.getItem(key) || 'null') }
+            } catch(e) {}
             if(!data || !data.review){
                 t.err = 'review not found in session storage'
                 return
             }
             let review = data.review
+            let cancelled = false
             // Cleanup after use: remove session data on page hide (multiple opens allowed before unload)
             try{
-                window.addEventListener('pagehide', ()=>{ chrome_storage_session.remove(key) })
+                window.addEventListener('pagehide', ()=>{ cancelled = true; chrome_storage_session.remove(key) })
             }catch(e){}
             // maximize the window when canonical json / raw expands (user directive 2026-10-06): at window-open
             // login.js already tried state:'maximized', but environments without a window manager (CI/sandbox)
@@ -198,33 +219,43 @@ var routePageActionView = (adr, clbk) => {
             let present = Array.isArray(review.present_signers) ? review.present_signers : []
             // Decompile code-carrying actions first, then render into each card
             // (failures only affect display, never the signing decision).
-            let prints = {}
+            let display = data.display || {}
+            let sourceBinding = mnx_review_sourcemap_bind(acts, display.sourcemaps || [], display.legacy_sourcemap)
+            let prints = {}, tasks = {}
             let collect = (list) => {
                 for(let i = 0; i < (list || []).length; i++){
                     let act = list[i]
-                    if(act && act.code){ prints[act.path] = act }
+                    if(act && act.code){
+                        tasks[act.path] = act
+                        prints[act.path] = `<div class="codehint">Code review · action_path ${mnx_esc_html(act.path)} · pending</div>`
+                    }
                     if(act && act.children){ collect(Array.isArray(act.children) ? act.children : Object.values(act.children || {})) }
                 }
             }
             collect(acts)
-            for(let p in prints){
-                try {
-                    prints[p] = await mnx_vm_decompile_html(prints[p], 'detail')
-                } catch(e) {
-                    prints[p] = `<pre class="codeprint err">decompile failed: ${mnx_esc_html(mnx_err_message(e))}</pre>`
-                }
-            }
-            // action list
-            let lines = []
             let tables = mnx_msglayout_normalize(data.msgparse || data.msglayouts || null)
             let bind = mnx_msglayout_bind(acts, tables)
             t.layouterr = (bind.errors || []).join(' ')
-            let layoutCtx = { byArrayIndex: bind.byArrayIndex, arrayIndex: 0 }
-            for(let i = 0; i < acts.length; i++){
-                layoutCtx.arrayIndex = i
-                lines = lines.concat(mnx_actv_render_action(acts[i], 0, prints, layoutCtx))
+            let renderLines = () => {
+                let out = [], layoutCtx = { byArrayIndex: bind.byArrayIndex, arrayIndex: 0, height_clock: display.height_clock, review }
+                for(let i = 0; i < acts.length; i++){
+                    layoutCtx.arrayIndex = i
+                    out = out.concat(mnx_actv_render_action(acts[i], 0, prints, layoutCtx))
+                }
+                t.lines = out
             }
-            t.lines = lines
+            renderLines()
+            for(let p in prints){
+                if(cancelled){ break }
+                await new Promise(resolve => setTimeout(resolve, 0))
+                try {
+                    prints[p] = await mnx_vm_decompile_html(tasks[p], 'detail', sourceBinding.byPath[p], sourceBinding.diagnostics[p] || sourceBinding.diagnostics['*'], display.address_table || review.address_table || [], () => !cancelled)
+                } catch(e) {
+                    prints[p] = `<pre class="codeprint err">decompile failed: ${mnx_esc_html(mnx_err_message(e))}</pre>`
+                }
+                if(cancelled){ break }
+                renderLines()
+            }
             // Signers
             let sg = {}
             let required = Array.isArray(review.required_signers) ? review.required_signers : Object.values(review.required_signers || {})

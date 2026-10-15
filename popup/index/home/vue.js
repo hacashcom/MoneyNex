@@ -206,8 +206,14 @@ var refreshHomeTrsLog = nil
         ,async ldbls() {
             let t = this
             let addr = t.addr
-            let res = await do_fetch_get(await mnx_get_fullnode_url()+'/query/balance?unit=mei&assets=true&asset_meta=true&address='+addr)
-            if(t.addr !== addr){
+            let context
+            try { context = await mnx_asset_meta_context() } catch(e) {
+                t.assetsError = 'Asset network context is unavailable'
+                t.assetsLoaded = yes
+                return
+            }
+            let res = await do_fetch_get(context.rpc+'/query/balance?unit=mei&assets=true&asset_meta=true&address='+addr)
+            if(t.addr !== addr || mnx_asset_meta_active_chain_id() !== context.chain_id){
                 return
             }
             let row = res && res.list && res.list[0]
@@ -230,7 +236,7 @@ var refreshHomeTrsLog = nil
                 t.assetsError = ''
                 t.assets = ast.list
                 // the same asset metadata cache serves the signing/review pages (decimal/name/ticket are immutable)
-                mnx_asset_meta_put_list(ast.list).catch(()=>{})
+                mnx_asset_meta_put_list(ast.list, context).catch(()=>{})
             }
             t.assetsLoaded = yes
         }

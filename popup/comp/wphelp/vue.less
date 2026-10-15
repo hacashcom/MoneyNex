@@ -1,0 +1,25 @@
+
+// wphelp — help-hint sheet (single OK, no decision to make). Structure and
+// behavior classes mirror wpcfm; see wpcfm.less for the btnrow rationale.
+.popbox {
+    p.tip.cfmt {
+        text-align: left;
+        font-size: @fs-14;
+        line-height: 22px;
+        color: @text-1;
+        margin-bottom: @sp-2;
+        word-break: break-word;
+    }
+
+    .con.box .btnrow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: @sp-2 @sp-3;
+
+        button {
+            flex: 1 1 0;
+            min-width: max-content;
+            margin: 0;
+        }
+    }
+}

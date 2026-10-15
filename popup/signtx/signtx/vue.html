@@ -11,13 +11,45 @@
 
         <div v-if="lding" class="ldw"><i class="spinner"></i></div>
         <div v-else>
+            <div class="txmeta card" v-if="txres && txres.review_binding">
+                <label class="lbl">Transaction metadata</label>
+                <dl>
+                    <div><dt>Main address</dt><dd>{{txres.main}}</dd></div>
+                    <div><dt>Type</dt><dd>Type {{txres.tx_type}}</dd></div>
+                    <div><dt>Timestamp</dt><dd>{{txmeta.timestamp}} ({{txres.timestamp}})</dd></div>
+                    <div><dt>Hash</dt><dd class="mono">{{txres.tx_hash}}</dd></div>
+                </dl>
+            </div>
+
             <div class="tx card" v-if="txdesc && txdesc.length">
-                <label class="lbl">Transaction</label>
+                <div class="txhead">
+                    <label class="lbl">Actions <span class="count">{{txdesc.length}}</span></label>
+                    <button class="mini" v-if="txres && txres.review_binding" @click="openactv">Details</button>
+                </div>
                 <ul class="txd">
                     <li v-for="(v, i) in txdesc" :class="'l'+i" v-html="v"></li>
                 </ul>
             </div>
             <p v-if="layouterr" class="layouterr">{{layouterr}}</p>
+
+            <div class="txfee card" v-if="txres && txres.review_binding">
+                <label class="lbl">Fee and gas</label>
+                <dl>
+                    <div><dt>Transaction fee</dt><dd><b>{{txfee.amount}} HAC</b></dd></div>
+                    <div><dt>Maximum gas charge <button class="fee-help" aria-label="About the maximum gas charge" title="About the maximum gas charge" @click="gashelp">?</button></dt><dd>{{txfee.maxCharge == null ? 'Unavailable' : txfee.maxCharge + ' HAC'}}</dd></div>
+                </dl>
+                <details class="gas-more">
+                    <summary>More gas details</summary>
+                    <dl>
+                        <div><dt>Gas max byte</dt><dd>{{txfee.gasMax}}</dd></div>
+                        <div><dt>Decoded gas budget</dt><dd>{{txfee.gasBudget == null ? 'Not set' : txfee.gasBudget}}</dd></div>
+                        <div v-if="txfee.billingSize != null"><dt>Billing size</dt><dd>{{txfee.billingSize}} bytes</dd></div>
+                        <div v-if="txfee.purity != null"><dt>Transaction fee purity</dt><dd>{{txfee.purity}} u{{txfee.purityUnit}} / byte</dd></div>
+                        <div v-if="txfee.purityFloor != null"><dt>Purity floor</dt><dd>{{txfee.purityFloor}} u{{txfee.purityUnit}} / byte</dd></div>
+                        <div v-if="txfee.estimateHeight != null && txfee.gasBudget != null"><dt>Estimate height</dt><dd>{{txfee.estimateHeight}}</dd></div>
+                    </dl>
+                </details>
+            </div>
 
             <div v-if="txerr" class="txerr">
                 <h1>Tx validation failed</h1>
@@ -27,12 +59,9 @@
             <div v-show="!txerr&&!end" class="sgck card">
                 <label class="lbl">Signature status</label>
                 <p class="sgr" v-for="(v, k) in txsgck">
-                    <a>{{v.address.substr(0, 17)}}...</a>
+                    <a>{{v.address}}</a>
                     <b v-if="v.complete" class="yes">Signed</b>
                     <b v-else class="no">Not yet</b>
-                </p>
-                <p class="actopen" v-if="txres && txres.review_binding">
-                    <button class="mini" @click="openactv">Details</button>
                 </p>
             </div>
         </div>
@@ -40,7 +69,7 @@
 
     <div class="reqbtns" v-if="!end">
         <div><button class="cancel" @click="nop">Cancel</button></div>
-        <div><button @click="cfim" :class="`blue ${txerr?'ban':''} ${ing?'ing':''}`">Sign Tx</button></div>
+        <div><button @click="cfim" :disabled="!reviewReady || ing" :class="`blue ${txerr?'ban':''} ${ing?'ing':''}`">{{reviewReady ? 'Sign Tx' : 'Reviewing code…'}}</button></div>
     </div>
     <div v-else class="success">
         <i class="icf" :class="ende?'show':''" style="--ic: url('../image/ftic/okg.svg')"></i>

@@ -37,6 +37,7 @@ module.exports = {
         [
             'comp/wptip',
             'comp/wpcfm',
+            'comp/wphelp',
             'comp/wpass',
             'comp/swtgas',
             'comp/pghead',
