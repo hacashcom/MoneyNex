@@ -29,27 +29,22 @@ export const cases = {
     const dapp = await openDapp(browser)
     await ensureDappConnected(browser, dapp)
     await dapp.evaluate(() => document.getElementById('b-signtext-hash').click())
-    const sw = await waitReqWin(browser, 'signtext')
-    await sleep(1400)
-    const t = await bodyText(sw)
-    await shot(sw, 'errors-02-signtexthash')
-    assert(/refus/i.test(t) || /cannot sign/i.test(t), 'hash input refused in-window', t.slice(0, 300))
     const out = await waitOut(dapp, 'out-signtext', 20000)
-    assert(/reject/.test(out) && /refus|32-byte|sign_refused/i.test(out + t),
+    const result = JSON.parse(out.replace(/^reject:\n?/, ''))
+    assert(/reject/.test(out) && result.ret === 1 && result.code === 'sign_refused' && /raw 32-byte hash/i.test(result.err),
       'dapp got the refusal reply', out.slice(0, 200))
-    await clickBtn(sw, 'cancel')
+    await shot(dapp, 'errors-02-signtexthash')
     await waitNoWin(browser, 'signtext')
   },
   async 'signtext refuses too-short text'(browser) {
     const dapp = await openDapp(browser)
     await ensureDappConnected(browser, dapp)
     await dapp.evaluate(() => document.getElementById('b-signtext-short').click())
-    const sw = await waitReqWin(browser, 'signtext')
-    await sleep(1200)
-    const t = await bodyText(sw)
-    await shot(sw, 'errors-03-signtextshort')
-    assert(/length|short|8/i.test(t), 'short text refused with the length rule', t.slice(0, 300))
-    await clickBtn(sw, 'cancel')
+    const out = await waitOut(dapp, 'out-signtext', 20000)
+    const result = JSON.parse(out.replace(/^reject:\n?/, ''))
+    assert(/reject/.test(out) && result.ret === 1 && result.code === 'sign_refused' && /between 8 and 4096/i.test(result.err),
+      'short text refused with the exact length rule', out.slice(0, 300))
+    await shot(dapp, 'errors-03-signtextshort')
     await waitNoWin(browser, 'signtext')
   },
   async 'raisefee with a pool-unknown hash fails visibly'(browser) {
@@ -67,12 +62,12 @@ export const cases = {
     await clickBtn(rw, 'blue')      // cfim 确认
     await confirmWpcfm(rw)          // 不可逆确认
     await sleep(2500)
-    const t = await bodyText(rw)
-    await shot(rw, 'errors-04-raisefee-unknown')
-    assert(/not find|pool|error/i.test(t), 'unknown hash raised a visible error', t.slice(0, 300))
     const out = await waitOut(dapp, 'out-raisefee', 25000)
-    assert(/reject/.test(out), 'dapp got the raisefee failure', out.slice(0, 200))
-    await waitNoWin(browser, 'raisefee', 10000).catch(() => rw.close().catch(() => {}))
+    const result = JSON.parse(out.replace(/^reject:\n?/, ''))
+    assert(/reject/.test(out) && result.ret === 1 && result.code === 'sign_refused' && /not find.*tx pool/i.test(result.err),
+      'dapp displays the exact unknown-pool error', out.slice(0, 300))
+    await shot(dapp, 'errors-04-raisefee-unknown')
+    await waitNoWin(browser, 'raisefee', 10000)
   },
   async 'actionview without key shows the error state'(browser) {
     const av = await openExtPage(browser, 'actionview.html')

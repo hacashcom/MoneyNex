@@ -136,7 +136,7 @@
       <button id="b-stx-sourcemap">Open multi-maincall sourcemap fixture</button>
     </div>
     <pre class="out" id="out-signtx">—</pre>
-    <p class="note">Review presets are unsigned and never autosubmit. The sourcemap fixture has two identical IR maincalls with different labels and one nested maincall.</p>
+      <p class="note">Review presets are unsigned, review-only requests; they never autosubmit or broadcast. The sourcemap fixture has two identical IR maincalls with different labels and one nested maincall.</p>
   </section>
 
   <section id="sec-signtext">
@@ -213,6 +213,29 @@
     el.textContent += '[' + new Date().toISOString() + '] ' + line + '\n';
     el.scrollTop = el.scrollHeight;
   }
+  let reviewPresetsPromise = null;
+  function loadReviewPresets() {
+    if (!reviewPresetsPromise) {
+      reviewPresetsPromise = fetch('./signtx-review-presets.json?v=' + Date.now(), { cache: 'no-store' }).then((r) => {
+        if (!r.ok) throw new Error('Review presets could not be loaded');
+        return r.json();
+      }).then((presets) => {
+        const select = $('i-stx-review-preset');
+        for (const [key, value] of Object.entries(presets)) {
+          if (![...select.options].some((option) => option.value === key)) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = typeof value === 'string' ? key : value.label || key;
+            select.append(option);
+          }
+        }
+        select.dataset.presetsReady = 'true';
+        return presets;
+      });
+    }
+    return reviewPresetsPromise;
+  }
+  loadReviewPresets().catch((e) => setOut('out-signtx', 'Review presets unavailable: ' + e.message, 'err'));
   // Run one SDK call; every terminal outcome (resolve/reject/exception) is logged
   // and rendered. No retry, no fallback: the raw contract is the point.
   function call(api, buttonId, outId, invoke) {
@@ -330,6 +353,12 @@
   $('b-signtx').addEventListener('click', async () => {
     if (!MNX) { setOut('out-signtx', 'MoneyNex not detected', 'err'); return; }
     const params = { txbody: $('i-stx-body').value.trim() };
+    const reviewExtra = window.__mnxReviewExtra;
+    if (reviewExtra && reviewExtra.msgid === 0 && Array.isArray(reviewExtra.msglayout)) {
+      params.msgid = 0;
+      params.msglayout = reviewExtra.msglayout;
+    }
+    window.__mnxReviewExtra = null;
     const cid = $('i-stx-chain').value.trim();
     if (cid !== '') { params.chain_id = parseInt(cid) || 0; }
     if ($('i-stx-auto').checked) { params.autosubmit = true; }
@@ -348,17 +377,19 @@
   $('b-stx-review').addEventListener('click', async () => {
     if (!MNX) { setOut('out-signtx', 'MoneyNex not detected', 'err'); return; }
     try {
-      const presets = await fetch('./signtx-review-presets.json').then((r) => {
-        if (!r.ok) throw new Error('Review presets could not be loaded');
-        return r.json();
-      });
-      const body = presets[$('i-stx-review-preset').value];
+      const presets = await loadReviewPresets();
+      const select = $('i-stx-review-preset');
+      const preset = presets[select.value];
+      const body = typeof preset === 'string' ? preset : preset && preset.body;
       if (!body) throw new Error('Unknown review preset');
       const input = $('i-stx-body');
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, body);
       input.dispatchEvent(new Event('input', { bubbles: true }));
       $('i-stx-auto').checked = false;
       $('i-stx-chain').value = '';
+      window.__mnxReviewExtra = preset && preset.msgid === 0 && Array.isArray(preset.msglayout)
+        ? { msgid: 0, msglayout: preset.msglayout }
+        : null;
       $('b-signtx').click();
     } catch (e) {
       setOut('out-signtx', 'reject:\n' + pretty({ err: e.message }), 'err');

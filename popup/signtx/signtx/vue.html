@@ -15,6 +15,7 @@
                 <label class="lbl">Transaction metadata</label>
                 <dl>
                     <div><dt>Main address</dt><dd>{{txres.main}}</dd></div>
+                    <div v-if="txAddressTableHtml"><dt>Address table</dt><dd><div v-html="txAddressTableHtml"></div></dd></div>
                     <div><dt>Type</dt><dd>Type {{txres.tx_type}}</dd></div>
                     <div><dt>Timestamp</dt><dd>{{txmeta.timestamp}} ({{txres.timestamp}})</dd></div>
                     <div><dt>Hash</dt><dd class="mono">{{txres.tx_hash}}</dd></div>
@@ -61,6 +62,8 @@
                 <p class="sgr" v-for="(v, k) in txsgck">
                     <a>{{v.address}}</a>
                     <b v-if="v.complete" class="yes">Signed</b>
+                    <b v-else-if="v.status === 'invalid'" class="invalid">Invalid signature</b>
+                    <b v-else-if="v.status === 'unverified'" class="no">Present · unverified</b>
                     <b v-else class="no">Not yet</b>
                 </p>
             </div>

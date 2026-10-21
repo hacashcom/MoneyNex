@@ -5,9 +5,11 @@
  * -> hacash_sdk (page build, wasm inlined as base64, exposes globalThis.hacash_sdk)
  * -> this file. Loaded by popup pages only; background does not load the SDK.
  *
- * Talks to the fullnode sdk single transport surface (transport v10, doc 14;
- * v11 = fee pricing in the u232 unit: review/fee-estimate/params carry an explicit
- * fee_purity_unit and purity/floor figures are u232-valued — envelope/ops unchanged):
+ * Talks to the fullnode SDK single transport surface (transport v11, doc 14).
+ * v10 changed fee pricing to u232; v11 added gas-budget, max-charge, billing-size,
+ * and estimate-height review facts. This adapter currently pins v11 so its
+ * review payload matches the fields the wallet displays.
+ * ABI minor versions are additive, so later minors within major 2 are accepted.
  *   sdk_invoke_json(operation_id, payload_json_bytes) -> envelope string
  *     {"ok":1,"body":<json>} / {"ok":0,"code":<id>,"msg":"...","detail":"..."}
  *   operation_id is the 1-based ordinal of the profile.rs OPERATIONS registry (MNX_OP table below).
@@ -18,15 +20,44 @@
  * canonical (low-S) output as 64 bytes r||s.
  */
 
-var mnx_sdk_ptr = null
-, mnx_sdk_ready = async function() {
-    if(mnx_sdk_ptr){ return mnx_sdk_ptr }
-    let hsd = globalThis.hacash_sdk
-    if(!hsd){
-        throw new Error('MoneyNex SDK not loaded (jslib/hacash_sdk.js missing)')
-    }
-    mnx_sdk_ptr = await hsd()
-    return mnx_sdk_ptr
+var MNX_SDK_TRANSPORT_VERSION = 11
+, MNX_SDK_ABI_MAJOR = 2
+, MNX_SDK_ABI_MIN_MINOR = 7
+, mnx_sdk_ptr = null
+, mnx_sdk_ready_promise = null
+, mnx_sdk_version_info = null
+, mnx_sdk_ready = function() {
+    if(mnx_sdk_ptr){ return Promise.resolve(mnx_sdk_ptr) }
+    if(mnx_sdk_ready_promise){ return mnx_sdk_ready_promise }
+    mnx_sdk_ready_promise = (async function() {
+        let hsd = globalThis.hacash_sdk
+        if(!hsd){
+            throw new Error('MoneyNex SDK not loaded (jslib/hacash_sdk.js missing)')
+        }
+        let api = await hsd()
+        let transport = api.sdk_transport_version()
+        if(transport !== MNX_SDK_TRANSPORT_VERSION){
+            throw new Error(`Unsupported Hacash SDK transport ${transport}; MoneyNex requires ${MNX_SDK_TRANSPORT_VERSION}`)
+        }
+        let envelope = JSON.parse(api.sdk_invoke_json(MNX_OP.SYSTEM_SDK_VERSION, new TextEncoder().encode('{}')))
+        if(!envelope || envelope.ok !== 1 || !envelope.body){
+            throw new Error('Unable to read Hacash SDK version: ' + (envelope && envelope.msg || 'invalid response'))
+        }
+        let version = envelope.body
+        let abi = version.abi || {}
+        let major = parseInt(abi.major, 10)
+        let minor = parseInt(abi.minor, 10)
+        if(version.schema !== 'hacash.sdk/sdk-version@1' || major !== MNX_SDK_ABI_MAJOR || !Number.isFinite(minor) || minor < MNX_SDK_ABI_MIN_MINOR){
+            throw new Error(`Unsupported Hacash SDK ABI ${abi.major}.${abi.minor}; MoneyNex requires ${MNX_SDK_ABI_MAJOR}.${MNX_SDK_ABI_MIN_MINOR} or newer in ABI major ${MNX_SDK_ABI_MAJOR}`)
+        }
+        mnx_sdk_version_info = version
+        mnx_sdk_ptr = api
+        return api
+    })().catch(function(e) {
+        mnx_sdk_ready_promise = null
+        throw e
+    })
+    return mnx_sdk_ready_promise
 }
 // Unified envelope: on failure throw {code, message, detail, sdkError} (sdkError = raw {ok:0,...})
 , mnx_sdk_invoke = async function(op_id, payload) {

@@ -526,7 +526,7 @@ var MNX_MSG_KIND_MESSAGE = 1025
     if(mnx_hex_listener_bound || typeof document === 'undefined'){ return }
     mnx_hex_listener_bound = true
     document.addEventListener('click', function(ev){
-        let el = ev.target && ev.target.closest ? ev.target.closest('.hexdump.clickable') : null
+        let el = ev.target && ev.target.closest ? ev.target.closest('.clickable[data-hexid]') : null
         if(!el){ return }
         let full = mnx_hex_registry[el.getAttribute('data-hexid')]
         if(!full){ return }

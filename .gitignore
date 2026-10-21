@@ -8,6 +8,8 @@ test/*
 !test/frame-host.html
 !test/signtx-review-presets.json
 !test/sourcemaps-audit.cjs
+!test/generate-review-presets.cjs
+!test/signtx-presets-audit.cjs
 test/ui/artifacts/
 # self-contained UI env caches (CFT binary, optional hacash-testnet source clone)
 test/ui/.cache/

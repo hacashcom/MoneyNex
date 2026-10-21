@@ -23,6 +23,8 @@
         <p v-for="(v, k) in signers">
             <span class="avaddr">{{v.address}}</span>
             <b v-if="v.complete" class="yes">Signed</b>
+            <b v-else-if="v.status === 'invalid'" class="invalid">Invalid signature</b>
+            <b v-else-if="v.status === 'unverified'" class="no">Present · unverified</b>
             <b v-else class="no">Not Yet</b>
         </p>
     </div>

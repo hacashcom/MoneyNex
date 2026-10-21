@@ -184,17 +184,12 @@ export const cases = {
     await ensureDappConnected(browser, dapp)
     // 32B hash 拒签：{ret:1, err, code:'sign_refused'}
     await dapp.evaluate(() => document.getElementById('b-signtext-hash').click())
-    let sw = await waitReqWin(browser, 'signtext')
-    await sleep(1200)
-    const t = await bodyText(sw)
-    await shot(sw, 'sdk-01-signtext-refused')
-    assert(/refus/i.test(t), 'refusal shown in-window', t.slice(0, 300))
     const out = await waitOut(dapp, 'out-signtext', 20000)
     const r = parseOut(out)
-    assert(/reject/.test(out) && parseInt(r.ret) === 1 && r.code === 'sign_refused',
+    assert(/reject/.test(out) && parseInt(r.ret) === 1 && r.code === 'sign_refused' && /raw 32-byte hash/i.test(r.err),
       'hash refusal → {ret:1, code:"sign_refused"}', out.slice(0, 240))
-    await clickBtn(sw, 'cancel').catch(() => {})
-    await waitNoWin(browser, 'signtext', 8000).catch(() => sw.close().catch(() => {}))
+    await shot(dapp, 'sdk-01-signtext-refused')
+    await waitNoWin(browser, 'signtext', 8000)
     await closeReqTargets(browser)
   },
 
@@ -223,8 +218,10 @@ export const cases = {
     await clickBtn(rw, 'blue')
     await confirmWpcfm(rw)
     const out2 = await waitOut(dapp, 'out-raisefee', 25000)
-    assert(/reject/.test(out2), 'unknown hash raisefee rejected', out2.slice(0, 240))
-    await waitNoWin(browser, 'raisefee', 10000).catch(() => rw.close().catch(() => {}))
+    const r2 = parseOut(out2)
+    assert(/reject/.test(out2) && parseInt(r2.ret) === 1 && r2.code === 'sign_refused' && /not find.*tx pool/i.test(r2.err),
+      'unknown hash raisefee → visible {ret:1, code:"sign_refused", err}', out2.slice(0, 300))
+    await waitNoWin(browser, 'raisefee', 10000)
     await closeReqTargets(browser)
   },
 

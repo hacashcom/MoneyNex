@@ -43,6 +43,11 @@
         .codefull summary { cursor: pointer; color: @text-2; }
         .height-time { color: @text-2; font-size: @fs-12; }
         .height-scope-note { margin-top: @sp-1; color: @text-2; }
+        .actfield {
+            display: block;
+            margin-left: 22px;
+            overflow-wrap: anywhere;
+        }
         .code-notes {
             margin-top: @sp-1;
             summary { cursor: pointer; color: @text-3; font-size: @fs-12; }
@@ -83,6 +88,19 @@
             text-align: right;
             overflow-wrap: anywhere;
             font-size: @fs-12;
+        }
+
+        .tx-address-table {
+            list-style: none;
+            max-height: 112px;
+            overflow: auto;
+            margin: 0;
+            padding-left: 0;
+            text-align: left;
+            overflow-wrap: anywhere;
+            li { padding: 2px 0; }
+            .tx-addr-index { display: inline-block; min-width: 2.2em; margin-right: 4px; font-family: @font-mono; color: @text-2; }
+            b { color: @text-2; font-weight: 500; }
         }
 
         .mono {
@@ -189,6 +207,10 @@
 
                 &.no {
                     color: @text-3;
+                }
+
+                &.invalid {
+                    color: @sem-error;
                 }
             }
         }

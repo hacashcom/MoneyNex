@@ -1017,8 +1017,8 @@ table {
             border-top: 1px solid @line-2;
         }
 
-        // step-number badge on the action row's own leading span only
-        > span {
+        // Only the explicit counter is a badge; action tokens use independent spans.
+        > .actnum {
             vertical-align: middle;
             display: inline-block;
             margin-right: 6px;

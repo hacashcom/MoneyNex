@@ -88,6 +88,7 @@ var routePageRaiseFee = (adr, clbk) => {
                     fee: t.fee,
                     timestamp: txjson.timestamp,
                     gas_max: txjson.gas_max || 0,
+                    addrlist: txjson.addrlist,
                     actions: specs,
                 })
                 // Local review

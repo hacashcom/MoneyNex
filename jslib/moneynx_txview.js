@@ -10,14 +10,7 @@
  * before the popup pages. All cross-file references (login.js storage vars,
  * html.js helpers) resolve at call time — nothing here runs at load time.
  */
-// Decoded diamonds come as a comma string (multi-name) or a single-name diamond
-// field (or an array); normalize to a trimmed non-empty name array. Shared by
-// txjson_to_spec / parseTxDesc / the actionview renderer / the transfer page.
-var mnx_split_diamond_names = (v) => {
-    if(v == null){ return [] }
-    let arr = typeof v === 'string' ? v.split(',') : v
-    return arr.map(s=>(s+'').trim()).filter(s=>s.length>0)
-}
+// mnx_split_diamond_names moved to the fact layer (jslib/actionfacts.js).
 
 var reqFeasibleFee = async (txsz, opts) => {
     let url = (await mnx_get_fullnode_url())+"/query/fee/average?unit=mei"
@@ -64,15 +57,9 @@ var reqFeasibleFee = async (txsz, opts) => {
     let number = Number(value)
     return Number.isSafeInteger(number) && number >= 0 && number <= max ? number : null
 }
-, mnx_height_scope_facts = act => {
-    if(!act || Number(act.kind) !== 1042){ return null }
-    try {
-        let fields = JSON_parse(act.json)
-        let start = mnx_display_uint(fields.start, 1099511627775)
-        let end = mnx_display_uint(fields.end, 1099511627775)
-        return start == null || end == null ? null : { start, end }
-    } catch(e){ return null }
-}
+// Height-scope facts moved to the fact layer (jslib/actionfacts.js); this
+// alias keeps the historical name used by the height clock tests.
+, mnx_height_scope_facts = act => mnx_act_height_scope(act)
 , mnx_review_has_height_scope = actions => {
     for(let act of (actions || [])){
         if(mnx_height_scope_facts(act) || mnx_review_has_height_scope(act.children)){ return true }
@@ -122,28 +109,8 @@ var reqFeasibleFee = async (txsz, opts) => {
         return result
     } finally { clearTimeout(timer) }
 }
-, mnx_height_estimated_time = (height, clock) => {
-    if(!clock || !clock.available){ return null }
-    let seconds = clock.timestamp + (height - clock.height) * clock.block_target_seconds
-    if(!Number.isSafeInteger(seconds) || seconds < 0 || seconds > 8640000000000){ return null }
-    return new Date(seconds * 1000).toISOString().replace(/:\d{2}\.\d{3}Z$/, ' UTC').replace('T', ' ')
-}
-, mnx_height_scope_html = (act, clock) => {
-    let fields = mnx_height_scope_facts(act)
-    if(!fields){ return null }
-    let esc = mnx_esc_html
-    let endpoint = height => {
-        let time = mnx_height_estimated_time(height, clock)
-        // No clock → no estimate: show the bare height instead of a "time
-        // unavailable" note (the title basis only exists when there is one).
-        if(!time){ return `${height}` }
-        let basis = clock && clock.available
-            ? `Linear estimate from chain ${clock.chain_id} block ${clock.height} at ${clock.timestamp}, target ${clock.block_target_seconds}s/block (${clock.interval_source}). ${clock.chain_id_verified ? 'Reported chain ID matches.' : 'RPC did not report its chain ID.'} Not a guaranteed arrival time or a historical timestamp.`
-            : (clock && clock.reason) || 'Latest block time is unavailable'
-        return `${height} <small class="height-time" title="${esc(basis)}">(est. ${esc(time)})</small>`
-    }
-    return `Height scope ${endpoint(fields.start)} to ${fields.end === 0 ? 'Unlimited' : endpoint(fields.end)}`
-}
+// Height rendering (est. time titles) moved to the shared renderer
+// (jslib/actionrender.js: mnx_height_scope_html / mnx_height_estimated_time).
 , mnx_chain_context = async () => {
     // Strict window: current_height from RPC; on failure return has_height=false (page degrades to report with a notice)
     let height = await queryLatestHeight()
@@ -198,8 +165,8 @@ var reqFeasibleFee = async (txsz, opts) => {
 // TransactionJson.actions[] (canonical json) -> ActionSpec[] (rebuild via tx.build, used by raisefee)
 // ActionSpec.kind takes registry schema names (the SDK also accepts numeric kinds; names follow the selection registry —
 // note 1025=message / 1026=blob / 1044=required_signers, not the VM syscalls tx_message etc.).
-// Field types: SAT's satoshi is a JSON number; Asset serial/amount must stay decimal
-// strings (never Number()) so Fold64 values above MAX_SAFE_INTEGER keep their precision.
+// Field types: SAT and Asset u64 values stay decimal strings so a lossless
+// canonical JSON integer is never rounded through JavaScript Number.
 // BytesW fields use the SDK JSON binary format: preserve/normalize their 0x or b64: prefix.
 , mnx_binary_action_spec = value => {
     let s = value == null ? '' : String(value)
@@ -225,7 +192,7 @@ var reqFeasibleFee = async (txsz, opts) => {
     for(let i in (txjson.actions || [])){
         let a = txjson.actions[i]
         let j
-        try { j = JSON_parse(a.json) } catch(e) { throw new Error('action json invalid at index '+a.index) }
+        try { j = mnx_json_parse_lossless(a.json) } catch(e) { throw new Error('action json invalid at index '+a.index) }
         let kd = parseInt(a.kind, 10) // tx.decode returns kind as a string; convert to number for branching
         let sp = nil
         if(kd == 1){ // HAC to
@@ -235,7 +202,12 @@ var reqFeasibleFee = async (txsz, opts) => {
         }else if(kd == 14){ // HAC fromto
             sp = { kind: kindname[kd], from: j.from, to: j.to, hacash: (j.hacash==null?'0':j.hacash)+'' }
         }else if(kd == 10 || kd == 11 || kd == 12){ // SAT
-            sp = { kind: kindname[kd], satoshi: num(j.satoshi) }
+            if(typeof j.satoshi === 'number' && !Number.isSafeInteger(j.satoshi)){
+                throw new Error('Cannot safely rebuild the raise-fee request: SAT amount is not a safe integer.')
+            }
+            let satoshi = mnx_u64_string(j.satoshi)
+            if(!satoshi){ throw new Error('Cannot safely rebuild the raise-fee request: SAT amount is invalid.') }
+            sp = { kind: kindname[kd], satoshi }
             if(kd==10){ sp.to = j.to }else if(kd==12){ sp.from = j.from, sp.to = j.to }else{ sp.from = j.from }
         }else if(kd == 5){ // HACD single
             sp = { kind: kindname[kd], diamond: (j.diamond+'').trim(), to: j.to }
@@ -339,127 +311,17 @@ var reqFeasibleFee = async (txsz, opts) => {
     mnx_open_actionview(key)
 }
 
-// ContractDeploy address = version byte + RIPEMD160(SHA3-256(main raw bytes || nonce BE)).
-// Keep this as a display-only wallet fact; the SDK action JSON remains the exact wire fields.
-, mnx_sha3_256_bytes = input => {
-    const mask = (1n << 64n) - 1n
-    const rotations = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14]
-    const roundConstants = [
-        0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
-        0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
-        0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
-        0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
-        0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
-        0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n,
-    ]
-    let state = new Array(25).fill(0n)
-    let padded = Array.from(input)
-    padded.push(0x06)
-    while(padded.length % 136 !== 135){ padded.push(0) }
-    padded.push(0x80)
-    let rotl = (x, n) => n ? ((x << BigInt(n)) | (x >> BigInt(64 - n))) & mask : x
-    for(let offset = 0; offset < padded.length; offset += 136){
-        for(let i = 0; i < 136; i++){
-            state[i >> 3] ^= BigInt(padded[offset + i]) << BigInt((i & 7) * 8)
-        }
-        for(let rc of roundConstants){
-            let c = new Array(5), d = new Array(5), b = new Array(25)
-            for(let x = 0; x < 5; x++){ c[x] = state[x] ^ state[x+5] ^ state[x+10] ^ state[x+15] ^ state[x+20] }
-            for(let x = 0; x < 5; x++){ d[x] = c[(x+4)%5] ^ rotl(c[(x+1)%5], 1) }
-            for(let y = 0; y < 5; y++) for(let x = 0; x < 5; x++){
-                let i = x + 5*y
-                b[y + 5*((2*x + 3*y)%5)] = rotl(state[i] ^ d[x], rotations[i])
-            }
-            for(let y = 0; y < 5; y++) for(let x = 0; x < 5; x++){
-                let i = x + 5*y
-                state[i] = (b[i] ^ ((~b[(x+1)%5 + 5*y]) & b[(x+2)%5 + 5*y])) & mask
-            }
-            state[0] ^= rc
-        }
-    }
-    let digest = new Uint8Array(32)
-    for(let i = 0; i < digest.length; i++){ digest[i] = Number((state[i >> 3] >> BigInt((i & 7) * 8)) & 0xffn) }
-    return digest
-}
-, mnx_base58check_decode = text => {
-    const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-    if(typeof text !== 'string' || !text.length){ return null }
-    let bytes = [0]
-    for(let char of text){
-        let digit = alphabet.indexOf(char)
-        if(digit < 0){ return null }
-        let carry = digit
-        for(let i = 0; i < bytes.length; i++){
-            let value = bytes[i] * 58 + carry
-            bytes[i] = value & 255
-            carry = value >> 8
-        }
-        while(carry){ bytes.push(carry & 255); carry >>= 8 }
-    }
-    let zeros = 0
-    while(zeros < text.length && text[zeros] === '1'){ zeros++ }
-    while(bytes.length > 1 && bytes[bytes.length - 1] === 0){ bytes.pop() }
-    let full = new Uint8Array(zeros + bytes.length)
-    for(let i = 0; i < bytes.length; i++){ full[full.length - 1 - i] = bytes[i] }
-    if(full.length !== 25 || typeof CryptoJS === 'undefined' || !CryptoJS.SHA256){ return null }
-    let payload = full.slice(0, 21), checksum = full.slice(21)
-    let hex = Array.from(payload, b => b.toString(16).padStart(2, '0')).join('')
-    let expected = CryptoJS.SHA256(CryptoJS.enc.Hex.parse(hex)).toString()
-    expected = CryptoJS.SHA256(CryptoJS.enc.Hex.parse(expected)).toString().slice(0, 8)
-    let actual = Array.from(checksum, b => b.toString(16).padStart(2, '0')).join('')
-    return expected === actual ? payload : null
-}
-, mnx_contract_deploy_address = (main, nonce) => {
-    try {
-        let rawMain = mnx_base58check_decode(main)
-        let n = BigInt(String(nonce))
-        if(!rawMain || rawMain[0] > 255 || n < 0n || n > 0xffffffffn || typeof CryptoJS === 'undefined' || !CryptoJS.RIPEMD160){ return null }
-        let preimage = new Uint8Array(25)
-        preimage.set(rawMain, 0)
-        preimage[21] = Number((n >> 24n) & 255n)
-        preimage[22] = Number((n >> 16n) & 255n)
-        preimage[23] = Number((n >> 8n) & 255n)
-        preimage[24] = Number(n & 255n)
-        let hash = mnx_sha3_256_bytes(preimage)
-        let hashHex = Array.from(hash, b => b.toString(16).padStart(2, '0')).join('')
-        let digest = CryptoJS.RIPEMD160(CryptoJS.enc.Hex.parse(hashHex)).toString()
-        let address = mnx_hex_to_bytes('01' + digest)
-        return mnx_base58check_encode(address)
-    } catch(e){ return null }
-}
-, mnx_asset_registration_facts = act => {
-    if(!act || Number(act.kind) !== 16){ return null }
-    try {
-        let data = JSON_parse(act.json), meta = data && data.metadata
-        if(!meta){ return null }
-        let decode = value => {
-            if(typeof value !== 'string' || !/^(?:0x)?(?:[0-9a-fA-F]{2})+$/.test(value)){ return null }
-            let decoded = mnx_hex_to_utf8(value)
-            return decoded && !/[\u0000-\u001f\u007f]/.test(decoded) ? decoded : null
-        }
-        return {
-            serial: mnx_display_uint(meta.serial, Number.MAX_SAFE_INTEGER),
-            ticket: decode(meta.ticket),
-            name: decode(meta.name),
-            issuer: typeof meta.issuer === 'string' ? meta.issuer : null,
-        }
-    } catch(e){ return null }
-}
-, mnx_contract_deployment_facts = (act, main) => {
-    if(!act || Number(act.kind) !== 40){ return null }
-    try {
-        let fields = JSON_parse(act.json)
-        let nonce = mnx_display_uint(fields.nonce, 4294967295)
-        let address = nonce == null ? null : mnx_contract_deploy_address(main, nonce)
-        return { nonce, address }
-    } catch(e){ return null }
-}
+// Registration/deployment facts and the contract-address derivation moved to
+// the fact layer (jslib/actionfacts.js): mnx_asset_registration_facts,
+// mnx_contract_deployment_facts, mnx_contract_deploy_address.
 
 // DApp callback compatibility layer: restore the fields promised by sdk.md
 // (transfer: ret/success/txbody/txhash/txhashfee/txfee/description;
 //  signtx: sign_hash/hash/hash_with_fee/body/fee/address/need_sign_address/description/ret)
 // async: Asset amounts in the description need on-chain metadata for their decimals,
-// so callers must await.
+// so callers must await. The description array comes from the shared display
+// model's plainText serializer — full addresses, no HTML entities, no code
+// panels, never HTML-stripped after the fact.
 , mnx_dapp_result = async (review, sigp, request, signer) => {
     await mnx_asset_meta_ensure((review && review.asset_serials) || [])
     let nsa = {}
@@ -467,7 +329,7 @@ var reqFeasibleFee = async (txsz, opts) => {
         let s = review.required_signers[i]
         nsa[s] = (sigp.missing_signers||[]).indexOf(s) >= 0
     }
-    let desc = parseTxDesc(review).map(s => s.replace(/<[^>]*>/g, ''))
+    let desc = mnx_txdesc_plain(review)
     return {
         ret: 0,
         success: true,
@@ -494,8 +356,9 @@ var reqFeasibleFee = async (txsz, opts) => {
 // falling back to Form 2 ircode assembly when FitSH cannot reconstruct.
 , mnx_act_codes_hex = function(act) {
     try {
-        let j = JSON_parse(act.json)
-        return ((j.codes == null ? '' : j.codes)+'').replace(/^0x/i, '')
+        let j = typeof mnx_json_parse_lossless === 'function' ? mnx_json_parse_lossless(act.json) : JSON_parse(act.json)
+        let codes = j.codes == null ? j.lockbox : j.codes
+        return ((codes == null ? '' : codes)+'').replace(/^0x/i, '')
     } catch(e) { return '' }
 }
 , mnx_act_marks_hex = function(act) {
@@ -615,11 +478,9 @@ var reqFeasibleFee = async (txsz, opts) => {
         + (r.sourcemap_labels && r.sourcemap_labels.length ? `<div class="codehint">${mode === 'sign' ? 'dApp labels' : 'dApp source labels (function selectors are matched)'}: ${r.sourcemap_labels.map(mnx_esc_html).join(' · ')}</div>` : '')
         + (notes.length ? `<div class="codehint">${notes.map(mnx_esc_html).join('<br>')}</div>` : '')
     if(mode !== 'sign' && addressTable && addressTable.length){ facts += `<div class="codehint">Address table: ${addressTable.map((a,i)=>`${i}: ${mnx_esc_html(a)}`).join(' · ')}</div>` }
-    // Sign mode: open by default — the labels line is the only place a maincall's
-    // dApp-provided names appear, and a collapsed <details> hides it from innerText
-    // and from users who won't know to click. Content stays annotation-only (the
-    // code above keeps real selectors/slots).
-    if(mode === 'sign' && facts){ facts = `<details class="code-notes" open><summary>${diagnostic || notes.length ? 'Code notes' : 'Source labels'}</summary>${facts}</details>` }
+    // Keep supplementary code notes and source labels available without expanding
+    // the signing review by default. The decompiled code remains visible below.
+    if(mode === 'sign' && facts){ facts = `<details class="code-notes"><summary>${diagnostic || notes.length ? 'Code notes' : 'Source labels'}</summary>${facts}</details>` }
     let code = `<pre class="${cls}">${mnx_esc_html(r.text)}${extra}</pre>`
     if(r.text.length > 8000){ code = `<details class="codefull"><summary>Full decompilation (${r.text.length} characters)</summary>${code}</details>` }
     return facts + code
@@ -648,78 +509,58 @@ var reqFeasibleFee = async (txsz, opts) => {
     return txdesc
 }
 
+// Sign-page action lines: the shared display model (jslib/actiondisplay.js)
+// builds an ActionPresentation tree per review; the shared renderer
+// (jslib/actionrender.js) turns tokens into the one-line HTML the signtx
+// template v-html's. Message layout blocks append as an independent inline
+// section; code panels stay with mnx_txdesc_attach_code (enrichment, not a
+// base mode).
+, mnx_tx_display_ctx = (review, displayContext) => ({
+    review,
+    height_clock: displayContext && displayContext.height_clock || null,
+    asset_text: (atoms, serial) => mnx_asset_amount_text(atoms, serial),
+})
 , parseTxDesc = (review, displayContext) => {
-    // SDK descriptions are authoritative; the wallet only formats structured transfer facts
-    // whose units need local chain metadata (Asset decimals).
     if(!review || !review.actions){ return [] }
-    let esc = mnx_esc_html
-    let txdesc = []
-    let parse = (i, text) => {
-        // Unit separated from the amount by a space ("100 HAC", not "100HAC").
-        let li = (text||'').replace(/(-?\d+:\d+)\s*HAC\b/g, (_, amount) => mnx_fin_to_decimal(amount) + ' HAC')
-            .replace(/(-?\d+(?:\.\d+)?)\s*HAC\b/g, '<b class="amt">$1</b> HAC')
-            .replace(/\b([a-km-zA-HJ-NP-Z1-9]{28,34})\b/g, (_, address) => {
-                let display = address === review.main ? address.slice(0, 7) + '...' : address
-                return `<a class="addr" href="${explorer_url}/address/${address}" target="_blank" rel="noopener noreferrer" title="${address}">${display}</a>`
-            })
-        return `<span>${i+1}</span> ${li}`
-    }
+    let nodes = mnx_review_presentations(review, mnx_tx_display_ctx(review, displayContext))
     let tables = (mnx_msglayout_state && mnx_msglayout_state.tables) || mnx_msglayout_normalize(null)
     let bind = mnx_msglayout_bind(review.actions, tables)
     if(mnx_msglayout_state){
         mnx_msglayout_state.display_err = (bind.errors || []).join(' ')
     }
-    for(let i in review.actions){
+    let opts = { abbrev_main: true, main: review.main, height_clock: displayContext && displayContext.height_clock }
+    let txdesc = []
+    for(let i = 0; i < nodes.length; i++){
+        let line = mnx_action_line_html(nodes[i], i, opts)
         let act = review.actions[i]
-        let ai = parseInt(i, 10)
-        let line
-        if(act.transfer && act.transfer.payload && act.transfer.payload.type === 'asset'){
-            let p = act.transfer.payload
-            // Asset atoms need chain metadata for decimals; endpoints and serial still come from SDK facts.
-            let amt = mnx_asset_amount_text(p.atoms, p.serial)
-            let desc = `Transfer <b class="amt${amt.known ? '' : ' asset-unit-unknown'}">${esc(amt.text)}</b>`
-            if(amt.unit){ desc += ` ${esc(amt.unit)}` }
-            desc += ` (Asset #${esc(p.serial)})`
-            if(!amt.known){ desc += ` <strong class="asset-unit-warning" role="note">Decimals unknown: raw atoms, not token units</strong>` }
-            if(act.transfer.from){ desc += ` from ${esc(act.transfer.from)}` }
-            if(act.transfer.to){ desc += ` to ${esc(act.transfer.to)}` }
-            line = parse(ai, desc)
-        }else if(Number(act.kind) === 16){
-            let facts = mnx_asset_registration_facts(act)
-            if(facts && facts.serial != null && facts.ticket && facts.name && facts.issuer){
-                line = parse(ai, `Register asset #${facts.serial} · ${esc(facts.ticket)} · ${esc(facts.name)} · issuer ${esc(facts.issuer)}`)
-            }else{
-                line = parse(ai, esc(act.description || act.name || `Action kind ${act.kind}`))
-            }
-        }else if(Number(act.kind) === 40){
-            let facts = mnx_contract_deployment_facts(act, review.main)
-            let desc = esc(act.description || act.name || `Action kind ${act.kind}`)
-            if(facts && facts.address){ desc += ` · deployed address ${esc(facts.address)}` }
-            line = parse(ai, desc)
-        }else if(mnx_height_scope_facts(act)){
-            line = parse(ai, mnx_height_scope_html(act, displayContext && displayContext.height_clock))
-        }else if(mnx_is_tx_message_action(act)){
-            line = parse(ai, `Message · ${esc(act.description || mnx_msg_bytes_text(act))}`)
-        }else if(mnx_is_maincall_action(act)){
-            line = parse(ai, esc(act.description || act.name || `Action kind ${act.kind}`))
-        }else{
-            line = parse(ai, esc(act.description || act.name || `Action kind ${act.kind}`))
-        }
         if(mnx_is_tx_message_action(act)){
             // Keep the inline message layout compact in the narrow signing window.
-            line += mnx_msglayout_block_html(act, bind.byArrayIndex[ai], 'inline')
+            line += mnx_msglayout_block_html(act, bind.byArrayIndex[i], 'inline')
         }
-        let nestedScopes = list => {
-            for(let child of (list || [])){
-                let scope = mnx_height_scope_html(child, displayContext && displayContext.height_clock)
-                if(scope){ line += `<div class="height-scope-note">[${esc(child.path)}] ${scope}</div>` }
-                nestedScopes(child.children)
-            }
-        }
-        nestedScopes(act.children)
         txdesc.push(line)
     }
     return txdesc
+}
+
+// Plain-text descriptions from the same model for DApp callbacks and the
+// transaction log: one string per top-level action, full addresses, no HTML,
+// no code panels. Callers warm the asset metadata cache first (mnx_dapp_result
+// already awaits mnx_asset_meta_ensure before this runs).
+, mnx_txdesc_plain = (review) => {
+    if(!review || !review.actions){ return [] }
+    let nodes = mnx_review_presentations(review, mnx_tx_display_ctx(review, null))
+    return nodes.map(node => mnx_action_plain_text(node))
+}
+
+// A signature slot is complete only when the SDK has verified it. Presence is
+// still useful forensic information, but never upgrades an invalid/unverified
+// signature to "Signed" in either wallet review surface.
+, mnx_tx_signer_status = function(review, address) {
+    let has = key => Array.isArray(review && review[key]) && review[key].indexOf(address) >= 0
+    if(has('valid_signers')){ return 'valid' }
+    if(has('invalid_signers')){ return 'invalid' }
+    if(has('present_signers')){ return 'unverified' }
+    return 'missing'
 }
 
 

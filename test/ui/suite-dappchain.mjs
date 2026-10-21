@@ -331,9 +331,29 @@ export const cases = {
     const t = await bodyText(av)
     await shot(av, 'dappchain-05-actionview', VP_WIDE)
     // meta 网格
-    for (const k of ['Main account', 'Type & fee', 'Review status', 'Transaction hash', 'Hash with fee', 'Unsigned body hash']) {
+    for (const k of ['Main account', 'Transaction', 'Fee and gas', 'Review status', 'Transaction hash', 'Hash with fee', 'Unsigned body hash']) {
       assert(t.includes(k), `meta grid has "${k}"`, t.slice(0, 200))
     }
+    const txMeta = await av.evaluate(() => [...document.querySelectorAll('.avmeta .avmrow')]
+      .find(row => row.querySelector('.avk')?.innerText.trim() === 'Transaction')?.querySelector('.avv')?.innerText || '')
+    assert(/Type-2/.test(txMeta), 'Transaction section identifies Type-2', txMeta)
+    const feeDetail = await av.evaluate(() => {
+      const details = document.querySelector('.av-fee')
+      const summary = details?.querySelector('summary')
+      summary?.click()
+      return { text: details?.innerText || '', open: details?.open === true }
+    })
+    const expectedFeeFacts = await av.evaluate(async () => {
+      const values = await chrome_storage_session.get('actv_ui')
+      const r = values.actv_ui.review
+      return { fee: mnx_fin_to_decimal(r.fee), billingSize: r.billing_size, purity: r.fee_purity, purityUnit: r.fee_purity_unit }
+    })
+    assert(feeDetail.open && /Transaction fee/.test(feeDetail.text) && feeDetail.text.includes(`${expectedFeeFacts.fee} HAC`),
+      'Fee and gas section expands and preserves the SDK fee value', JSON.stringify({ feeDetail: feeDetail.text, expectedFeeFacts }))
+    const billingText = expectedFeeFacts.billingSize == null ? /Billing size\s*Unavailable/ : new RegExp(`Billing size\\s*${expectedFeeFacts.billingSize} bytes`)
+    assert(billingText.test(feeDetail.text), 'Fee and gas billing size matches the SDK review fact', JSON.stringify({ feeDetail: feeDetail.text, expectedFeeFacts }))
+    const purityText = expectedFeeFacts.purity == null ? /Fee purity\s*Unavailable/ : new RegExp(`Fee purity\\s*${expectedFeeFacts.purity} u${expectedFeeFacts.purityUnit} / byte`)
+    assert(purityText.test(feeDetail.text), 'Fee and gas purity matches the SDK review fact', JSON.stringify({ feeDetail: feeDetail.text, expectedFeeFacts }))
     assert(t.includes(EXPECTED_ADDRESS), 'meta shows the main account address')
     // 动作卡 + 签名者状态
     // 动作卡（avname 为 SDK registry 名，如 transfer_hac_to —— 小写）+ 签名者状态
@@ -345,13 +365,15 @@ export const cases = {
       summary: (d.querySelector('summary') || {}).textContent || '',
       open: d.open,
     })))
-    assert(det.length >= 2 && det.some((d) => /canonical json/i.test(d.summary)),
-      'canonical json + raw bytes details present', JSON.stringify(det))
+    assert(det.length >= 3 && det.some((d) => /SDK description/i.test(d.summary)) && det.some((d) => /canonical json/i.test(d.summary)),
+      'SDK description, canonical json, and raw bytes details present', JSON.stringify(det))
     assert(det.every((d) => !d.open), 'details collapsed by default')
     // 展开后有 JSON 内容
-    await av.evaluate(() => [...document.querySelectorAll('details.avdet')][0]?.setAttribute('open', ''))
+    await av.evaluate(() => [...document.querySelectorAll('details.avdet')]
+      .find(d => /canonical json/i.test(d.querySelector('summary')?.innerText || ''))?.setAttribute('open', ''))
     await sleep(300)
-    const pre = await av.evaluate(() => (document.querySelector('details.avdet pre.avpre') || {}).textContent || '')
+    const pre = await av.evaluate(() => [...document.querySelectorAll('details.avdet')]
+      .find(d => /canonical json/i.test(d.querySelector('summary')?.innerText || ''))?.querySelector('pre.avpre')?.textContent || '')
     await shot(av, 'dappchain-06-actionview-json', VP_WIDE)
     assert(/[{\[]/.test(pre), 'expanded canonical json shows content', pre.slice(0, 120))
     await av.close().catch(() => {})

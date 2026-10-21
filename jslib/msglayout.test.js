@@ -144,4 +144,30 @@ bind = ctx.mnx_msglayout_bind(actions, ctx.mnx_msglayout_normalize({ msgid: 0, m
 assert(bind.errors.some(e => /layout failed/.test(e)), 'parse error recorded: ' + bind.errors.join(' '))
 assert(bind.byArrayIndex[0], 'failed layout still bound for hex fallback')
 
+// Long message/blob payloads use `hexgray clickable`, not the standalone
+// `.hexdump` class; delegation must accept every generated data-hexid preview.
+let clickHandler = null
+let blobHex = null
+let openedUrl = null
+const clickCtx = {
+    Uint8Array, BigInt, JSON, String, Number, Array, Object, Math, parseInt, isFinite, TextDecoder,
+    document: { addEventListener: (event, handler) => { if(event === 'click') clickHandler = handler } },
+    window: { open: url => { openedUrl = url; return true } },
+    URL: { createObjectURL: blob => { blobHex = blob.parts.join(''); return 'blob:full-hex' } },
+    Blob: function(parts) { this.parts = parts },
+}
+vm.createContext(clickCtx)
+vm.runInContext(src, clickCtx)
+const longHex = 'ab'.repeat(80)
+const preview = clickCtx.mnx_hex_plain(longHex, 'hexgray')
+assert(/class="hexgray clickable" data-hexid=/.test(preview), 'long raw message data preview is registered')
+clickCtx.mnx_hex_bind_delegate()
+const id = preview.match(/data-hexid="(\d+)"/)[1]
+clickHandler({ target: { closest: selector => {
+    assert(selector === '.clickable[data-hexid]', 'delegation targets protocol-generated previews')
+    return { getAttribute: name => name === 'data-hexid' ? id : null }
+} } })
+assert(blobHex === '0x' + longHex, 'click opens the full original HEX, not only the clipped preview')
+assert(openedUrl === 'blob:full-hex', 'full HEX viewer is opened')
+
 console.log('msglayout tests ok')

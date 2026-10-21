@@ -7,7 +7,7 @@ const ctx = vm.createContext({
     JSON_parse: JSON.parse, explorer_url: 'https://explorer.hacash.org', AbortController,
     setTimeout: (callback, ms) => setTimeout(callback, ms === 5000 ? 100 : ms), clearTimeout,
 })
-for (const file of ['moneynx_sdk_facade.js', 'assetamt.js', 'msglayout.js', 'moneynx_txview.js']) {
+for (const file of ['moneynx_sdk_facade.js', 'assetamt.js', 'msglayout.js', 'actionfacts.js', 'actiondisplay.js', 'actionrender.js', 'moneynx_txview.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), ctx)
 }
 const scope = (start, end, path = '0') => ({ kind: '1042', path, json: JSON.stringify({kind:1042,start,end}), description:'Limit height range' })

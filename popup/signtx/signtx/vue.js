@@ -30,6 +30,7 @@ var routePageSignTx = (adr, clbk) => {
         sadr: addrOmitted(adr),
         txres: {},
         txmeta: {},
+        txAddressTableHtml: '',
         txfee: {},
         displayContext: {},
         txsgck: {},
@@ -68,6 +69,12 @@ var routePageSignTx = (adr, clbk) => {
             }
             let review = rv.review
             t.txres = review
+            let addresses = Array.isArray(review.address_table) ? review.address_table : [review.main]
+            t.txAddressTableHtml = addresses.length > 1
+                ? '<ol class="tx-address-table">' + addresses.map((address, index) =>
+                    `<li><span class="tx-addr-index">${index}:</span>${mnx_address_html(address)}${index === 0 ? ' <b>primary / fee payer</b>' : ''}</li>`
+                ).join('') + '</ol>'
+                : ''
             t.txmeta = { timestamp: new Date(review.timestamp * 1000).toLocaleString() }
             t.txfee = {
                 amount: mnx_fin_to_decimal(review.fee),
@@ -114,7 +121,8 @@ var routePageSignTx = (adr, clbk) => {
             let sg = {}
             for(let i in (review.required_signers || [])){
                 let s = review.required_signers[i]
-                sg[s] = { address: s, complete: (review.present_signers||[]).indexOf(s) >= 0 }
+                let status = mnx_tx_signer_status(review, s)
+                sg[s] = { address: s, status, complete: status === 'valid' }
             }
             t.txsgck = sg
         }

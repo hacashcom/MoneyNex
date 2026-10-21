@@ -28,9 +28,13 @@ module.exports = {
         './jslib/message-types',
         './jslib/elliptic.min',
         './jslib/moneynx_sdk_facade',
-        './jslib/moneynx_txview',
         './jslib/msglayout',
         './jslib/assetamt',
+        // action presentation pipeline (plan §7): facts -> three-mode model -> renderer
+        './jslib/actionfacts',
+        './jslib/actiondisplay',
+        './jslib/actionrender',
+        './jslib/moneynx_txview',
         './jslib/importkey',
     ],
     popup_common: [

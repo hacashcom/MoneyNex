@@ -8,19 +8,22 @@ function mnx_actv_addr_html(a) {
     let s = a == null ? '' : String(a)
     if(!s){ return '' }
     if(/^[a-km-zA-HJ-NP-Z1-9]{28,34}$/.test(s)){
-        return `<a class="avaddr" href="${explorer_url}/address/${encodeURIComponent(s)}" target="_blank" title="${esc(s)}">${esc(s)}</a>`
+        let explorer = String(explorer_url || '')
+        if(!/^https?:\/\//i.test(explorer)){ return `<span class="avaddr">${esc(s)}</span>` }
+        return `<a class="avaddr" href="${esc(explorer)}/address/${encodeURIComponent(s)}" target="_blank" title="${esc(s)}">${esc(s)}</a>`
     }
     return `<span class="avaddr">${esc(s)}</span>`
 }
 
 // one action -> a card block (div). depth indents via CSS, no more &nbsp; padding.
-function mnx_actv_render_action(act, depth, prints, layoutCtx) {
+function mnx_actv_render_action(act, depth, prints, layoutCtx, presentation) {
     // Action json content (HACD names, engraved content, etc.) is attacker-controlled; must escape before embedding in HTML
     let esc = mnx_esc_html
     let out = []
     let cls = 'avact' + (depth > 0 ? ' avd' + Math.min(depth, 4) : '')
     let name = mnx_is_tx_message_action(act) ? 'Message' : (act.name || ('kind '+act.kind))
     let head = `<span class="avpath">[${esc(act.path)}]</span><b class="avname">${esc(name)}</b>`
+    if(presentation && presentation.branch){ head += `<span class="avtag">${esc(presentation.branch)}</span>` }
     // payload byte count folds into the title (the dashed box keeps fields only)
     if(mnx_is_tx_message_action(act)){ head += `<span class="avbytes">· ${mnx_msg_bytes_text(act)}</span>` }
     head += `<span class="avtag">${esc(act.scope)}</span>`
@@ -32,50 +35,9 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
     if(act.blob){ head += `<span class="avtag">payload</span>` }
     else if(!act.protocol_valid){ head += `<span class="avtag err">invalid</span>` }
     out.push(`<div class="${cls}"><div class="avhd">${head}</div>`)
-    let scope = mnx_height_scope_html(act, layoutCtx && layoutCtx.height_clock)
-    if(scope){ out.push(`<div class="avrow"><span class="avk">Height scope</span><span class="avv">${scope}</span></div>`) }
-
-    if(act.transfer){
-        let p = act.transfer.payload
-        let amt = ''
-        if(p.type == 'hac'){ amt = `<b class="amt">${esc(mnx_fin_to_decimal(p.amount))}</b> HAC` }
-        else if(p.type == 'satoshi'){ amt = `<b class="amt">${esc(p.atoms)}</b> SAT` }
-        else if(p.type == 'hacd'){
-            let names = p.names || []
-            if(!names.length){
-                try {
-                    let j = JSON_parse(act.json)
-                    names = mnx_split_diamond_names(j.diamond).concat(mnx_split_diamond_names(j.diamonds))
-                } catch(e){}
-            }
-            amt = `<b class="amt">${esc(names.length || p.count)}</b> HACD <span class="avsub">(${esc(names.join(', '))})</span>`
-        }
-        else if(p.type == 'asset'){
-            // same source as the signing page: decimals from on-chain AssetSmelt (this page's load() warmed the cache)
-            let a = mnx_asset_amount_text(p.atoms, p.serial)
-            amt = `<b class="amt">${esc(a.text)}</b>${a.unit ? ' ' + esc(a.unit) : ''}`
-            amt += `<span class="avtag">Asset #${esc(p.serial)}</span>`
-            if(!a.known){ amt += `<span class="avtag err">decimal unknown — raw atoms</span>` }
-        }
-        let path = ''
-        if(act.transfer.from){ path += `${mnx_actv_addr_html(act.transfer.from)}<span class="avarrow">→</span>` }
-        path += mnx_actv_addr_html(act.transfer.to)
-        out.push(`<div class="avrow"><span class="avk">transfer</span><span class="avv">${amt}<span class="avarrow">→</span>${path}</span></div>`)
+    if(presentation){
+        out.push(`<div class="avrow"><span class="avk">Action</span><span class="avv">${mnx_action_line_html(presentation, null, { main: layoutCtx && layoutCtx.review && layoutCtx.review.main, height_clock: layoutCtx && layoutCtx.height_clock, include_children: false })}</span></div>`)
     }
-
-    let assetRegistration = mnx_asset_registration_facts(act)
-    if(assetRegistration){
-        if(assetRegistration.serial != null){ out.push(`<div class="avrow"><span class="avk">serial</span><span class="avv">#${esc(assetRegistration.serial)}</span></div>`) }
-        if(assetRegistration.ticket){ out.push(`<div class="avrow"><span class="avk">ticket</span><span class="avv">${esc(assetRegistration.ticket)}</span></div>`) }
-        if(assetRegistration.name){ out.push(`<div class="avrow"><span class="avk">name</span><span class="avv">${esc(assetRegistration.name)}</span></div>`) }
-        if(assetRegistration.issuer){ out.push(`<div class="avrow"><span class="avk">issuer</span><span class="avv">${mnx_actv_addr_html(assetRegistration.issuer)}</span></div>`) }
-    }
-    let deployment = mnx_contract_deployment_facts(act, layoutCtx && layoutCtx.review && layoutCtx.review.main)
-    if(deployment){
-        if(deployment.nonce != null){ out.push(`<div class="avrow"><span class="avk">deployment nonce</span><span class="avv">${esc(deployment.nonce)}</span></div>`) }
-        if(deployment.address){ out.push(`<div class="avrow"><span class="avk">contract address</span><span class="avv">${mnx_actv_addr_html(deployment.address)}</span></div>`) }
-    }
-
     if(mnx_is_tx_message_action(act)){
         let layout = null
         if(depth === 0 && layoutCtx && layoutCtx.byArrayIndex){
@@ -99,17 +61,23 @@ function mnx_actv_render_action(act, depth, prints, layoutCtx) {
         out.push(`<div class="avrow"><span class="avk">note</span><span class="avv">${esc(act.audit_notes[i])}</span></div>`)
     }
 
-    // canonical json / raw bytes collapsed by default: the review page stays faithful without a screen full of bytes
-    let pretty = ''
-    try { pretty = JSON.stringify(JSON_parse(act.json), null, 2) } catch(e){ pretty = act.json }
-    out.push(`<details class="avdet"><summary>canonical json</summary><pre class="avpre">${esc(pretty)}</pre></details>`)
+    let sdkDescription = presentation && presentation.sdkDescription != null
+        ? presentation.sdkDescription : act.description
+    if(sdkDescription != null && sdkDescription !== ''){
+        out.push(`<details class="avdet"><summary>SDK description</summary><pre class="avpre">${esc(sdkDescription)}</pre></details>`)
+    }
+    // Canonical JSON / raw bytes are separate audit views, not inputs to the wallet summary.
+    // Keep SDK canonical JSON as text so large bare integers remain exact.
+    out.push(`<details class="avdet"><summary>canonical json</summary><pre class="avpre">${esc(act.json)}</pre></details>`)
     out.push(`<details class="avdet"><summary>raw bytes</summary><pre class="avpre">${esc(act.raw)}</pre></details>`)
     out.push('</div>')
 
+    // Each v-html entry must be a complete element, not an open/close fragment.
+    let lines = [out.join('')]
     for(let i in (act.children||[])){
-        out = out.concat(mnx_actv_render_action(act.children[i], depth + 1, prints, layoutCtx))
+        lines = lines.concat(mnx_actv_render_action(act.children[i], depth + 1, prints, layoutCtx, presentation && presentation.children && presentation.children[i]))
     }
-    return out
+    return lines
 }
 
 var routePageActionView = (adr, clbk) => {
@@ -189,7 +157,22 @@ var routePageActionView = (adr, clbk) => {
             }
             let yesno = (v) => (v === true || v === 'true') ? 'yes' : ((v === false || v === 'false') ? 'no' : esc(v))
             meta.push(mrow('Main account', `<span class="avmono">${esc(review.main)}</span>`))
-            meta.push(mrow('Type & fee', `Type-${esc(review.tx_type)} <span class="avsub">· fee</span> <b class="amt">${esc(mnx_fin_to_decimal(review.fee))}</b> HAC <span class="avsub">· created</span> ${tsfmt(review.timestamp)}`))
+            if(Array.isArray(review.address_table) && review.address_table.length){
+                let rows = review.address_table.map((address, index) => `<li><span class="av-address-index">${index}:</span>${mnx_actv_addr_html(address)}${index === 0 ? ' <b>primary / fee payer</b>' : ''}</li>`).join('')
+                meta.push(mrow('Address table', `<ol class="av-address-table">${rows}</ol>`))
+            }
+            meta.push(mrow('Transaction', `Type-${esc(review.tx_type)} <span class="avsub">· created</span> ${tsfmt(review.timestamp)}`))
+            let feeRows = [
+                `<div><dt>Transaction fee</dt><dd><b>${esc(mnx_fin_to_decimal(review.fee))} HAC</b></dd></div>`,
+                `<div><dt>Maximum gas charge</dt><dd>${review.gas_max_charge == null ? 'Unavailable' : esc(mnx_fin_to_decimal(review.gas_max_charge)) + ' HAC'}</dd></div>`,
+                `<div><dt>Gas max byte</dt><dd>${review.gas_max == null ? 'Not set' : esc(review.gas_max)}</dd></div>`,
+                `<div><dt>Decoded gas budget</dt><dd>${review.gas_budget == null ? 'Not set' : esc(review.gas_budget)}</dd></div>`,
+                `<div><dt>Fee purity</dt><dd>${review.fee_purity == null ? 'Unavailable' : esc(review.fee_purity) + ' u' + esc(review.fee_purity_unit) + ' / byte'}</dd></div>`,
+                `<div><dt>Purity floor</dt><dd>${review.fee_purity_floor == null ? 'Unavailable' : esc(review.fee_purity_floor) + ' u' + esc(review.fee_purity_unit) + ' / byte'}</dd></div>`,
+                `<div><dt>Billing size</dt><dd>${review.billing_size == null ? 'Unavailable' : esc(review.billing_size) + ' bytes'}</dd></div>`,
+            ]
+            if(review.gas_estimate_height != null){ feeRows.push(`<div><dt>Estimate height</dt><dd>${esc(review.gas_estimate_height)}</dd></div>`) }
+            meta.push(mrow('Fee and gas', `<details class="av-fee"><summary>View fee and gas facts</summary><dl>${feeRows.join('')}</dl></details>`))
             if(review.valid_height_range){
                 meta.push(mrow('Valid block range', `<b>${esc(review.valid_height_range.start)} - ${esc(review.valid_height_range.end)}</b>${review._strict_note ? ` <span class="avtag err">not verified (${esc(review._strict_note)})</span>` : ''}`))
             }
@@ -215,11 +198,14 @@ var routePageActionView = (adr, clbk) => {
             if(review.review_binding){ meta.push(mrow('Review binding', esc(review.review_binding), true)) }
             meta.push(mrow('Codec profile hash', esc(review.codec_profile_hash), true))
             t.meta = meta.join('')
+            let display = data.display || {}
             let acts = Array.isArray(review.actions) ? review.actions : Object.values(review.actions || {})
-            let present = Array.isArray(review.present_signers) ? review.present_signers : []
+            let presentations = mnx_review_presentations(review, {
+                height_clock: display.height_clock,
+                asset_text: (atoms, serial) => mnx_asset_amount_text(atoms, serial),
+            })
             // Decompile code-carrying actions first, then render into each card
             // (failures only affect display, never the signing decision).
-            let display = data.display || {}
             let sourceBinding = mnx_review_sourcemap_bind(acts, display.sourcemaps || [], display.legacy_sourcemap)
             let prints = {}, tasks = {}
             let collect = (list) => {
@@ -240,7 +226,7 @@ var routePageActionView = (adr, clbk) => {
                 let out = [], layoutCtx = { byArrayIndex: bind.byArrayIndex, arrayIndex: 0, height_clock: display.height_clock, review }
                 for(let i = 0; i < acts.length; i++){
                     layoutCtx.arrayIndex = i
-                    out = out.concat(mnx_actv_render_action(acts[i], 0, prints, layoutCtx))
+                    out = out.concat(mnx_actv_render_action(acts[i], 0, prints, layoutCtx, presentations[i]))
                 }
                 t.lines = out
             }
@@ -261,7 +247,8 @@ var routePageActionView = (adr, clbk) => {
             let required = Array.isArray(review.required_signers) ? review.required_signers : Object.values(review.required_signers || {})
             for(let i = 0; i < required.length; i++){
                 let s = required[i]
-                sg[s] = { address: s, complete: present.indexOf(s) >= 0 }
+                let status = mnx_tx_signer_status(review, s)
+                sg[s] = { address: s, status, complete: status === 'valid' }
             }
             t.signers = sg
         }
