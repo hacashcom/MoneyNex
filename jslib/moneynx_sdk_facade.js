@@ -116,6 +116,11 @@ var MNX_SDK_TRANSPORT_VERSION = 11
     VM_DECODE_CALL: 23,
     ACTION_DESCRIBE: 24,
     VM_CODE: 25,
+    TEX_BUILD: 26,
+    TEX_INSPECT: 27,
+    TEX_PREPARE_SIGNATURE: 28,
+    TEX_ATTACH_SIGNATURE: 29,
+    TEX_VERIFY: 30,
 }
 
 ///////////////// tx operations /////////////////
@@ -155,6 +160,19 @@ var MNX_SDK_TRANSPORT_VERSION = 11
 , sdk_tx_decode = function(body) {
     return mnx_sdk_invoke(MNX_OP.TX_DECODE, { body })
 }
+
+// TEX authorization is a distinct signing domain. The SDK derives the digest
+// from canonical authorization contents; callers never supply a digest.
+, sdk_tex_build = authorization => mnx_sdk_invoke(MNX_OP.TEX_BUILD, { authorization })
+, sdk_tex_inspect = authorization => mnx_sdk_invoke(MNX_OP.TEX_INSPECT, { authorization })
+, sdk_tex_prepare_signature = (authorization, signer_address, origin, expires_at) => {
+    let req = { authorization, signer_address }
+    if(origin){ req.origin = origin }
+    if(expires_at != null){ req.expires_at = expires_at }
+    return mnx_sdk_invoke(MNX_OP.TEX_PREPARE_SIGNATURE, req)
+}
+, sdk_tex_attach_signature = (authorization, request, proof) => mnx_sdk_invoke(MNX_OP.TEX_ATTACH_SIGNATURE, { authorization, request, proof })
+, sdk_tex_verify = action => mnx_sdk_invoke(MNX_OP.TEX_VERIFY, { action })
 
 ///////////////// account / vm /////////////////
 

@@ -8,6 +8,7 @@ var optkey_check_wallet = "wallet"
 , optkey_sign_tx = "signtx"
 , optkey_raise_fee = "raisefee"
 , optkey_sign_text = "signtext"
+, optkey_sign_tex = "signtex"
 ;
 
 var optkey_list_to_popup = [
@@ -19,4 +20,5 @@ var optkey_list_to_popup = [
     optkey_sign_tx,
     optkey_raise_fee,
     optkey_sign_text,
+    optkey_sign_tex,
 ];

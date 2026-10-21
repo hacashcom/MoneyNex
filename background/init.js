@@ -29,7 +29,7 @@ async function sendMessageToTabContent(tabid, req, msg) {
     }
 }
 
-// A2: dApp request pages (connect/transfer/signtx/signtext/raisefee/switchchain)
+// A2: dApp request pages (connect/transfer/signtx/signtext/signtex/raisefee/switchchain)
 // open as a MetaMask-style notification popup window instead of a full tab:
 // type 'popup', sized REQ_WIN_W x REQ_WIN_H (see the constants below — 800px
 // is the #wpage design max-width), outer size including the window frame.
@@ -67,7 +67,7 @@ async function openWalletPopupPageInNextTab(req, tabid) {
     const layoutKeys = {
         msglayout: 1, msg_layout: 1, msglayouts: 1, msg_layouts: 1,
         msgid: 1, msg_id: 1, message_id: 1, action_id: 1,
-        text: 1, sourcemaps: 1,
+        text: 1, sourcemaps: 1, authorization: 1,
     }
     for(let k in req){
         if(layoutKeys[k] || (req[k] != null && typeof req[k] === 'object')){
@@ -371,7 +371,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 const BADGE_COLOR = '#d9534f'
 // sign-class request pages: transfers, transaction/message signing, fee raise —
 // the actions that commit (or authorize) on-chain effects and deserve a recall
-const REQ_SIGN_KINDS = { transfer: 1, signtx: 1, signtext: 1, raisefee: 1 }
+const REQ_SIGN_KINDS = { transfer: 1, signtx: 1, signtext: 1, signtex: 1, raisefee: 1 }
 // The badge write must land OUTSIDE the request event's window-open churn:
 // setBadgeText issued while a request popup is being created is silently
 // dropped by Chrome 152 (found live — the write "succeeds" but the badge never
@@ -436,6 +436,7 @@ const REQ_PAGE_LABELS = {
     transfer: 'Transfer request',
     signtx: 'Transaction signing request',
     signtext: 'Message signing request',
+    signtex: 'TEX authorization signing request',
     raisefee: 'Fee adjustment request',
     switchchain: 'Network switch request',
     actionview: 'Transaction review request',

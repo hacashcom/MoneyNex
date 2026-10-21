@@ -1,0 +1,35 @@
+<div class="reqpage">
+    <pghead :adr="adr" :sadr="sadr" />
+    <div class="pgtitle">Approve TEX Authorization</div>
+    <div class="reqbody">
+        <div class="sitebar"><span class="sitechip"><b>{{dmu}}</b></span><span class="netchip">Chain {{context.expected_chain_id}}</span></div>
+        <div v-if="loading" class="ldw"><i class="spinner"></i></div>
+        <div v-else-if="review">
+            <section class="tx card warning">
+                <h2>Repeatable authority</h2>
+                <p>This authorization may execute more than once. It cannot be revoked after signing. If a payment becomes affordable later, it may execute again. Get cells describe what the account can receive from escrow; they do not grant payment authority.</p>
+                <p>Signing account: <b>{{adr}}</b></p>
+            </section>
+            <section class="tx card">
+                <h2>Ordered conditions <span class="count">{{cells.length}}</span></h2>
+                <ol class="cells"><li v-for="cell in cells"><b>{{cell.category}}</b><span>{{cell.description}}</span><code>cell {{cell.cellid}}</code><details><summary>Canonical condition and exact wire values</summary><pre>{{JSON.stringify(cell.cell, null, 2)}}</pre></details></li></ol>
+            </section>
+            <section class="tx card">
+                <h2>Execution window</h2>
+                <p>Height now: {{context.has_height ? context.current_height : 'unavailable'}}</p><p>{{windowState}}<span v-if="window.min != null"> · not before height {{window.min}}</span></p><p v-if="window.max != null">Expires after height {{window.max}} ({{expiryEstimate}}).</p><p v-else>No height-based expiry condition.</p>
+                <pre>{{JSON.stringify(review.height_conditions || [], null, 2)}}</pre>
+                <p>Network condition: {{JSON.stringify(review.chain_id_condition || 'No chain guard')}}</p>
+                <p>Chain execution is not guaranteed by the SDK.</p>
+            </section>
+            <section class="tx card">
+                <h2>Payments and receipts</h2>
+                <div v-for="item in payments" class="factrow"><p>Payment: {{item.description}}</p><details><summary>Exact canonical values</summary><pre>{{JSON.stringify(item.cell, null, 2)}}</pre></details></div>
+                <div v-for="item in receipts" class="factrow"><p>Receipt: {{item.description}}</p><details><summary>Exact canonical values</summary><pre>{{JSON.stringify(item.cell, null, 2)}}</pre></details></div>
+            </section>
+            <p class="txerr" v-if="error">{{error}}</p>
+        </div>
+        <div v-else class="txerr"><h2>Cannot sign</h2><p>{{error}}</p></div>
+    </div>
+    <div class="reqbtns" v-if="!end"><div><button class="cancel" @click="nop">Cancel</button></div><div><button class="blue" :disabled="!review || error || signing" @click="sign">{{signing ? 'Signing…' : 'Approve authority'}}</button></div></div>
+    <div v-else class="success"><i class="icf" :class="ende?'show':''" style="--ic: url('../image/ftic/okg.svg')"></i><p>TEX authority signed</p></div>
+</div>

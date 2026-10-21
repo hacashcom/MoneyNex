@@ -10,6 +10,8 @@ test/*
 !test/sourcemaps-audit.cjs
 !test/generate-review-presets.cjs
 !test/signtx-presets-audit.cjs
+!test/signtex-audit.cjs
+!test/signtex-wasm-e2e.cjs
 test/ui/artifacts/
 # self-contained UI env caches (CFT binary, optional hacash-testnet source clone)
 test/ui/.cache/

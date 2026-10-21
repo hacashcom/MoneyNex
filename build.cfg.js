@@ -88,6 +88,12 @@ module.exports = {
             ],
             ['signtext']
         ], // sign arbitrary text (rejects raw 32B hashes)
+        'signtex': [
+            [
+                'signtex/signtex'
+            ],
+            ['signtex']
+        ], // inspect and sign TEX authorization independently
         'raisefee': [
             [
                 'raisefee/raisefee'
