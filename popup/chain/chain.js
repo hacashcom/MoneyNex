@@ -184,10 +184,23 @@ var MAIN_CHAIN_ID = 0
     }
     return nil
 }
+, actionChainList = act => {
+    if(!act) return []
+    if(Array.isArray(act.chains)) return act.chains
+    // SDK review actions keep the canonical body in `json`; `chains` is not a top-level field.
+    if(typeof act.json === 'string' && act.json) {
+        try {
+            let parsed = JSON.parse(act.json)
+            if(Array.isArray(parsed.chains)) return parsed.chains
+        } catch(e) {}
+    }
+    return []
+}
 , actionAllowsChain = (act, id) => {
     if(!act) return no
     id = parseInt(id || 0) || 0
-    let cs = act.chains || []
+    let cs = actionChainList(act)
+    if(!cs.length && Array.isArray(act.chain_ids_allowed)) cs = act.chain_ids_allowed
     for(let i in cs) {
         if((parseInt(cs[i]) || 0) === id) {
             return yes
