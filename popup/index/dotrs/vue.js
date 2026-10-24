@@ -82,7 +82,18 @@ var routePageDotrs = (options, clbk) => {
             if(!recadr) {
                 return showWPerr('Please enter receiving address')
             }
-            if(!amt) {
+            let hacdNames = nil
+            if(t.transferType=='HACD'){
+                if(!t.nmshacd.trim()){
+                    return showWPerr('Please enter asset')
+                }
+                let parsed = mnx_parse_hacd_list(t.nmshacd)
+                if(parsed.err){
+                    return showWPerr(parsed.err)
+                }
+                hacdNames = parsed.names
+                amt = hacdNames.join(',')
+            }else if(!amt) {
                 return showWPerr(t.transferType=='ASSET' ? 'Please enter amount' : 'Please enter asset')
             }
             if(!gas) {
@@ -120,7 +131,7 @@ var routePageDotrs = (options, clbk) => {
                 }
                 let actions = txobjpre.actions
                 if(t.transferType=='HACD'){
-                    actions.push({ kind: 'transfer_hacd_single_to', to: recadr, diamond: amt })
+                    actions.push(mnx_hacd_transfer_action(recadr, hacdNames))
                 }else if(t.transferType=='ASSET'){
                     actions.push({
                         kind: 'transfer_asset_to',
@@ -153,7 +164,7 @@ var routePageDotrs = (options, clbk) => {
                     collection_address: recadr,
                     amount: t.transferType=='HAC' ? amt : nil,
                     diamonds: t.transferType=='HACD' ? amt : nil,
-                    diamond_count: t.transferType=='HACD' ? 1 : 0,
+                    diamond_count: t.transferType=='HACD' ? hacdNames.length : 0,
                 }
                 if(t.transferType=='ASSET'){
                     txobj.asset = {

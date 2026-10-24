@@ -258,4 +258,17 @@ assert(template.includes('Main address') && template.includes('<dt>Hash</dt>'))
 assert(template.includes('({{txres.timestamp}})'))
 assert(template.includes('<a>{{v.address}}</a>'))
 assert(!template.includes('gas-note'))
+const hacdJoin = (v) => (v && v.names ? v.names.join(',') : v && v.err)
+assert.equal(hacdJoin(ctx.mnx_parse_hacd_list('TUHBME')), 'TUHBME')
+assert.equal(ctx.mnx_hacd_transfer_action('to', ctx.mnx_parse_hacd_list('TUHBME').names).kind, 'transfer_hacd_single_to')
+for (const text of ['TUHBME,WTYUIA', 'TUHBME, WTYUIA', 'TUHBME , WTYUIA', 'TUHBME WTYUIA', 'TUHBME|WTYUIA', 'TUHBMEWTYUIA']) {
+    const listed = ctx.mnx_parse_hacd_list(text)
+    assert.equal(hacdJoin(listed), 'TUHBME,WTYUIA', text)
+    assert.equal(ctx.mnx_hacd_transfer_action('to', listed.names).kind, 'transfer_hacd_to')
+}
+assert.equal(ctx.mnx_parse_hacd_list('tuhbme').err, 'diamond name tuhbme is not valid')
+assert.equal(ctx.mnx_parse_hacd_list('TUHBM').err, 'diamond list format invalid')
+assert.equal(ctx.mnx_parse_hacd_list('TUHBME,TUHBME').err, 'diamond name TUHBME is duplicated')
+assert.equal(hacdJoin(ctx.mnx_parse_hacd_list(['TUHBME', 'WTYUIA'])), 'TUHBME,WTYUIA')
+
 console.log('txdisplay tests ok')

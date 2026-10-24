@@ -5,8 +5,9 @@
 // (transfer_hac_to / transfer_hacd_single_to / transfer_hacd_to / transfer_sat_to /
 // transfer_asset_to / hacd_insc_push) — ActionSpec.kind takes either form, so the transfer
 // entry point must not reject the documented registry names (P3-1).
-// dapp kind 5=single name -> transfer_hacd_single_to (diamond field),
-// 6=multi names -> transfer_hacd_to (diamonds), 8=SAT -> transfer_sat_to, 17=Asset.
+// dapp kind 5/6 both accept one name or a space/comma/pipe list. One name is
+// transfer_hacd_single_to (diamond); more than one is transfer_hacd_to (diamonds).
+// 8=SAT -> transfer_sat_to, 17=Asset.
 // legacy numeric dapp kind for an action kind: accepts BOTH the numeric kinds and
 // their SDK registry names (ActionSpec.kind takes either form); unknown values
 // pass through unchanged.
@@ -30,12 +31,14 @@ var mnx_map_txobj_actions = (acts) => {
             let amt = a.amount != null ? a.amount : a.hacash
             out.push({ kind: 'transfer_hac_to', to: a.to, hacash: (amt==null ? '0' : amt)+'' })
         }else if(kd == 5 || kd == 6){
-            let names = mnx_split_diamond_names(a.diamond || a.diamonds)
-            if(kd == 5 && names.length == 1){
-                out.push({ kind: 'transfer_hacd_single_to', to: a.to, diamond: names[0] })
-            }else{
-                out.push({ kind: 'transfer_hacd_to', to: a.to, diamonds: names })
+            // Kind 5 is one diamond and does not accept separators. A comma/space/pipe
+            // list is the SDK DiamondNameList form, so more than one name uses kind 7.
+            let raw = (a.diamond != null && a.diamond !== '') ? a.diamond : a.diamonds
+            let parsed = mnx_parse_hacd_list(raw)
+            if(parsed.err){
+                throw new Error(parsed.err)
             }
+            out.push(mnx_hacd_transfer_action(a.to, parsed.names))
         }else if(kd == 8){
             out.push({ kind: 'transfer_sat_to', to: a.to, satoshi: Number(a.satoshi!=null ? a.satoshi : a.amount) || 0 })
         }else if(kd == 17){
@@ -310,8 +313,9 @@ var routePageSigTrs = (adr, clbk) => {
                             ticket: ast.ticket,
                         }
                     }else{
-                        txlog.diamonds = act.diamonds || act.diamond
-                        txlog.diamond_count = String(act.diamonds||act.diamond||'').split(',').length
+                        let listed = mnx_parse_hacd_list((act.diamond != null && act.diamond !== '') ? act.diamond : act.diamonds)
+                        txlog.diamonds = listed.names ? listed.names.join(',') : (act.diamonds || act.diamond)
+                        txlog.diamond_count = listed.names ? listed.names.length : String(act.diamonds||act.diamond||'').split(',').length
                     }
                 }
             }

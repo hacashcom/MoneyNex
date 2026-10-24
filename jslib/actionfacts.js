@@ -21,6 +21,58 @@ var mnx_split_diamond_names = (v) => {
     return arr.map(s=>(s+'').trim()).filter(s=>s.length>0)
 }
 
+// Readable HACD list, same rules as field::DiamondNameListMax200::from_readable:
+// drop space, newline, '|' and ',', then cut the remainder into 6-character names.
+// A string, or an array of those strings. Returns {names} or {err}.
+, MNX_HACD_LIST_MAX = 200
+, mnx_parse_hacd_list = (v) => {
+    if(Array.isArray(v)){
+        let names = []
+        for(let i = 0; i < v.length; i++){
+            let one = mnx_parse_hacd_list(v[i])
+            if(one.err){ return one }
+            names = names.concat(one.names)
+        }
+        return mnx_hacd_list_check(names)
+    }
+    let s = String(v == null ? '' : v).replace(/[ \n|,]/g, '')
+    if(!s){ return { err: 'diamond list is empty' } }
+    if(s.length % 6 !== 0){ return { err: 'diamond list format invalid' } }
+    let names = []
+    for(let i = 0; i < s.length; i += 6){
+        names.push(s.slice(i, i + 6))
+    }
+    return mnx_hacd_list_check(names)
+}
+, mnx_hacd_list_check = (names) => {
+    if(!names.length){ return { err: 'diamond list is empty' } }
+    if(names.length > MNX_HACD_LIST_MAX){ return { err: 'diamond list max 200 overflow' } }
+    let seen = {}
+    for(let i = 0; i < names.length; i++){
+        let name = names[i]
+        if(name.length !== 6 || !mnx_hacd_name_chars_ok(name)){
+            return { err: 'diamond name ' + name + ' is not valid' }
+        }
+        if(seen[name]){ return { err: 'diamond name ' + name + ' is duplicated' } }
+        seen[name] = 1
+    }
+    return { names: names }
+}
+, mnx_hacd_name_chars_ok = (name) => {
+    for(let i = 0; i < name.length; i++){
+        if(MNX_HACD_NAME_CHARS.indexOf(name.charAt(i)) < 0){ return false }
+    }
+    return true
+}
+// One valid name is kind 5 (diamond). More than one is kind 7 (diamonds),
+// because kind 5 does not strip separators.
+, mnx_hacd_transfer_action = (to, names) => {
+    if(names.length === 1){
+        return { kind: 'transfer_hacd_single_to', to: to, diamond: names[0] }
+    }
+    return { kind: 'transfer_hacd_to', to: to, diamonds: names }
+}
+
 // Cache canonical JSON without mutating the SDK-owned Review snapshot.
 var mnx_act_json_cache = new WeakMap()
 , mnx_act_json = function(act) {
