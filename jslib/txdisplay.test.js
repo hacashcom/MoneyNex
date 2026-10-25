@@ -270,5 +270,9 @@ assert.equal(ctx.mnx_parse_hacd_list('tuhbme').err, 'diamond name tuhbme is not 
 assert.equal(ctx.mnx_parse_hacd_list('TUHBM').err, 'diamond list format invalid')
 assert.equal(ctx.mnx_parse_hacd_list('TUHBME,TUHBME').err, 'diamond name TUHBME is duplicated')
 assert.equal(hacdJoin(ctx.mnx_parse_hacd_list(['TUHBME', 'WTYUIA'])), 'TUHBME,WTYUIA')
+assert.equal(hacdJoin(ctx.mnx_parse_hacd_list(['TUHBME', '', ' ', '\r\n'])), 'TUHBME')
+assert.equal(ctx.mnx_parse_hacd_list(['', '']).err, 'diamond list is empty')
+assert.equal(hacdJoin(ctx.mnx_parse_hacd_list('TUHBME\r\nWTYUIA')), 'TUHBME,WTYUIA')
+assert.equal(hacdJoin(ctx.mnx_parse_hacd_list('TUHBME\tWTYUIA')), 'TUHBME,WTYUIA')
 
 console.log('txdisplay tests ok')

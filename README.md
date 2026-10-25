@@ -4,7 +4,7 @@ A Hacash and Bitcoin wallet — Chrome browser extension (Manifest V3), with an 
 
 Your key to future money.
 
-Current release: **0.4.2** — fixes binary encoding for HACD inscriptions and preserves byte payloads when rebuilding transactions to raise fees.
+Current release: **0.4.3** — HACD transfer lists accept Windows newlines, tabs, and blank slots.
 
 ### SDK API
 

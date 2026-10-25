@@ -1,6 +1,6 @@
 {
     "name": "MoneyNex",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "description": "A Bitcoin and Hacash Wallet",
     "scripts": {
         "test": "node jslib/importkey.test.js && node jslib/assetamt.test.js && node jslib/assetcache.test.js && node jslib/msglayout.test.js && node jslib/txdisplay.test.js && node jslib/heightclock.test.js && node test/sourcemaps-audit.cjs && node test/signtx-presets-audit.cjs && node test/signtex-audit.cjs && node test/signtex-wasm-e2e.cjs",

@@ -22,20 +22,24 @@ var mnx_split_diamond_names = (v) => {
 }
 
 // Readable HACD list, same rules as field::DiamondNameListMax200::from_readable:
-// drop space, newline, '|' and ',', then cut the remainder into 6-character names.
-// A string, or an array of those strings. Returns {names} or {err}.
+// drop space, tab, CR, LF, '|' and ',', then cut the remainder into 6-character names.
+// A string, or an array of those strings. Blank array slots are ignored.
+// Returns {names} or {err}.
 , MNX_HACD_LIST_MAX = 200
 , mnx_parse_hacd_list = (v) => {
     if(Array.isArray(v)){
         let names = []
         for(let i = 0; i < v.length; i++){
             let one = mnx_parse_hacd_list(v[i])
-            if(one.err){ return one }
+            if(one.err){
+                if(one.err === 'diamond list is empty'){ continue }
+                return one
+            }
             names = names.concat(one.names)
         }
         return mnx_hacd_list_check(names)
     }
-    let s = String(v == null ? '' : v).replace(/[ \n|,]/g, '')
+    let s = String(v == null ? '' : v).replace(/[ \t\n\r|,]/g, '')
     if(!s){ return { err: 'diamond list is empty' } }
     if(s.length % 6 !== 0){ return { err: 'diamond list format invalid' } }
     let names = []
