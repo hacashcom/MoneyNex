@@ -95,6 +95,56 @@ const elliptic = require('../jslib/elliptic.min.js')
     assert.throws(() => invoke(30, {action:signed.action.slice(0, -2)}))
     assert.throws(() => invoke(29, {authorization, request, proof:{...proof, signature:'00'.repeat(64)}}))
 
+    // Directed cells (26-33): inspect categorization (pay 26/28/30/32,
+    // get 27/29/31/33), counterparty naming, and the signer-pays warning in
+    // DirectedGet descriptions. Vector: chain guard, height window (at least /
+    // at most), DirectedZhuPay{to}, DirectedZhuGet{from: 0}, ZhuPay, ZhuGet.
+    const counterKey = ec.keyFromPrivate('0'.repeat(63) + '2', 'hex')
+    const counterAddress = invoke(13, {public_key: counterKey.getPublic(true, 'hex')}).address
+    const directedAuthorization = {
+        schema: 'hacash.tex/authorization@1',
+        address,
+        cells: [
+            {cellid:25, chainid:0},
+            {cellid:24, height:10},
+            {cellid:23, height:200},
+            {cellid:26, to:counterAddress, haczhu:'9007199254740993'},
+            {cellid:27, from:0, haczhu:2000},
+            {cellid:1, haczhu:'300000000'},
+            {cellid:2, haczhu:'400000000'},
+        ],
+    }
+    const directedRaw = sdk.sdk_invoke_json(27, new TextEncoder().encode(JSON.stringify({authorization:directedAuthorization})))
+    const directedInspect = JSON.parse(directedRaw)
+    assert.equal(directedInspect.ok, 1)
+    assert.deepEqual(directedInspect.body.unknown_conditions, [])
+    assert.deepEqual(directedInspect.body.payments.map(cell => cell.cellid), [26, 1])
+    assert.deepEqual(directedInspect.body.receipts.map(cell => cell.cellid), [27, 2])
+    assert.deepEqual(directedInspect.body.height_conditions, [{operator:'at_least', value:'10'}, {operator:'at_most', value:'200'}])
+    const directedCells = directedInspect.body.cells
+    assert.equal(directedCells[3].category, 'pay')
+    assert.match(directedCells[3].description, new RegExp(`Pay 90071992\\.54740993 HAC \\(9007199254740993 zhu\\) directly to ${counterAddress}$`))
+    assert.equal(directedCells[4].category, 'get')
+    assert.match(directedCells[4].description, /Take 0\.00002 HAC \(2000 zhu\) directly from transaction signer ptr:0 \(you, when executing\)/)
+    assert.match(directedRaw, /9007199254740993/)
+    // prepare -> sign -> attach -> verify roundtrip with directed cells present
+    const directedRequest = invoke(28, {authorization:directedAuthorization, signer_address:address, origin:'https://test.invalid'})
+    assert.equal(directedRequest.purpose, 'tex_authorization')
+    const directedSignature = ec.sign(Buffer.from(directedRequest.digest, 'hex'), privateKey, {canonical:true})
+    const directedProof = {
+        schema:'hacash.sdk/signature-proof@1',
+        request_id:directedRequest.id,
+        request_binding:directedRequest.request_binding,
+        public_key:publicKey,
+        signature:pad(directedSignature.r) + pad(directedSignature.s),
+        algorithm:'secp256k1-rfc6979-sha256',
+    }
+    const directedSigned = invoke(29, {authorization:directedAuthorization, request:directedRequest, proof:directedProof})
+    assert.equal(directedSigned.schema, 'hacash.tex/signed-bundle@1')
+    const directedVerified = invoke(30, {action:directedSigned.action})
+    assert.equal(directedVerified.ok, true)
+    assert.equal(directedVerified.address, address)
+
     // Run the actual approval page controller using the real wallet facade
     // and WASM SDK. Signing uses deterministic test key 1 only.
     const pageSource = fs.readFileSync(path.join(__dirname, '../popup/signtex/signtex/vue.js'), 'utf8')
@@ -131,5 +181,32 @@ const elliptic = require('../jslib/elliptic.min.js')
     assert.equal(answers[0].success,true)
     assert.equal(answers[0].signed_authorization.schema,'hacash.tex/signed-bundle@1')
     assert.equal(invoke(30,{action:answers[0].signed_authorization.action}).ok,true)
-    console.log(`real TEX approval page roundtrip passed: ABI ${version.abi.major}.${version.abi.minor}, transport ${sdk.sdk_transport_version()}, deterministic test key, large-integer preservation, build/inspect/prepare/attach/verify`)
+
+    // The same approval page must render the directed authorization: the new
+    // cells land in the payments/receipts cards with the SDK counterparty
+    // wording, and the page signs the bundle end to end.
+    const directedAnswers = []
+    let directedPageModel, directedMounted
+    sandbox.chrome_storage_session = { get: async () => ({ 'ml-directed-wasm': { authorization: directedAuthorization } }) }
+    sandbox.urlquery = { ...sandbox.urlquery, mlkey: 'ml-directed-wasm' }
+    sandbox.mnx_dapp_reply = () => ({ answerOnce: async v => directedAnswers.push(v), closeWin: () => {}, cancelAndClose: async m => directedAnswers.push({ ret: 1, err: m }), nop: () => {} })
+    sandbox.VueCreateApp = (id, template, data, methods, onMounted) => {
+        directedPageModel = Object.assign({}, data)
+        for(const [name, fn] of Object.entries(methods)) directedPageModel[name] = fn.bind(directedPageModel)
+        directedMounted = onMounted
+        return { app: directedPageModel }
+    }
+    sandbox.routePageSignTex(address)
+    await directedMounted(directedPageModel)
+    assert.equal(directedPageModel.error, '')
+    assert.equal(directedPageModel.cells.length, 7)
+    assert.equal(directedPageModel.payments.length, 2)
+    assert.equal(directedPageModel.receipts.length, 2)
+    assert.match(directedPageModel.payments[0].description, new RegExp(`directly to ${counterAddress}`))
+    assert.match(directedPageModel.receipts[0].description, /from transaction signer ptr:0 \(you, when executing\)/)
+    await directedPageModel.sign()
+    assert.equal(directedAnswers.length, 1)
+    assert.equal(directedAnswers[0].success, true)
+    assert.equal(invoke(30, { action: directedAnswers[0].signed_authorization.action }).ok, true)
+    console.log(`real TEX approval page roundtrip passed: ABI ${version.abi.major}.${version.abi.minor}, transport ${sdk.sdk_transport_version()}, deterministic test key, large-integer preservation, directed cells 26-33 categorization + signer-pays wording + sign roundtrip, build/inspect/prepare/attach/verify`)
 })().catch(e => { console.error(e); process.exitCode = 1 })

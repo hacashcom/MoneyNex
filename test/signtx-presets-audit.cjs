@@ -107,6 +107,40 @@ const deepFreeze = value => {
         assert(ast.plain.includes(marker), `plainText must label ${marker}`)
     }
     assert.match(ast.plain, /0\/\d+\/\d+/, 'nested AST output must keep original SDK paths')
+
+    // Directed TEX cells (26-33) inside a kind-22 action, built by the real
+    // SDK: the canonical JSON keeps the quoted-address / bare-pointer shapes,
+    // every cell renders with an explicit counterparty and direction, and
+    // DirectedGet reads as prominently as a transfer leg against the
+    // transaction signer ("will take ... from you (transaction main)").
+    const directedCounter = '1Drrsep4vZVKhKWx2vVmiw8umYN3ETYraB'
+    const directedAuthorizer = 'bJASBXHo5SbNWJWbfACqZVNmi2j2hhCpe'
+    const directedBuilt = invoke(2, { spec: {
+        tx_type: 3, main, addrlist: [main, directedCounter, directedAuthorizer],
+        fee: '0.001', gas_max: 10, timestamp: 1700000000,
+        actions: [{ kind: 22, addr: directedAuthorizer, cells: [
+            { cellid: 26, to: directedCounter, haczhu: '3000' },
+            { cellid: 27, from: 0, haczhu: 2000 },
+            { cellid: 28, to: 0, satnum: 7 },
+            { cellid: 1, haczhu: '1000000' },
+        ], sign: { publickey: '0x02' + '11'.repeat(32), signature: '0x' + 'ab'.repeat(64) } }],
+    } })
+    const directedReview = invoke(3, { body: directedBuilt.body, signer_address: main })
+    assert.equal(directedReview.protocol_valid, true, `directed TEX tx must be protocol-valid: ${JSON.stringify(directedReview.topology_violations)}`)
+    assert.match(directedReview.actions[0].json, /"cellid":26,"to":"1Drrsep4vZVKhKWx2vVmiw8umYN3ETYraB"/, 'DirectedPay keeps the quoted readable-address form')
+    assert.match(directedReview.actions[0].json, /"cellid":27,"from":0/, 'DirectedGet keeps the bare pointer form')
+    const directedModels = wallet.mnx_review_presentations(directedReview, { review: directedReview, asset_text: atoms => ({ text: String(atoms), unit: '', known: false }) })
+    assert.equal(directedModels[0].mode, 'structured', 'directed cells must render in structured mode, not the SDK sentence fallback')
+    assert.equal(directedModels[0].fields.length, 4)
+    const directedSign = wallet.mnx_action_line_html(directedModels[0], 0, { main, abbrev_main: true })
+    const directedPlain = wallet.mnx_action_plain_text(directedModels[0])
+    assert.match(directedPlain, /directly pay 0\.00003 HAC to 1Drrsep4vZVKhKWx2vVmiw8umYN3ETYraB/, 'DirectedPay names the counterparty and direction')
+    assert.match(directedPlain, /will take 0\.00002 HAC from you \(transaction main\)/, 'DirectedGet names the signer-pays direction')
+    assert.match(directedPlain, /directly pay 7 SAT to you \(transaction main\)/)
+    assert.match(directedPlain, /pay 0\.01 HAC into TEX escrow/, 'escrow cells keep their existing wording')
+    assert.match(directedSign, /class="asset-unit-warning" role="note">will take /, 'DirectedGet renders with warning prominence')
+    assert.match(directedSign, /includes cells that take assets from the transaction signer/, 'the TEX summary flags signer-taking cells')
+    assert.match(directedSign, new RegExp(`/address/${directedCounter}"`), 'DirectedPay counterparty is linkable in Sign')
     const signatureReview = reviews.get('signature-status-mixed').review
     const invalidSigner = signatureReview.invalid_signers[0]
     const missingSigner = signatureReview.missing_signers[0]
@@ -192,7 +226,7 @@ const deepFreeze = value => {
     const largeSatReDecoded = invoke(10, { body: largeSatRebuilt.body })
     assert.match(largeSatReDecoded.actions[0].json, /"satoshi":9007199254740993/, 'rebuilt raise-fee request must keep the exact SAT amount')
 
-    console.log(`Real wasm preset audit passed: ${sdkKinds.length} SDK kinds, ${reviews.size} inspect/render cases, deep AST/TEX/large-u64/pointer variants, frozen Review, and Single/List addrlist roundtrips.`)
+    console.log(`Real wasm preset audit passed: ${sdkKinds.length} SDK kinds, ${reviews.size} inspect/render cases, deep AST/TEX/directed-cell(26-33)/large-u64/pointer variants, frozen Review, and Single/List addrlist roundtrips.`)
 })().catch(error => {
     console.error(error)
     process.exitCode = 1

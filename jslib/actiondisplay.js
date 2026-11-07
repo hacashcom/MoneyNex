@@ -428,13 +428,7 @@ var MNX_ACTION_MODES = {
         let id = Number(cell && cell.cellid)
         let val = key => cell && cell[key] != null ? String(cell[key]) : null
         let integer = value => value != null && /^\d+$/.test(String(value))
-        let hac = value => {
-            if(!integer(value)){ return null }
-            let digits = String(value).padStart(9, '0')
-            let whole = digits.slice(0, -8).replace(/^0+(?=\d)/, '')
-            let fraction = digits.slice(-8).replace(/0+$/, '')
-            return whole + (fraction ? '.' + fraction : '')
-        }
+        let hac = mnx_zhu_hac_text
         let n, unit, verb
         if(id === 1 || id === 2){ n = hac(val('haczhu')); unit = ' HAC'; verb = id === 1 ? 'pay' : 'get' }
         else if(id === 3 || id === 4){ n = val('satnum'); unit = ' SAT'; verb = id === 3 ? 'pay' : 'get' }
@@ -456,11 +450,50 @@ var MNX_ACTION_MODES = {
         if(n == null || id > 2 && !integer(n)){ return null }
         return `${verb} ${n}${unit} ${verb === 'pay' ? 'into' : 'from'} TEX escrow`
     }
-    let cells = json.cells.map(cellText)
+    // Directed cells (26-33) render with an explicit counterparty and direction.
+    // A DirectedGet takes assets FROM a transaction signer at execution — it is
+    // a transfer leg against the signer, so its wording ("will take X from you
+    // (transaction main)", matching the SDK's "you, when executing" view) is
+    // warning-marked and can be read as prominently as a transfer line.
+    let cells = json.cells.map(cell => {
+        let id = Number(cell && cell.cellid)
+        if(id >= 26 && id <= 33){
+            let facts = mnx_tex_directed_cell(cell, ctx.review)
+            if(!facts){ return null }
+            return { tokens: mnx_tex_directed_tokens(facts), get: !facts.isPay }
+        }
+        let text = cellText(cell)
+        return text == null ? null : { tokens: [mnx_tok_text(text)], get: false }
+    })
     if(cells.some(v => v == null)){ return null }
-    let fields = cells.map((cell, index) => ({ k: `cell ${index + 1}`, tokens: [mnx_tok_text(cell)] }))
+    let fields = cells.map((cell, index) => ({ k: `cell ${index + 1}`, tokens: cell.tokens }))
     let tokens = [mnx_tok_text('Execute TEX cells signed by '), mnx_tok_address(json.addr)]
+    if(cells.some(cell => cell.get)){
+        let warn = mnx_tok_text(' · includes cells that take assets from the transaction signer')
+        warn.warning = true
+        tokens.push(warn)
+    }
     return { summary: tokens, fields, sections: [] }
+}
+
+// Directed TEX cell facts -> field tokens: direction first, then amount, then
+// the counterparty (main-perspective wording when the endpoint is the
+// transaction main; the pointer/address identity otherwise).
+, mnx_tex_directed_tokens = function(facts) {
+    let who = facts.isMain ? [mnx_tok_text('you (transaction main)')] : mnx_endpoint_tokens(facts.endpoint)
+    if(facts.isPay){
+        return [mnx_tok_text('directly pay '), mnx_tok_amount(facts.payload.text, facts.payload.unit),
+            mnx_tok_text(' to '), ...who]
+    }
+    let warn = token => { token.warning = true; return token }
+    return [
+        warn(mnx_tok_text('will take ')),
+        mnx_tok_amount(facts.payload.text, facts.payload.unit),
+        facts.isMain ? warn(mnx_tok_text(' from you (transaction main)'))
+            : warn(mnx_tok_text(' from ')),
+        ...(facts.isMain ? [] : who),
+        ...(facts.isMain ? [] : [warn(mnx_tok_text(' (transaction signer)'))]),
+    ]
 }
 
 , MNX_ACTION_ADAPTERS = {

@@ -218,6 +218,63 @@ var mnx_act_json_cache = new WeakMap()
     return facts
 }
 
+// u64 zhu -> HAC decimal string (up to 8 decimals, trailing zeros trimmed).
+// Shared by the TEX display adapter: escrow cells (1/2) and directed cells (26/27).
+, mnx_zhu_hac_text = value => {
+    if(value == null || !/^\d+$/.test(String(value))){ return null }
+    let digits = String(value).padStart(9, '0')
+    let whole = digits.slice(0, -8).replace(/^0+(?=\d)/, '')
+    let fraction = digits.slice(-8).replace(/0+$/, '')
+    return whole + (fraction ? '.' + fraction : '')
+}
+
+// Directed TEX cells (26-33): AddrOrPtr counterparty + typed payload. The
+// canonical JSON encodes the counterparty as a quoted readable address string
+// or a bare number (transaction address-list pointer; ptr 0 = the transaction
+// main). Pointer 0 resolves through review.main even without an address table —
+// the protocol defines that pointer as the transaction main.
+, mnx_tex_cell_endpoint = function(value, review) {
+    if(typeof value === 'string' && /^[a-km-zA-HJ-NP-Z1-9]{28,34}$/.test(value)){ return { kind: 'address', value } }
+    let pointer = mnx_act_uint(value, 235)
+    if(pointer == null){ return null }
+    let table = (review && review.address_table) || []
+    let resolved = Array.isArray(table) && typeof table[pointer] === 'string' ? table[pointer] : null
+    if(resolved == null && pointer === 0 && review && typeof review.main === 'string' && review.main){ resolved = review.main }
+    return { kind: 'pointer', index: pointer, resolved }
+}
+
+// One directed cell's typed facts, or null when any field is unexpected (the
+// display adapter falls back to the SDK description — never guesses). Pay ids
+// (26/28/30/32) move assets from the TEX authorizer to the counterparty; Get
+// ids (27/29/31/33) take assets FROM a transaction signer at execution.
+, mnx_tex_directed_cell = function(cell, review) {
+    let id = Number(cell && cell.cellid)
+    if(!(id >= 26 && id <= 33)){ return null }
+    let isPay = id % 2 === 0
+    let endpoint = mnx_tex_cell_endpoint(isPay ? cell.to : cell.from, review)
+    if(!endpoint){ return null }
+    let payload = null
+    if(id === 26 || id === 27){
+        let v = mnx_zhu_hac_text(cell.haczhu)
+        if(v == null){ return null }
+        payload = { unit: 'HAC', text: v }
+    }else if(id === 28 || id === 29){
+        if(cell.satnum == null || !/^\d+$/.test(String(cell.satnum))){ return null }
+        payload = { unit: 'SAT', text: String(cell.satnum) }
+    }else if(id === 30 || id === 31){
+        let names = mnx_split_diamond_names(cell.diamonds)
+        if(!names.length){ return null }
+        payload = { unit: 'HACD', text: names.join(','), names }
+    }else{
+        let a = cell.asset
+        if(!a || !/^\d+$/.test(String(a.amount)) || !/^\d+$/.test(String(a.serial))){ return null }
+        payload = { unit: '', text: `${a.amount} atoms of Asset #${a.serial}` }
+    }
+    let isMain = endpoint.kind === 'pointer' && endpoint.index === 0 ||
+        !!endpoint.resolved && !!review && endpoint.resolved === review.main
+    return { id, isPay, endpoint, isMain, payload }
+}
+
 // Height scope (kind 1042): inclusive start..end, end = 0 means unlimited.
 , mnx_act_height_scope = function(act) {
     if(!act || Number(act.kind) !== 1042){ return null }

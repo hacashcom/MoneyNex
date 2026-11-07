@@ -210,6 +210,47 @@ assert(texModel.fields[10].tokens[0].v.includes('require HAC balance equal to 0.
 assert(texModel.fields[4].tokens[0].v.includes('WTYUIA,XVMEKB'))
 assert.equal(ctx.mnx_action_presentation({ ...tex, json: JSON.stringify({ kind: 22, addr: main, cells: [{ cellid: 1 }] }) }, { review: { main } }).mode, 'decorate')
 
+// Directed TEX cells (26-33): every cell names its counterparty and direction,
+// and DirectedGet reads as prominently as a transfer leg — warning-marked
+// "will take X from you (transaction main)" — because the execution takes the
+// assets from the transaction signer.
+const directedTex = { kind: 22, name: 'tex_cell_execute', description: 'natural language not parsed', json: JSON.stringify({ kind: 22, addr: main, cells: [
+    { cellid: 26, to: from, haczhu: 3000 },
+    { cellid: 27, from: 0, haczhu: 2000 },
+    { cellid: 28, to: 0, satnum: 7 },
+    { cellid: 29, from: 1, satnum: 9 },
+    { cellid: 30, to: from, diamonds: 'WTYUIA,XVMEKB' },
+    { cellid: 31, from: 0, diamonds: 'HYXYHY' },
+    { cellid: 32, to: from, asset: { serial: 11, amount: 500 } },
+    { cellid: 33, from: 0, asset: { serial: 11, amount: 5 } },
+    { cellid: 27, from: 0, haczhu: '9007199254740993' },
+    { cellid: 27, from: from, haczhu: 4000 },
+] }) }
+const directedReview = { main, address_table: [main, from] }
+const directedModel = ctx.mnx_action_presentation(directedTex, { review: directedReview })
+assert.equal(directedModel.mode, 'structured')
+assert.equal(directedModel.fields.length, 10)
+const directedPlain = ctx.mnx_action_plain_text(directedModel)
+assert(directedPlain.includes('directly pay 0.00003 HAC to ' + from), directedPlain)
+assert(directedPlain.includes('will take 0.00002 HAC from you (transaction main)'), directedPlain)
+assert(directedPlain.includes('directly pay 7 SAT to you (transaction main)'), directedPlain)
+assert(directedPlain.includes('will take 9 SAT from <address pointer 1> = ' + from + ' (transaction signer)'), directedPlain)
+assert(directedPlain.includes('directly pay WTYUIA,XVMEKB HACD to ' + from), directedPlain)
+assert(directedPlain.includes('will take HYXYHY HACD from you (transaction main)'), directedPlain)
+assert(directedPlain.includes('directly pay 500 atoms of Asset #11 to ' + from), directedPlain)
+assert(directedPlain.includes('will take 5 atoms of Asset #11 from you (transaction main)'), directedPlain)
+assert(directedPlain.includes('will take 90071992.54740993 HAC from you (transaction main)'), directedPlain)
+assert(directedPlain.includes('will take 0.00004 HAC from ' + from + ' (transaction signer)'), directedPlain)
+const directedHtml = ctx.mnx_action_line_html(directedModel, 0, { main, abbrev_main: true })
+assert(directedHtml.includes('asset-unit-warning'), 'DirectedGet renders with warning prominence')
+assert(directedHtml.includes('>will take <'))
+assert(directedHtml.includes('<b class="amt">0.00002</b> HAC'))
+assert(directedHtml.includes('from you (transaction main)'))
+assert(directedHtml.includes('includes cells that take assets from the transaction signer'), 'summary names the DirectedGet direction')
+assert(directedHtml.includes(`/address/${from}"`))
+// a malformed directed cell falls back to the SDK description instead of guessing
+assert.equal(ctx.mnx_action_presentation({ ...directedTex, json: JSON.stringify({ kind: 22, addr: main, cells: [{ cellid: 26 }] }) }, { review: directedReview }).mode, 'decorate')
+
 // Inscription type distinguishes otherwise-identical content and survives all
 // three outputs. AST child rendering descends without rewriting SDK paths.
 const inscription = type => ({ kind: 32, name: 'hacd_insc_push', description: 'SDK text', json: JSON.stringify({ kind: 32, diamonds: 'WTYUIA', engraved_content: '0x6869', engraved_type: type, protocol_cost: '0:0' }) })
