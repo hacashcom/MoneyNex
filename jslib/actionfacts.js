@@ -219,7 +219,7 @@ var mnx_act_json_cache = new WeakMap()
 }
 
 // u64 zhu -> HAC decimal string (up to 8 decimals, trailing zeros trimmed).
-// Shared by the TEX display adapter: escrow cells (1/2) and directed cells (26/27).
+// Shared by the TEX display adapter: escrow cells (1/2) and directed cells (29/30).
 , mnx_zhu_hac_text = value => {
     if(value == null || !/^\d+$/.test(String(value))){ return null }
     let digits = String(value).padStart(9, '0')
@@ -228,7 +228,7 @@ var mnx_act_json_cache = new WeakMap()
     return whole + (fraction ? '.' + fraction : '')
 }
 
-// Directed TEX cells (26-33): AddrOrPtr counterparty + typed payload. The
+// Directed TEX cells (29-36): AddrOrPtr counterparty + typed payload. The
 // canonical JSON encodes the counterparty as a quoted readable address string
 // or a bare number (transaction address-list pointer; ptr 0 = the transaction
 // main). Pointer 0 resolves through review.main even without an address table —
@@ -245,23 +245,23 @@ var mnx_act_json_cache = new WeakMap()
 
 // One directed cell's typed facts, or null when any field is unexpected (the
 // display adapter falls back to the SDK description — never guesses). Pay ids
-// (26/28/30/32) move assets from the TEX authorizer to the counterparty; Get
-// ids (27/29/31/33) take assets FROM a transaction signer at execution.
+// (29/31/33/35) move assets from the TEX authorizer to the counterparty; Get
+// ids (30/32/34/36) take assets FROM a transaction signer at execution.
 , mnx_tex_directed_cell = function(cell, review) {
     let id = Number(cell && cell.cellid)
-    if(!(id >= 26 && id <= 33)){ return null }
-    let isPay = id % 2 === 0
+    if(!(id >= 29 && id <= 36)){ return null }
+    let isPay = id % 2 === 1
     let endpoint = mnx_tex_cell_endpoint(isPay ? cell.to : cell.from, review)
     if(!endpoint){ return null }
     let payload = null
-    if(id === 26 || id === 27){
+    if(id === 29 || id === 30){
         let v = mnx_zhu_hac_text(cell.haczhu)
         if(v == null){ return null }
         payload = { unit: 'HAC', text: v }
-    }else if(id === 28 || id === 29){
+    }else if(id === 31 || id === 32){
         if(cell.satnum == null || !/^\d+$/.test(String(cell.satnum))){ return null }
         payload = { unit: 'SAT', text: String(cell.satnum) }
-    }else if(id === 30 || id === 31){
+    }else if(id === 33 || id === 34){
         let names = mnx_split_diamond_names(cell.diamonds)
         if(!names.length){ return null }
         payload = { unit: 'HACD', text: names.join(','), names }

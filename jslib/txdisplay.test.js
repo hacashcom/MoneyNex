@@ -210,21 +210,21 @@ assert(texModel.fields[10].tokens[0].v.includes('require HAC balance equal to 0.
 assert(texModel.fields[4].tokens[0].v.includes('WTYUIA,XVMEKB'))
 assert.equal(ctx.mnx_action_presentation({ ...tex, json: JSON.stringify({ kind: 22, addr: main, cells: [{ cellid: 1 }] }) }, { review: { main } }).mode, 'decorate')
 
-// Directed TEX cells (26-33): every cell names its counterparty and direction,
+// Directed TEX cells (29-36): every cell names its counterparty and direction,
 // and DirectedGet reads as prominently as a transfer leg — warning-marked
 // "will take X from you (transaction main)" — because the execution takes the
 // assets from the transaction signer.
 const directedTex = { kind: 22, name: 'tex_cell_execute', description: 'natural language not parsed', json: JSON.stringify({ kind: 22, addr: main, cells: [
-    { cellid: 26, to: from, haczhu: 3000 },
-    { cellid: 27, from: 0, haczhu: 2000 },
-    { cellid: 28, to: 0, satnum: 7 },
-    { cellid: 29, from: 1, satnum: 9 },
-    { cellid: 30, to: from, diamonds: 'WTYUIA,XVMEKB' },
-    { cellid: 31, from: 0, diamonds: 'HYXYHY' },
-    { cellid: 32, to: from, asset: { serial: 11, amount: 500 } },
-    { cellid: 33, from: 0, asset: { serial: 11, amount: 5 } },
-    { cellid: 27, from: 0, haczhu: '9007199254740993' },
-    { cellid: 27, from: from, haczhu: 4000 },
+    { cellid: 29, to: from, haczhu: 3000 },
+    { cellid: 30, from: 0, haczhu: 2000 },
+    { cellid: 31, to: 0, satnum: 7 },
+    { cellid: 32, from: 1, satnum: 9 },
+    { cellid: 33, to: from, diamonds: 'WTYUIA,XVMEKB' },
+    { cellid: 34, from: 0, diamonds: 'HYXYHY' },
+    { cellid: 35, to: from, asset: { serial: 11, amount: 500 } },
+    { cellid: 36, from: 0, asset: { serial: 11, amount: 5 } },
+    { cellid: 30, from: 0, haczhu: '9007199254740993' },
+    { cellid: 30, from: from, haczhu: 4000 },
 ] }) }
 const directedReview = { main, address_table: [main, from] }
 const directedModel = ctx.mnx_action_presentation(directedTex, { review: directedReview })
@@ -249,7 +249,7 @@ assert(directedHtml.includes('from you (transaction main)'))
 assert(directedHtml.includes('includes cells that take assets from the transaction signer'), 'summary names the DirectedGet direction')
 assert(directedHtml.includes(`/address/${from}"`))
 // a malformed directed cell falls back to the SDK description instead of guessing
-assert.equal(ctx.mnx_action_presentation({ ...directedTex, json: JSON.stringify({ kind: 22, addr: main, cells: [{ cellid: 26 }] }) }, { review: directedReview }).mode, 'decorate')
+assert.equal(ctx.mnx_action_presentation({ ...directedTex, json: JSON.stringify({ kind: 22, addr: main, cells: [{ cellid: 29 }] }) }, { review: directedReview }).mode, 'decorate')
 
 // Inscription type distinguishes otherwise-identical content and survives all
 // three outputs. AST child rendering descends without rewriting SDK paths.

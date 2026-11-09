@@ -450,14 +450,14 @@ var MNX_ACTION_MODES = {
         if(n == null || id > 2 && !integer(n)){ return null }
         return `${verb} ${n}${unit} ${verb === 'pay' ? 'into' : 'from'} TEX escrow`
     }
-    // Directed cells (26-33) render with an explicit counterparty and direction.
+    // Directed cells (29-36) render with an explicit counterparty and direction.
     // A DirectedGet takes assets FROM a transaction signer at execution — it is
     // a transfer leg against the signer, so its wording ("will take X from you
     // (transaction main)", matching the SDK's "you, when executing" view) is
     // warning-marked and can be read as prominently as a transfer line.
     let cells = json.cells.map(cell => {
         let id = Number(cell && cell.cellid)
-        if(id >= 26 && id <= 33){
+        if(id >= 29 && id <= 36){
             let facts = mnx_tex_directed_cell(cell, ctx.review)
             if(!facts){ return null }
             return { tokens: mnx_tex_directed_tokens(facts), get: !facts.isPay }

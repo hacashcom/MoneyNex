@@ -108,7 +108,7 @@ const deepFreeze = value => {
     }
     assert.match(ast.plain, /0\/\d+\/\d+/, 'nested AST output must keep original SDK paths')
 
-    // Directed TEX cells (26-33) inside a kind-22 action, built by the real
+    // Directed TEX cells (29-36) inside a kind-22 action, built by the real
     // SDK: the canonical JSON keeps the quoted-address / bare-pointer shapes,
     // every cell renders with an explicit counterparty and direction, and
     // DirectedGet reads as prominently as a transfer leg against the
@@ -119,16 +119,16 @@ const deepFreeze = value => {
         tx_type: 3, main, addrlist: [main, directedCounter, directedAuthorizer],
         fee: '0.001', gas_max: 10, timestamp: 1700000000,
         actions: [{ kind: 22, addr: directedAuthorizer, cells: [
-            { cellid: 26, to: directedCounter, haczhu: '3000' },
-            { cellid: 27, from: 0, haczhu: 2000 },
-            { cellid: 28, to: 0, satnum: 7 },
+            { cellid: 29, to: directedCounter, haczhu: '3000' },
+            { cellid: 30, from: 0, haczhu: 2000 },
+            { cellid: 31, to: 0, satnum: 7 },
             { cellid: 1, haczhu: '1000000' },
         ], sign: { publickey: '0x02' + '11'.repeat(32), signature: '0x' + 'ab'.repeat(64) } }],
     } })
     const directedReview = invoke(3, { body: directedBuilt.body, signer_address: main })
     assert.equal(directedReview.protocol_valid, true, `directed TEX tx must be protocol-valid: ${JSON.stringify(directedReview.topology_violations)}`)
-    assert.match(directedReview.actions[0].json, /"cellid":26,"to":"1Drrsep4vZVKhKWx2vVmiw8umYN3ETYraB"/, 'DirectedPay keeps the quoted readable-address form')
-    assert.match(directedReview.actions[0].json, /"cellid":27,"from":0/, 'DirectedGet keeps the bare pointer form')
+    assert.match(directedReview.actions[0].json, /"cellid":29,"to":"1Drrsep4vZVKhKWx2vVmiw8umYN3ETYraB"/, 'DirectedPay keeps the quoted readable-address form')
+    assert.match(directedReview.actions[0].json, /"cellid":30,"from":0/, 'DirectedGet keeps the bare pointer form')
     const directedModels = wallet.mnx_review_presentations(directedReview, { review: directedReview, asset_text: atoms => ({ text: String(atoms), unit: '', known: false }) })
     assert.equal(directedModels[0].mode, 'structured', 'directed cells must render in structured mode, not the SDK sentence fallback')
     assert.equal(directedModels[0].fields.length, 4)
@@ -226,7 +226,7 @@ const deepFreeze = value => {
     const largeSatReDecoded = invoke(10, { body: largeSatRebuilt.body })
     assert.match(largeSatReDecoded.actions[0].json, /"satoshi":9007199254740993/, 'rebuilt raise-fee request must keep the exact SAT amount')
 
-    console.log(`Real wasm preset audit passed: ${sdkKinds.length} SDK kinds, ${reviews.size} inspect/render cases, deep AST/TEX/directed-cell(26-33)/large-u64/pointer variants, frozen Review, and Single/List addrlist roundtrips.`)
+    console.log(`Real wasm preset audit passed: ${sdkKinds.length} SDK kinds, ${reviews.size} inspect/render cases, deep AST/TEX/directed-cell(29-36)/large-u64/pointer variants, frozen Review, and Single/List addrlist roundtrips.`)
 })().catch(error => {
     console.error(error)
     process.exitCode = 1

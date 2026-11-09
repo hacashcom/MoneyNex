@@ -95,8 +95,8 @@ const elliptic = require('../jslib/elliptic.min.js')
     assert.throws(() => invoke(30, {action:signed.action.slice(0, -2)}))
     assert.throws(() => invoke(29, {authorization, request, proof:{...proof, signature:'00'.repeat(64)}}))
 
-    // Directed cells (26-33): inspect categorization (pay 26/28/30/32,
-    // get 27/29/31/33), counterparty naming, and the signer-pays warning in
+    // Directed cells (29-36): inspect categorization (pay 29/31/33/35,
+    // get 30/32/34/36), counterparty naming, and the signer-pays warning in
     // DirectedGet descriptions. Vector: chain guard, height window (at least /
     // at most), DirectedZhuPay{to}, DirectedZhuGet{from: 0}, ZhuPay, ZhuGet.
     const counterKey = ec.keyFromPrivate('0'.repeat(63) + '2', 'hex')
@@ -108,8 +108,8 @@ const elliptic = require('../jslib/elliptic.min.js')
             {cellid:25, chainid:0},
             {cellid:24, height:10},
             {cellid:23, height:200},
-            {cellid:26, to:counterAddress, haczhu:'9007199254740993'},
-            {cellid:27, from:0, haczhu:2000},
+            {cellid:29, to:counterAddress, haczhu:'9007199254740993'},
+            {cellid:30, from:0, haczhu:2000},
             {cellid:1, haczhu:'300000000'},
             {cellid:2, haczhu:'400000000'},
         ],
@@ -118,8 +118,8 @@ const elliptic = require('../jslib/elliptic.min.js')
     const directedInspect = JSON.parse(directedRaw)
     assert.equal(directedInspect.ok, 1)
     assert.deepEqual(directedInspect.body.unknown_conditions, [])
-    assert.deepEqual(directedInspect.body.payments.map(cell => cell.cellid), [26, 1])
-    assert.deepEqual(directedInspect.body.receipts.map(cell => cell.cellid), [27, 2])
+    assert.deepEqual(directedInspect.body.payments.map(cell => cell.cellid), [29, 1])
+    assert.deepEqual(directedInspect.body.receipts.map(cell => cell.cellid), [30, 2])
     assert.deepEqual(directedInspect.body.height_conditions, [{operator:'at_least', value:'10'}, {operator:'at_most', value:'200'}])
     const directedCells = directedInspect.body.cells
     assert.equal(directedCells[3].category, 'pay')
@@ -208,5 +208,5 @@ const elliptic = require('../jslib/elliptic.min.js')
     assert.equal(directedAnswers.length, 1)
     assert.equal(directedAnswers[0].success, true)
     assert.equal(invoke(30, { action: directedAnswers[0].signed_authorization.action }).ok, true)
-    console.log(`real TEX approval page roundtrip passed: ABI ${version.abi.major}.${version.abi.minor}, transport ${sdk.sdk_transport_version()}, deterministic test key, large-integer preservation, directed cells 26-33 categorization + signer-pays wording + sign roundtrip, build/inspect/prepare/attach/verify`)
+    console.log(`real TEX approval page roundtrip passed: ABI ${version.abi.major}.${version.abi.minor}, transport ${sdk.sdk_transport_version()}, deterministic test key, large-integer preservation, directed cells 29-36 categorization + signer-pays wording + sign roundtrip, build/inspect/prepare/attach/verify`)
 })().catch(e => { console.error(e); process.exitCode = 1 })
